@@ -1,7 +1,7 @@
 # Building Software with AI Agents — a course built on a real codebase
 
 **Audience:** developers and tech leads who already write code and now want to ship a
-production app *with* AI coding agents (Claude Code and similar), not just autocomplete.
+production app _with_ AI coding agents (Claude Code and similar), not just autocomplete.
 
 **Worked example:** this repository — the DNA Forms portal (Next.js 16 App Router, tRPC,
 Mastra agents, PostgreSQL, a Docker Swarm estate with qa/staging/uat/production). It is
@@ -9,7 +9,8 @@ built and operated day to day by a team of humans plus a standing pool of AI age
 Everything in this course is drawn from how that actually works, including where it broke.
 
 **Ground rules for the material**
-- Every incident is an *anonymised lesson*: no credentials, tokens, internal hosts/IPs,
+
+- Every incident is an _anonymised lesson_: no credentials, tokens, internal hosts/IPs,
   webhook URLs, account ids or customer data. Placeholders look like `<REGISTRY>`, `<TOKEN>`.
 - Every claim about the repo points at a file you can open (`CLAUDE.md`, `.husky/pre-push`,
   `.gitlab-ci.yml`, `.claude/agents/*.md`, `skills/*/SKILL.md`).
@@ -17,18 +18,18 @@ Everything in this course is drawn from how that actually works, including where
 
 ## Course map
 
-| # | module | the one idea | repo artefacts used |
-|---|---|---|---|
-| 0 | [Orientation](01-orientation.md) | an agent is a fast, literal, forgetful colleague — design the workplace for that | repo tour, `CLAUDE.md` Quick Start |
-| 1 | [Context files](02-context-files.md) | the agent knows only what it reads; *existence is not reach* | `CLAUDE.md`, memory index, project-mcp mirror |
-| 2 | [Skills and specialist agents](03-skills-and-agents.md) | package repeatable know-how so it loads on demand | `skills/*/SKILL.md`, `.claude/agents/*.md` |
-| 3 | [The OODA loop for agents](04-ooda.md) | observe → orient → decide → act, and measure instead of recalling | `CLAUDE.md` OODA section |
-| 4 | [Verification discipline](05-verification.md) | *ask the artefact, not the exit code* | the "what reported / what was true" table, vitest/tsc/CI false greens |
-| 5 | [Review gates and hooks](06-review-gates.md) | a guard checked only by its author is one check, not two | `.husky/pre-commit`, `.husky/pre-push`, CI `typecheck`, PRE-SHIP review |
-| 6 | [Orchestrating many agents](07-orchestration.md) | roles, routing, state files, one committer | v84 triage orchestration (anonymised) |
-| 7 | [Shipping safely](08-shipping.md) | branch ≠ built ≠ delivered ≠ deployed | release train, QA tag-bump procedure, reconcile-against-running |
-| 8 | [Writing for humans and tools](09-writing.md) | state the predicate, the window and the frame | timestamps, Jira rendering, "a number travels, its predicate does not" |
-| 9 | [Capstone](10-capstone.md) | ship a small feature end-to-end with agents, with evidence | a scoped feature in this repo |
+| #   | module                                                  | the one idea                                                                     | repo artefacts used                                                     |
+| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 0   | [Orientation](01-orientation.md)                        | an agent is a fast, literal, forgetful colleague — design the workplace for that | repo tour, `CLAUDE.md` Quick Start                                      |
+| 1   | [Context files](02-context-files.md)                    | the agent knows only what it reads; _existence is not reach_                     | `CLAUDE.md`, memory index, project-mcp mirror                           |
+| 2   | [Skills and specialist agents](03-skills-and-agents.md) | package repeatable know-how so it loads on demand                                | `skills/*/SKILL.md`, `.claude/agents/*.md`                              |
+| 3   | [The OODA loop for agents](04-ooda.md)                  | observe → orient → decide → act, and measure instead of recalling                | `CLAUDE.md` OODA section                                                |
+| 4   | [Verification discipline](05-verification.md)           | _ask the artefact, not the exit code_                                            | the "what reported / what was true" table, vitest/tsc/CI false greens   |
+| 5   | [Review gates and hooks](06-review-gates.md)            | a guard checked only by its author is one check, not two                         | `.husky/pre-commit`, `.husky/pre-push`, CI `typecheck`, PRE-SHIP review |
+| 6   | [Orchestrating many agents](07-orchestration.md)        | roles, routing, state files, one committer                                       | v84 triage orchestration (anonymised)                                   |
+| 7   | [Shipping safely](08-shipping.md)                       | branch ≠ built ≠ delivered ≠ deployed                                            | release train, QA tag-bump procedure, reconcile-against-running         |
+| 8   | [Writing for humans and tools](09-writing.md)           | state the predicate, the window and the frame                                    | timestamps, Jira rendering, "a number travels, its predicate does not"  |
+| 9   | [Capstone](10-capstone.md)                              | ship a small feature end-to-end with agents, with evidence                       | a scoped feature in this repo                                           |
 
 Plus: [Glossary](glossary.md) · [Exercise answer notes](answers.md) · [WORKLOG](WORKLOG.md)
 
@@ -52,7 +53,7 @@ Plus: [Glossary](glossary.md) · [Exercise answer notes](answers.md) · [WORKLOG
 - **Orchestration evolution:** one looping agent → a pickup/router + general + deep + shipper
   pool, and the specific failure each version answered.
 - **Shipping:** a carried-over bump list that would have pointed live services at tags never
-  built; reconciling against *running* services, not the stored stack file.
+  built; reconciling against _running_ services, not the stored stack file.
 - **Writes disguised as probes:** testing a tool's input format against a live field and
   destroying its content.
 
