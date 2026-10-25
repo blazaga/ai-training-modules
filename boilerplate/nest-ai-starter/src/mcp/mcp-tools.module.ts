@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { NotesModule } from '../notes/notes.module.js';
+import { UsersModule } from '../users/users.module.js';
+import { IdentityTools } from './identity.tools.js';
 import { NotesTools } from './notes.tools.js';
 
 /** Every @McpController lives here, so each entrypoint (stdio, HTTP) serves the same tools. */
 @Module({
-  imports: [NotesModule],
-  controllers: [NotesTools],
+  imports: [NotesModule, UsersModule],
+  controllers: [NotesTools, IdentityTools],
 })
 export class McpToolsModule {}
 

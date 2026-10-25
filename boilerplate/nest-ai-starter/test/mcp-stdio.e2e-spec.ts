@@ -46,6 +46,7 @@ describe('MCP over stdio (e2e)', () => {
       'create-note',
       'get-note',
       'list-notes',
+      'whoami',
     ]);
     const create = tools.find((t) => t.name === 'create-note');
     expect(create?.inputSchema.required).toEqual(['title']);
@@ -79,6 +80,12 @@ describe('MCP over stdio (e2e)', () => {
     expect(bad.content[0].text).toMatch(
       /a published note needs a non-empty body/,
     );
+  });
+
+  it('whoami over stdio: no device identity (local trust), so a tool error', async () => {
+    const result = await call('whoami', {});
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/No device identity/);
   });
 
   it('stdout carries only protocol: diagnostics went to stderr', () => {

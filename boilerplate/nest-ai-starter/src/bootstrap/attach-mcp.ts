@@ -2,6 +2,8 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { McpStrategy, StreamableHttpTransport } from '@rekog/mcp-nest';
 import type { Env } from '../config/env.schema.js';
+import { DevicesService } from '../devices/devices.service.js';
+import { deviceAuth } from '../mcp/device-auth.middleware.js';
 import { MCP_SERVER_INFO } from '../mcp/mcp-tools.module.js';
 
 /**
@@ -34,6 +36,10 @@ export async function attachMcp(app: INestApplication): Promise<void> {
       }),
     ],
   });
+  // ch09: every request to /mcp must carry ACTIVE device credentials. Registered
+  // BEFORE the transport mounts its routes, so a failure is an HTTP 401 and no
+  // JSON-RPC is ever read for it.
+  app.use('/mcp', deviceAuth(app.get(DevicesService, { strict: false })));
   mcp.setHttpAdapter(app.getHttpAdapter());
   app.connectMicroservice({ strategy: mcp });
   // Order matters: mount the MCP routes before the server accepts connections.

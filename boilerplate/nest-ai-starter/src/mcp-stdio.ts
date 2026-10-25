@@ -13,11 +13,13 @@ import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { McpStrategy, StdioTransport } from '@rekog/mcp-nest';
 import { validateEnv } from './config/env.schema.js';
+import { DatabaseModule } from './database/database.module.js';
 import { MCP_SERVER_INFO, McpToolsModule } from './mcp/mcp-tools.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    DatabaseModule, // whoami (ch09) reads users
     McpToolsModule,
   ],
 })
