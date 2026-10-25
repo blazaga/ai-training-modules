@@ -27,7 +27,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node dist/database/migrate.js",
     "check:migrations": "node scripts/check-migrations.mjs",
-    "mcp:stdio": "node dist/mcp-stdio.js"
+    "mcp:stdio": "node dist/mcp-stdio.js",
+    "mcp:inspect": "npx -y @modelcontextprotocol/inspector@2.12.0 node dist/mcp-stdio.js",
+    "mcp:inspect:cli": "npx -y @modelcontextprotocol/inspector@2.12.0 --cli node dist/mcp-stdio.js"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.11",
