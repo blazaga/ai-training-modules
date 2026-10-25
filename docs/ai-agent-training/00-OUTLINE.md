@@ -1,5 +1,9 @@
 # Building Software with AI Agents — a course built on a real codebase
 
+**Main hands-on track:** modules 10–11 build a NestJS service with agents, skills and
+templated code, on the boilerplate in `boilerplate/nest-ai-starter/`. Modules 1–9 are the
+discipline that makes that work.
+
 **Audience:** developers and tech leads who already write code and now want to ship a
 production app _with_ AI coding agents (Claude Code and similar), not just autocomplete.
 
@@ -18,18 +22,19 @@ Everything in this course is drawn from how that actually works, including where
 
 ## Course map
 
-| #   | module                                                  | the one idea                                                                     | repo artefacts used                                                     |
-| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| 1   | [Orientation](01-orientation.md)                        | an agent is a fast, literal, forgetful colleague — design the workplace for that | repo tour, `CLAUDE.md` Quick Start                                      |
-| 2   | [Context files](02-context-files.md)                    | the agent knows only what it reads; _existence is not reach_                     | `CLAUDE.md`, memory index, project-mcp mirror                           |
-| 3   | [Skills and specialist agents](03-skills-and-agents.md) | package repeatable know-how so it loads on demand                                | `skills/*/SKILL.md`, `.claude/agents/*.md`                              |
-| 4   | [The OODA loop for agents](04-ooda.md)                  | observe → orient → decide → act, and measure instead of recalling                | `CLAUDE.md` OODA section                                                |
-| 5   | [Verification discipline](05-verification.md)           | _ask the artefact, not the exit code_                                            | the "what reported / what was true" table, vitest/tsc/CI false greens   |
-| 6   | [Review gates and hooks](06-review-gates.md)            | a guard checked only by its author is one check, not two                         | `.husky/pre-commit`, `.husky/pre-push`, CI `typecheck`, PRE-SHIP review |
-| 7   | [Orchestrating many agents](07-orchestration.md)        | roles, routing, state files, one committer                                       | v84 triage orchestration (anonymised)                                   |
-| 8   | [Shipping safely](08-shipping.md)                       | branch ≠ built ≠ delivered ≠ deployed                                            | release train, QA tag-bump procedure, reconcile-against-running         |
-| 9   | [Writing for humans and tools](09-writing.md)           | state the predicate, the window and the frame                                    | timestamps, Jira rendering, "a number travels, its predicate does not"  |
-| 10  | [Capstone](10-capstone.md)                              | ship a small feature end-to-end with agents, with evidence                       | a scoped feature in this repo                                           |
+| #   | module                                                                  | the one idea                                                                                            | repo artefacts used                                                                   |
+| --- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1   | [Orientation](01-orientation.md)                                        | an agent is a fast, literal, forgetful colleague — design the workplace for that                        | repo tour, `CLAUDE.md` Quick Start                                                    |
+| 2   | [Context files](02-context-files.md)                                    | the agent knows only what it reads; _existence is not reach_                                            | `CLAUDE.md`, memory index, project-mcp mirror                                         |
+| 3   | [Skills and specialist agents](03-skills-and-agents.md)                 | package repeatable know-how so it loads on demand                                                       | `skills/*/SKILL.md`, `.claude/agents/*.md`                                            |
+| 4   | [The OODA loop for agents](04-ooda.md)                                  | observe → orient → decide → act, and measure instead of recalling                                       | `CLAUDE.md` OODA section                                                              |
+| 5   | [Verification discipline](05-verification.md)                           | _ask the artefact, not the exit code_                                                                   | the "what reported / what was true" table, vitest/tsc/CI false greens                 |
+| 6   | [Review gates and hooks](06-review-gates.md)                            | a guard checked only by its author is one check, not two                                                | `.husky/pre-commit`, `.husky/pre-push`, CI `typecheck`, PRE-SHIP review               |
+| 7   | [Orchestrating many agents](07-orchestration.md)                        | roles, routing, state files, one committer                                                              | v84 triage orchestration (anonymised)                                                 |
+| 8   | [Shipping safely](08-shipping.md)                                       | branch ≠ built ≠ delivered ≠ deployed                                                                   | release train, QA tag-bump procedure, reconcile-against-running                       |
+| 9   | [Writing for humans and tools](09-writing.md)                           | state the predicate, the window and the frame                                                           | timestamps, Jira rendering, "a number travels, its predicate does not"                |
+| 10  | [Skills and templated code (NestJS)](10-skills-and-templates-nestjs.md) | the framework generates structure, templates fix conventions, agents fill marked gaps, a gate proves it | `boilerplate/nest-ai-starter/`: nest-cli, templates, `.claude/skills/`, `pnpm verify` |
+| 11  | [Capstone](11-capstone.md)                                              | ship a resource end to end with agents, with evidence                                                   | the boilerplate                                                                       |
 
 Plus: [Glossary](glossary.md) · [Exercise answer notes](answers.md) · [WORKLOG](WORKLOG.md)
 

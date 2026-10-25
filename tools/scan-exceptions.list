@@ -1,0 +1,9 @@
+# Reviewed false positives. Format: <path relative to repo root>|<exact substring>|<reason>
+# Each entry suppresses only lines in THAT file containing THAT substring. Suppressed hits
+# are still counted in the scan output so they stay visible. Adding a line is a review
+# decision: give the reason here and in the commit message.
+boilerplate/nest-ai-starter/src/config/env.schema.spec.ts|not-a-port-but-pretend-this-is-sensitive|fake value used to prove config errors never echo input
+boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/rules/security-auth-jwt.md|my-secret-key|upstream "incorrect" example showing a hardcoded secret (verbatim MIT skill)
+boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/AGENTS.md|my-secret-key|same upstream example, compiled copy
+boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/rules/test-e2e-supertest.md|Token = loginResponse|variable assignment, not a value
+boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/AGENTS.md|Token = loginResponse|same, compiled copy

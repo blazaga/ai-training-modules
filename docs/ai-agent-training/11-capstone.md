@@ -1,29 +1,32 @@
-# Module 10 — Capstone: ship a small feature end to end, with evidence
+# Module 11 — Capstone: ship a small feature end to end, with evidence
 
 ## Goal
 
 Use agents to deliver one small, real change to this repo or your own, through every stage
 covered in the course. The grade is the **evidence package**, not the feature.
 
-## Suggested feature (this repo)
+## Suggested feature (the boilerplate)
 
-Add a read-only "About" panel to a portal page that shows the app version from `/api/config`.
-It is small, visible, testable, and touches the conventions: a server component first, a
-`data-testid` on every control, `~/` imports and Tailwind v3.
+Add an **orders** resource to `boilerplate/nest-ai-starter/` (Lab 10.1 is the warm-up),
+then one cross-resource rule: _an order can only reference an existing, published note_.
+That rule needs a second repository injected into the orders service. Neither the
+templates nor any skill covers it, so your agent has to plan it (`plan-feature`) and you
+have to review the design.
 
-Pick something of the same size if you use your own project.
+If you use your own NestJS project, pick something of the same size: one new resource
+plus one rule that spans two resources.
 
 ## Steps and required evidence
 
 | #   | step                                                                                                                     | evidence to hand in                                                                                            |
 | --- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | 1   | **Context check.** Start a fresh agent with only the repo's context file. Have it explain how it would build the feature | its plan; every wrong assumption it made, and the context-file line you added to prevent it                    |
-| 2   | **Skills.** Identify and load the relevant skills (`platform-components`, `directory-structure`, …)                      | which skills loaded, and whether any needed a version warning                                                  |
+| 2   | **Skills.** Identify and load the relevant skills (`resource-spec`, `nest-resource-scaffold`, `plan-feature`, …)         | which skills loaded, and whether any needed a version warning                                                  |
 | 3   | **Isolation.** Create a worktree on a feature branch from a freshly fetched base                                         | `git worktree list`, the base SHA, and the fetch time with its offset                                          |
 | 4   | **Build.** The agent implements the feature with a unit test                                                             | the diff                                                                                                       |
 | 5   | **Verify.** Run the tests per file, mutation-check them, and typecheck with a planted-error control                      | test counts per file; the failing run with the fix reverted; typecheck reporting the planted error, then clean |
 | 6   | **Gates.** Commit through the pre-commit hook and push to _your own_ remote through pre-push                             | hook output (no `--no-verify`)                                                                                 |
-| 7   | **Review.** A second agent or person reviews using the module 6 checklist                                                | the review, including any method HOLDs                                                                         |
+| 7   | **Review.** A second agent or person reviews using the module 6 checklist and the `nest-verify` skill                    | the review, including any method HOLDs                                                                         |
 | 8   | **Ship plan.** Write a PRE-SHIP plan for a test environment, even a local Docker one                                     | the plan file, with every item measured                                                                        |
 | 9   | **Deliver and verify.** Deploy, then confirm with the stage table from module 8                                          | the running tag and the HTTP response, each read by its own instrument                                         |
 | 10  | **Write-up.** One page: what happened, what you measured, what you withdrew                                              | the page, with predicates, windows and offsets on every figure                                                 |

@@ -1,0 +1,27 @@
+# Hosts and IPs that are PUBLIC or RESERVED and may appear in the material.
+# One per line; a line matches a host exactly or as a parent domain (nestjs.com covers docs.nestjs.com).
+# Adding a line is a review decision: say why in the commit message.
+# loopback / reserved (RFC 2606, RFC 6761)
+localhost
+127.0.0.1
+example.com
+test.com
+env.local
+# public documentation and upstream sources cited by the material
+nestjs.com
+typeorm.io
+wikipedia.org
+github.com
+githubusercontent.com
+nodejs.org
+martinfowler.com
+jestjs.io
+owasp.org
+x.com
+schemastore.org
+eslint.org
+opencollective.com
+docker.com
+npmjs.com
+# docker-compose service name in an upstream example (not a DNS domain)
+redis

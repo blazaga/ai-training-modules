@@ -1,0 +1,5 @@
+# Vendored skills are kept byte-identical to their upstream (see each PROVENANCE.md).
+# Reformatting them would silently break that claim.
+.claude/skills/karpathy-guidelines/
+.claude/skills/nestjs-best-practices/
+pnpm-lock.yaml

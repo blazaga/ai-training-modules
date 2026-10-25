@@ -1,0 +1,43 @@
+import { z } from 'zod';
+
+/**
+ * Every environment variable the service reads, validated once at boot.
+ * A missing or malformed variable stops the process with the variable NAME and
+ * the reason, never its value, so this is safe to run against real secrets.
+ *
+ * To add a variable: add it here, add its NAME to `.env.example`, read it with
+ * `ConfigService.get('NAME', { infer: true })`. Never read `process.env` directly.
+ */
+export const envSchema = z
+  .object({
+    NODE_ENV: z
+      .enum(['development', 'test', 'production'])
+      .default('development'),
+    PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    /** Serve OpenAPI docs at /api/docs. Unset: on, except in production. */
+    SWAGGER_ENABLED: z.enum(['true', 'false']).optional(),
+  })
+  .transform(({ SWAGGER_ENABLED, ...env }) => ({
+    ...env,
+    SWAGGER_ENABLED:
+      SWAGGER_ENABLED === undefined
+        ? env.NODE_ENV !== 'production'
+        : SWAGGER_ENABLED === 'true',
+  }));
+
+export type Env = z.output<typeof envSchema>;
+
+export function validateEnv(raw: Record<string, unknown>): Env {
+  const result = envSchema.safeParse(raw);
+  if (!result.success) {
+    // Names and messages only, built here rather than printing `result.error`.
+    // Measured on zod 4.4.3: its default messages do not include the input, but
+    // that is zod's choice (`reportInput` turns it on), not a guarantee we own.
+    // env.schema.spec.ts pins that the raw value never appears.
+    const problems = result.error.issues
+      .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
+      .join('\n');
+    throw new Error(`Invalid environment configuration:\n${problems}`);
+  }
+  return result.data;
+}

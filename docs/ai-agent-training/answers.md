@@ -61,3 +61,16 @@ They describe what a good submission shows and the usual ways a submission goes 
 
 - **Ex 2:** a bare date is recoverable only if some other artefact (a commit with an offset, a
   log line) pins it down. Most are not recoverable, which is the lesson.
+
+## Module 10
+
+- **Lab 10.1:** the most common miss is putting a stored-state rule (such as "a paid order
+  cannot be cancelled") in the schema. It belongs in the service and maps to 422. Also check
+  that the mutation result is reported **per rule**, not as one overall "tests fail".
+- **Lab 10.2:** good answers notice that existing resources do **not** pick up template changes
+  automatically, and propose either a three-way merge (base template, new template, filled
+  file) or moving the shared behaviour into `src/common/` so the template only references it.
+- **Lab 10.4:** one hole is that `check-ai-fill` only finds the marker text. An agent can delete
+  a marker without doing the work (for example leaving `const valid = {} as never`). Closing
+  it takes a test-level check, such as requiring each rule in `specs/` to be referenced by a
+  test name.

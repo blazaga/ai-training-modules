@@ -1,0 +1,15 @@
+# dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# local environment: never commit real values (use .env.example for names)
+.env
+.env.*
+!.env.example
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
