@@ -9,16 +9,16 @@ Start with the [outline](00-OUTLINE.md).
 
 | #   | module                                                  |
 | --- | ------------------------------------------------------- |
-| 0   | [Orientation](01-orientation.md)                        |
-| 1   | [Context files](02-context-files.md)                    |
-| 2   | [Skills and specialist agents](03-skills-and-agents.md) |
-| 3   | [The OODA loop for agents](04-ooda.md)                  |
-| 4   | [Verification discipline](05-verification.md)           |
-| 5   | [Review gates and hooks](06-review-gates.md)            |
-| 6   | [Orchestrating many agents](07-orchestration.md)        |
-| 7   | [Shipping safely](08-shipping.md)                       |
-| 8   | [Writing for humans and tools](09-writing.md)           |
-| 9   | [Capstone](10-capstone.md)                              |
+| 1   | [Orientation](01-orientation.md)                        |
+| 2   | [Context files](02-context-files.md)                    |
+| 3   | [Skills and specialist agents](03-skills-and-agents.md) |
+| 4   | [The OODA loop for agents](04-ooda.md)                  |
+| 5   | [Verification discipline](05-verification.md)           |
+| 6   | [Review gates and hooks](06-review-gates.md)            |
+| 7   | [Orchestrating many agents](07-orchestration.md)        |
+| 8   | [Shipping safely](08-shipping.md)                       |
+| 9   | [Writing for humans and tools](09-writing.md)           |
+| 10  | [Capstone](10-capstone.md)                              |
 
 [Glossary](glossary.md) · [Facilitator answer notes](answers.md) · [WORKLOG](WORKLOG.md)
 

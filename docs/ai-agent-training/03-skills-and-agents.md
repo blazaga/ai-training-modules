@@ -1,4 +1,4 @@
-# Module 2 — Skills and specialist agents: package the know-how
+# Module 3 — Skills and specialist agents: package the know-how
 
 ## Why it matters
 

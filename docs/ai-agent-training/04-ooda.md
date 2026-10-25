@@ -1,4 +1,4 @@
-# Module 3 — The OODA loop for agents: measure, don't recall
+# Module 4 — The OODA loop for agents: measure, don't recall
 
 ## Why it matters
 
@@ -84,7 +84,7 @@ something else.**
 
 ### Act: then verify the property you care about
 
-Acting is not finishing, and a proxy for the result is not the result. Module 4 covers this
+Acting is not finishing, and a proxy for the result is not the result. Module 5 covers this
 in depth.
 
 ### Then loop, and withdraw readings by name

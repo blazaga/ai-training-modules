@@ -1,4 +1,4 @@
-# Module 6 — Orchestrating many agents: roles, routing, state, one committer
+# Module 7 — Orchestrating many agents: roles, routing, state, one committer
 
 ## Why it matters
 

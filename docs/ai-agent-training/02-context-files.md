@@ -1,4 +1,4 @@
-# Module 1 — Context files: the agent knows only what it reads
+# Module 2 — Context files: the agent knows only what it reads
 
 ## Why it matters
 
@@ -88,7 +88,7 @@ Many of those are valuable, but a long file has costs:
 6. **Index the question, not just the answer.** If people ask "will this merge?", the
    instrument for that belongs where people look when they ask it.
 7. **Keep it reviewable.** Prefer a short project file that links to runbooks and skills over a
-   file that holds everything. Load detail when it is needed (module 2).
+   file that holds everything. Load detail when it is needed (module 3).
 
 ## Memory: the forgetfulness fix, and its own traps
 

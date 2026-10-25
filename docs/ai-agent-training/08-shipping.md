@@ -1,4 +1,4 @@
-# Module 7 — Shipping safely: branch ≠ built ≠ delivered ≠ deployed
+# Module 8 — Shipping safely: branch ≠ built ≠ delivered ≠ deployed
 
 ## Why it matters
 
