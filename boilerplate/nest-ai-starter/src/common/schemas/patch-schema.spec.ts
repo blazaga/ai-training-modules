@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { patchSchema } from './patch-schema';
+import { patchSchema } from './patch-schema.js';
 
 const fields = z.object({
   title: z.string(),

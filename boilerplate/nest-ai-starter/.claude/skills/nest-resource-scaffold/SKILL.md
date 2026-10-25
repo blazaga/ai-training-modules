@@ -26,12 +26,14 @@ Do not skip or reorder steps. Do not hand-write what step 1 or 2 generates.
 ## 1. Generate with nest-cli
 
 ```bash
-# answer the prompts with the defaults: REST API, generate CRUD entry points = Yes
-printf '\n\n' | pnpm exec nest g resource <plural>
+pnpm exec nest g resource <plural> --type rest --crud
 ```
 
-- nest-cli 11 rejects `--type`/`--crud` flags and prompts instead. Piping the two default
-  answers is the non-interactive form.
+- nest-cli 12 honours `--type`/`--crud`, so there are no prompts. (nest-cli 11 rejected
+  these flags and needed `printf '\n\n' |` piped in. Use that form on 11.)
+- With `@nestjs/swagger` installed, the generated update DTO imports `PartialType` from
+  swagger. Without it, nest-cli adds an unpinned `"@nestjs/mapped-types": "*"` to
+  `package.json`, which breaks frozen installs. Step 2 removes it if nothing imports it.
 - **Check the result, not the exit code:** `src/<plural>/<plural>.module.ts` exists, and
   `src/app.module.ts` imports `<Plural>Module`.
 
@@ -46,7 +48,7 @@ pnpm resource:template --name <singular> --plural <plural>
   has already templated (`--force` discards fill work, so do not use it on filled code).
 - It prints every file written and the number of `AI-FILL` markers. Note that number: it
   is your to-do list.
-- At this point `pnpm typecheck` and `pnpm lint:check` already pass. If they do not, the
+- At this point `pnpm typecheck`, `pnpm lint` and `pnpm format:check` already pass. If they do not, the
   templates are broken: stop and report it rather than patching around it.
 
 ## 3. Fill every AI-FILL marker from the spec
@@ -76,7 +78,7 @@ pnpm verify    # typecheck, lint, no AI-FILL/stub left, unit tests, e2e tests
 Then prove the rule tests can fail. For **each** service rule:
 
 1. Delete the rule.
-2. Run `pnpm test -- src/<plural>`.
+2. Run `pnpm exec vitest run src/<plural>`.
 3. At least one test must fail.
 4. Restore the rule.
 
@@ -94,6 +96,11 @@ A rule whose deletion leaves the tests green is not tested.
   Keep it.
 - **Zod 4 and refined objects:** `.omit()`/`.partial()` throw on an object that has a
   `.refine()`. Refine the _derived_ schema last, as the template does.
+- **ESM imports:** every relative import ends in `.js`. The templates already do this; keep
+  it in anything you add.
+- **Validation over HTTP:** the template's e2e test "unknown keys are stripped" is what proves
+  the validation pipe REPLACES the body with the parsed value. Do not delete it: a pipe that
+  validated but passed the raw input through was invisible to every other e2e test.
 - **All-optional resources:** the template's e2e test "invalid body is 400" assumes at
   least one required field. If the spec has none, change that test and say why.
 

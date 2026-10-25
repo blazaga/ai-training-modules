@@ -12,12 +12,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import type { Page } from '../common/persistence/repository';
-import { PageQueryDto } from '../common/schemas/page-query.schema';
-import { NotesService } from './notes.service';
-import { CreateNoteDto } from './dto/create-note.dto';
-import { UpdateNoteDto } from './dto/update-note.dto';
-import type { Note } from './entities/note.entity';
+import type { Page } from '../common/persistence/repository.js';
+import { PageQueryDto } from '../common/schemas/page-query.schema.js';
+import { NotesService } from './notes.service.js';
+import { CreateNoteDto } from './dto/create-note.dto.js';
+import { UpdateNoteDto } from './dto/update-note.dto.js';
+import type { Note } from './entities/note.entity.js';
 
 /**
  * HTTP only: parse, delegate, return. No business logic here (it goes in the

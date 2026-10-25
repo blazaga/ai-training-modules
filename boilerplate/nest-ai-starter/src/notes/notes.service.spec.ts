@@ -1,10 +1,10 @@
 import {
   NotFoundError,
   RuleViolationError,
-} from '../common/errors/domain-error';
-import { InMemoryRepository } from '../common/persistence/repository';
-import { NotesService } from './notes.service';
-import type { Note } from './entities/note.entity';
+} from '../common/errors/domain-error.js';
+import { InMemoryRepository } from '../common/persistence/repository.js';
+import { NotesService } from './notes.service.js';
+import type { Note } from './entities/note.entity.js';
 
 /** Unit tests: plain constructor injection, no Nest container needed. */
 describe('NotesService', () => {

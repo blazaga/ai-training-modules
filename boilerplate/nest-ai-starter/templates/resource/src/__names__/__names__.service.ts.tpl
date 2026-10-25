@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { NotFoundError } from '../common/errors/domain-error';
-import type { Page } from '../common/persistence/repository';
+import { NotFoundError } from '../common/errors/domain-error.js';
+import type { Page } from '../common/persistence/repository.js';
 import {
   __NAMES___REPOSITORY,
   type __Names__Repository,
-} from './__names__.repository';
-import type { Create__Name__Dto } from './dto/create-__name__.dto';
-import type { Update__Name__Dto } from './dto/update-__name__.dto';
-import type { __Name__ } from './entities/__name__.entity';
+} from './__names__.repository.js';
+import type { Create__Name__Dto } from './dto/create-__name__.dto.js';
+import type { Update__Name__Dto } from './dto/update-__name__.dto.js';
+import type { __Name__ } from './entities/__name__.entity.js';
 
 /**
  * Business logic for __names__. Shape rules (types, lengths, enums) live in the

@@ -31,13 +31,15 @@ marker is left. That turns "the agent says it finished" into a count that must b
 ## The boilerplate
 
 `boilerplate/nest-ai-starter/` is in this repository and can be split into its own repo.
-It is NestJS 11, zod 4 with `nestjs-zod`, `@nestjs/config`, Swagger and jest + supertest,
-with every version pinned exactly.
+It tracks the current `nest new` output: **NestJS 12** (ESM, TypeScript 6, vitest 4, oxlint),
+zod 4, `@nestjs/config`, Swagger and supertest, on pnpm 12, with every version pinned
+exactly. A learner's own fresh `nest new` therefore looks like this repo minus the
+course layer.
 
 ```
 .claude/skills/          the agent's playbooks (below)
 CLAUDE.md                conventions + which skill to load for which task
-src/common/              errors, filter, repository port, page + patch schemas
+src/common/              errors, filter, repository port, page + patch schemas, zod adapter
 src/config/env.schema.ts every env var, validated at boot
 src/bootstrap/           prefix, versioning, docs: shared by main.ts AND e2e tests
 src/notes/ + specs/notes.md   the finished worked example and its spec
@@ -45,13 +47,33 @@ templates/resource/      the house templates
 scripts/                 apply-resource-template.mjs, check-ai-fill.mjs
 ```
 
-### Why Nest 11 and not 12
+### Porting to Nest 12: a major upgrade done with the same discipline
 
-`nestjs-zod` declares `@nestjs/common ^10 || ^11` as a peer dependency, in both the version
-the reference service uses and the latest one. The choice follows a measured constraint,
-not a preference, and the README says when to revisit it.
+The starter was first built on Nest 11 and then ported to Nest 12 so learners can follow
+along with the latest CLI. The method is itself a lesson:
 
-## The skills: what was reused, what had to be written
+1. **Measure the registry, not memory.** `npm view <pkg> dist-tags peerDependencies` for
+   every package. Result: Nest 12.2.0, cli/schematics 12.0.10 (schematics now require
+   **TypeScript 6**), and **no release of `nestjs-zod`, not even its `next` tag, that
+   supports Nest 12.**
+2. **Generate a fresh scaffold with the new CLI and port onto it,** rather than bumping
+   versions in place. A fresh `nest new` revealed that Nest 12 changed the toolchain, not
+   just the version: **ESM** (`.js` on every relative import, top-level await), **vitest**
+   instead of jest, **oxlint** instead of eslint.
+3. **Baseline the new scaffold before changing anything.** The key risk was that vitest's
+   compiler might drop the decorator metadata Nest's DI needs. The scaffold's own
+   DI-by-type test passed, so it did not.
+4. **Replace the blocker, keep the pattern.** `nestjs-zod` became a ~60-line in-repo
+   adapter (`src/common/zod/`) exposing the same `createZodDto(Schema)` shape, so the
+   templates and skills did not change shape. Swagger is generated from the same schemas
+   via `z.toJSONSchema`.
+5. **Mechanical changes by script, with counts:** 43 relative imports gained `.js`, in
+   src, tests **and templates**. Then the fresh render was diffed against the ported
+   example: they differ only in the AI-FILL regions.
+6. **Re-measure every version-specific claim.** The zod behaviours below were re-checked
+   on 4.6.7, and one CLI claim had changed (item 2 below).
+
+## The skills: what was reused, what had to be written## The skills: what was reused, what had to be written
 
 A survey of the 42 project skills and 37 local skills found that **one** could be copied
 as-is. Most of what this workflow needs did not exist anywhere:
@@ -84,7 +106,7 @@ Two decisions are worth copying:
 # 0. spec first (skill: resource-spec)
 $EDITOR specs/orders.md
 # 1. structure
-printf '\n\n' | pnpm exec nest g resource orders
+pnpm exec nest g resource orders --type rest --crud
 # 2. conventions
 pnpm resource:template --name order --plural orders     # prints: files written, AI-FILL count
 # 3. domain: the agent fills every AI-FILL marker from specs/orders.md
@@ -105,10 +127,12 @@ rediscover it.
 <absolute path>`, run from another directory, wrote under the _current_ directory and
    reported success. The scaffold was found by looking for it, not by trusting the exit
    code (module 5).
-2. **Flags the CLI does not know are rejected, not ignored.** `nest g resource --type rest
---crud` failed. The generator only accepts those answers through prompts, so the skill
-   pipes the defaults in.
-3. **`.partial()` re-applies defaults.** In zod 4.4.3, `PATCH {"title":"x"}` parsed to
+2. **A CLI fact that changed between majors.** nest-cli 11 rejected
+   `nest g resource --type rest --crud` and had to be fed prompt answers through a pipe.
+   nest-cli 12 accepts the flags. A control (`--type graphql-code-first` produced resolvers)
+   showed the flag is honoured, not silently ignored. Re-measure tool behaviour on every
+   major version.
+3. **`.partial()` re-applies defaults.** In zod 4.4.3 (and still in 4.6.7), `PATCH {"title":"x"}` parsed to
    `{title, body:'', status:'draft', tags:[]}`. Every update would have wiped fields and
    un-published notes. The fix is a shared `patchSchema()` helper, plus a test that pins
    the zod behaviour as a control, so a future zod upgrade that changes it is noticed.
@@ -121,7 +145,7 @@ rediscover it.
    exactly one test red each. A rule nobody has tried deleting is a rule nobody has proven
    is tested.
 7. **A test that passes for the wrong reason.** "Config errors never echo the value" stays
-   green even if the code prints zod's whole error, because zod 4.4.3 happens not to
+   green even if the code prints zod's whole error, because zod (4.4.3 and 4.6.7) happens not to
    include inputs. The test guards the mistake that matters (dumping the raw env), and the
    code comment was reworded to claim only what was measured.
 8. **A false comment, caught by reading the formatted code.** "Docs off by default in
@@ -132,6 +156,22 @@ rediscover it.
 10. **A spec gap found while writing the spec.** "Create as published needs a body" left
     "PATCH a draft to published with no body" open. It became rule R5, raised in the spec
     rather than invented in code.
+11. **A validation pipe could pass raw input through and every e2e test stayed green.**
+    Found by mutation during the port, and true on Nest 11 as well. Only the pipe's own
+    unit test noticed. The templates now include an e2e test, "unknown keys are stripped",
+    that proves over HTTP that the body was replaced by the parsed value.
+12. **pnpm 12 silently ignores `frozen-lockfile` in `.npmrc`.** With `package.json`
+    drifted on purpose, `pnpm install` exited 0 and rewrote the lockfile. The setting moved
+    to `pnpm-workspace.yaml` (`frozenLockfile: true`), and the same drift is now refused.
+    A configuration that "is there" is not a configuration that is read (module 2).
+13. **pnpm 12 fails an install on an unapproved build script.** The script belonged to
+    `@scarf/scarf`, install-time telemetry pulled in by Swagger UI. It was **denied**
+    (`allowBuilds: false`), not approved to make the error go away.
+14. **The host repo's ignore rules nearly swallowed boilerplate files.** The portal's
+    `.gitignore` ignores `*.txt` and `.*.json`, so the scan lists and `.oxlintrc.json` would
+    never have been committed, and the commit would still have succeeded. Instrument:
+    `git ls-files --others --ignored --exclude-standard <dir>` lists exactly what will be
+    left behind.
 
 ## Labs
 

@@ -7,13 +7,14 @@ description: Verify a change to this NestJS service before calling it done - typ
 
 `pnpm verify` runs, in order and stopping at the first failure:
 
-| check        | command                            | what a real pass looks like                           |
-| ------------ | ---------------------------------- | ----------------------------------------------------- |
-| types        | `tsc --noEmit`                     | no output, exit 0                                     |
-| lint         | `eslint "{src,test}/**/*.ts"`      | no output, exit 0                                     |
-| completeness | `node scripts/check-ai-fill.mjs`   | `AI-FILL markers: 0` and `stub bodies: 0` **printed** |
-| unit         | `jest`                             | `Tests: N passed`, where N is what you expect         |
-| e2e          | `jest --config test/jest-e2e.json` | `Tests: N passed`, where N is what you expect         |
+| check        | command                                         | what a real pass looks like                           |
+| ------------ | ----------------------------------------------- | ----------------------------------------------------- |
+| types        | `tsc --noEmit`                                  | no output, exit 0                                     |
+| lint         | `oxlint --type-aware src/ test/`                | no output, exit 0                                     |
+| format       | `prettier --check "src/**/*.ts" "test/**/*.ts"` | `All matched files use Prettier code style!`          |
+| completeness | `node scripts/check-ai-fill.mjs`                | `AI-FILL markers: 0` and `stub bodies: 0` **printed** |
+| unit         | `vitest run`                                    | `Tests  N passed (N)`, where N is what you expect     |
+| e2e          | `vitest run --config ./vitest.config.e2e.ts`    | `Tests  N passed (N)`, where N is what you expect     |
 
 ## Controls: prove each check can fail
 
@@ -23,9 +24,12 @@ session, and again after changing any config:
 - **typecheck:** create `src/__planted.ts` containing
   `export const x: number = 'no';` and confirm `pnpm typecheck` reports `TS2322`.
   Then delete the file.
+- **lint:** add `async function f(): Promise<void> {}` and an un-awaited `f();` in a scratch
+  file and confirm oxlint reports `no-floating-promises`. oxlint is silent when clean, so the
+  silence means nothing until you have seen it fail.
 - **tests:** delete one business rule from a service and confirm a test fails. Then
   restore it. Do this for every rule you added.
-- **test selection:** when you run a subset (`pnpm test -- src/notes`), confirm the
+- **test selection:** when you run a subset (`pnpm exec vitest run src/notes`), confirm the
   summary names the suites you meant. A filter that matches nothing can still exit 0.
 
 ## Read output, not status
@@ -44,6 +48,7 @@ session, and again after changing any config:
 | wrong type, missing import                  | typecheck                                             |
 | business rule missing or wrong              | service unit test                                     |
 | validation, defaults, status codes, routing | **e2e only**, because unit tests get pre-parsed input |
+| validation pipe passes raw input through    | e2e "unknown keys are stripped" + the pipe's own spec |
 | AI step left unfinished                     | `check:ai-fill`                                       |
 
 ## Report

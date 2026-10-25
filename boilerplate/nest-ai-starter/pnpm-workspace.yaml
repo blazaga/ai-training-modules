@@ -1,0 +1,7 @@
+# Repeatable installs: never rewrite the lockfile implicitly.
+# Change dependencies on purpose with: pnpm install --no-frozen-lockfile
+frozenLockfile: true
+allowBuilds:
+  '@scarf/scarf': false
+minimumReleaseAgeExclude:
+  - '@nestjs/swagger@12.0.4'

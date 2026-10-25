@@ -1,6 +1,6 @@
 # nest-ai-starter
 
-A NestJS 11 REST starter for building services **with AI agents, skills and templated
+A NestJS 12 REST starter for building services **with AI agents, skills and templated
 code**. It is the hands-on companion to the course in `docs/ai-agent-training/`.
 
 The idea: split every piece of work by who does it best.
@@ -26,7 +26,7 @@ corepack pnpm verify
 ## Add a resource
 
 ```bash
-printf '\n\n' | corepack pnpm exec nest g resource orders     # 1. nest-cli
+corepack pnpm exec nest g resource orders --type rest --crud    # 1. nest-cli
 corepack pnpm resource:template --name order --plural orders  # 2. templates
 # 3. ask your agent: "fill the AI-FILL markers for orders from specs/orders.md"
 corepack pnpm verify                                          # 4. proof
@@ -37,8 +37,8 @@ the full procedure. `src/notes` + `specs/notes.md` is a finished example.
 
 ## What is in the box
 
-- Nest 11, TypeScript 5.9, zod 4 + `nestjs-zod`, `@nestjs/config`, `@nestjs/swagger`,
-  jest 30 + supertest. All versions pinned exactly.
+- Nest 12 (the `nest new` defaults: ESM, TypeScript 6, vitest 4, oxlint), zod 4,
+  `@nestjs/config`, `@nestjs/swagger`, supertest. All versions pinned exactly, pnpm 12.
 - `/api/v1/...` URI versioning, unversioned `/api/health`, and OpenAPI docs
   (disabled by default when `NODE_ENV=production`).
 - Env validated at boot. Bad config stops the process with the variable **name**, never
@@ -47,7 +47,15 @@ the full procedure. `src/notes` + `specs/notes.md` is a finished example.
 - A repository port with an in-memory adapter, swappable per module.
 - A multi-stage Dockerfile that runs as a non-root user and has a health check.
 
-## Why Nest 11, not 12
+## Differences from a bare `nest new` (Nest 12)
 
-`nestjs-zod` (5.1.1 through 5.5.0) declares `@nestjs/common ^10 || ^11` as a peer
-dependency. Upgrade once it supports 12.
+- **Validation adapter instead of `nestjs-zod`:** `src/common/zod/` (~60 lines). No release of
+  `nestjs-zod`, including its `next` tag, declares support for Nest 12 (peer
+  `@nestjs/common ^10 || ^11`). Swagger is generated from the same zod schemas through
+  `z.toJSONSchema`. Swap back once `nestjs-zod` supports Nest 12.
+- **`pnpm-workspace.yaml` holds the install policy:** `frozenLockfile: true`, a denied build
+  script for Swagger UI's install-time telemetry dependency (`@scarf/scarf`), and pnpm 12's
+  release-age exception for `@nestjs/swagger`. pnpm 12 **ignores** `frozen-lockfile` in `.npmrc`
+  (measured), so the file is gone.
+- **Removed:** the scaffold's `deploy` script and `@nestjs/mau` dev dependency (Nest's hosting
+  CLI, which is outside this course), and the hello-world controller.

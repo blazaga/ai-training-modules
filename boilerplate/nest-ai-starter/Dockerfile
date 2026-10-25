@@ -4,7 +4,8 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 RUN corepack enable
-COPY package.json pnpm-lock.yaml .npmrc ./
+# pnpm-workspace.yaml carries frozenLockfile, allowBuilds and the release-age policy (pnpm 12).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build && pnpm prune --prod

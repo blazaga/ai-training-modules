@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../zod/zod-dto.js';
 import { z } from 'zod';
 
 /** `?limit=&offset=` for every list endpoint. Query strings arrive as text, hence coerce. */

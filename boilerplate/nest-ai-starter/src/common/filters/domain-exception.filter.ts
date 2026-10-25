@@ -5,7 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { DomainError } from '../errors/domain-error';
+import { DomainError } from '../errors/domain-error.js';
 
 const STATUS: Record<DomainError['code'], HttpStatus> = {
   NOT_FOUND: HttpStatus.NOT_FOUND,

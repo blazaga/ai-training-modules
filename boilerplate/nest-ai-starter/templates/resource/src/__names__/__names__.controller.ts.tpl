@@ -12,12 +12,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import type { Page } from '../common/persistence/repository';
-import { PageQueryDto } from '../common/schemas/page-query.schema';
-import { __Names__Service } from './__names__.service';
-import { Create__Name__Dto } from './dto/create-__name__.dto';
-import { Update__Name__Dto } from './dto/update-__name__.dto';
-import type { __Name__ } from './entities/__name__.entity';
+import type { Page } from '../common/persistence/repository.js';
+import { PageQueryDto } from '../common/schemas/page-query.schema.js';
+import { __Names__Service } from './__names__.service.js';
+import { Create__Name__Dto } from './dto/create-__name__.dto.js';
+import { Update__Name__Dto } from './dto/update-__name__.dto.js';
+import type { __Name__ } from './entities/__name__.entity.js';
 
 /**
  * HTTP only: parse, delegate, return. No business logic here (it goes in the

@@ -1,6 +1,6 @@
 # nest-ai-starter
 
-A NestJS 11 REST service designed to be built **with AI agents**. nest-cli generates the
+A NestJS 12 REST service designed to be built **with AI agents**. nest-cli generates the
 structure, repo templates apply the conventions, and agents fill only marked gaps from a
 written spec. Every change ends with `pnpm verify`.
 
@@ -13,8 +13,10 @@ corepack pnpm start:dev    # http://localhost:3000/api/health, docs at /api/docs
 corepack pnpm verify       # typecheck, lint, AI-FILL check, unit, e2e
 ```
 
-`.npmrc` sets `frozen-lockfile=true`. To change dependencies on purpose, run
-`pnpm install --no-frozen-lockfile` and commit the lockfile.
+`pnpm-workspace.yaml` sets `frozenLockfile: true` (pnpm 12 ignores that key in `.npmrc`). To
+change dependencies on purpose, run `pnpm install --no-frozen-lockfile` and commit the
+lockfile. The same file denies the install-time telemetry script of `@scarf/scarf`; keep it
+denied.
 
 ## Skills: load before acting
 
@@ -30,7 +32,9 @@ Skills live in `.claude/skills/`.
 | end of every session | `worklog-handoff` |
 
 `nestjs-best-practices` shows class-validator DTOs in its examples. **This repo uses zod
-via `nestjs-zod`**, and this file wins wherever the two disagree.
+via the in-repo adapter in `src/common/zod/`** (`createZodDto`, `ZodValidationPipe`), and this
+file wins wherever the two disagree. The adapter replaces `nestjs-zod`, which has no Nest 12
+release.
 
 ## Layout
 
@@ -44,6 +48,7 @@ src/
 │   ├── errors/domain-error.ts      NotFoundError 404 · ConflictError 409 · RuleViolationError 422
 │   ├── filters/                    DomainError → HTTP, one error body shape
 │   ├── persistence/repository.ts   Repository<T> port + InMemoryRepository adapter
+│   ├── zod/                        createZodDto + ZodValidationPipe (+ OpenAPI from the schema)
 │   └── schemas/                    PageQuery (?limit&offset), patchSchema (PATCH without defaults)
 ├── health/                     GET /api/health (unversioned)
 └── <resource>/                 one folder per resource, generated - see below
@@ -54,7 +59,7 @@ specs/<plural>.md               one spec per resource; the input for step 3
 
 ## Adding a resource: always three steps
 
-1. `printf '\n\n' | pnpm exec nest g resource <plural>` (nest-cli: wiring)
+1. `pnpm exec nest g resource <plural> --type rest --crud` (nest-cli: wiring)
 2. `pnpm resource:template --name <singular> --plural <plural>` (templates: conventions)
 3. Fill every `AI-FILL(...)` marker from `specs/<plural>.md`, then run `pnpm verify`.
 
@@ -64,7 +69,10 @@ is the finished worked example, and `specs/notes.md` is its spec.
 ## Conventions
 
 - **Validation:** zod schemas are the single source of truth. DTOs are
-  `class X extends createZodDto(Schema)`. Never hand-write a field in two places.
+  `class X extends createZodDto(Schema)` from `src/common/zod/zod-dto.js`. Never hand-write a
+  field in two places.
+- **ESM:** the package is `"type": "module"`. Every relative import ends in `.js`
+  (`'./notes.service.js'`), including in templates. TypeScript resolves it to the `.ts` file.
 - **Placement of rules:** a rule that needs only the payload goes in the schema (400). A
   rule that needs stored state goes in the service and throws a `DomainError` (422/409).
 - **Errors:** services throw `DomainError` subclasses. Never `return { success: false }`

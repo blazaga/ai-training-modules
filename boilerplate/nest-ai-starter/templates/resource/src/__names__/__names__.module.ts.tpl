@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { InMemoryRepository } from '../common/persistence/repository';
-import { __Names__Controller } from './__names__.controller';
-import { __NAMES___REPOSITORY } from './__names__.repository';
-import { __Names__Service } from './__names__.service';
-import type { __Name__ } from './entities/__name__.entity';
+import { InMemoryRepository } from '../common/persistence/repository.js';
+import { __Names__Controller } from './__names__.controller.js';
+import { __NAMES___REPOSITORY } from './__names__.repository.js';
+import { __Names__Service } from './__names__.service.js';
+import type { __Name__ } from './entities/__name__.entity.js';
 
 @Module({
   controllers: [__Names__Controller],

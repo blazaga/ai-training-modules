@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { patchSchema } from '../common/schemas/patch-schema';
+import { patchSchema } from '../common/schemas/patch-schema.js';
 
 /**
  * Single source of truth for a __Name__: validation, TypeScript types and the

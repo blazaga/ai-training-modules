@@ -2,12 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   NotFoundError,
   RuleViolationError,
-} from '../common/errors/domain-error';
-import type { Page } from '../common/persistence/repository';
-import { NOTES_REPOSITORY, type NotesRepository } from './notes.repository';
-import type { CreateNoteDto } from './dto/create-note.dto';
-import type { UpdateNoteDto } from './dto/update-note.dto';
-import type { Note } from './entities/note.entity';
+} from '../common/errors/domain-error.js';
+import type { Page } from '../common/persistence/repository.js';
+import { NOTES_REPOSITORY, type NotesRepository } from './notes.repository.js';
+import type { CreateNoteDto } from './dto/create-note.dto.js';
+import type { UpdateNoteDto } from './dto/update-note.dto.js';
+import type { Note } from './entities/note.entity.js';
 
 /**
  * Business logic for notes. Shape rules (types, lengths, enums) live in the

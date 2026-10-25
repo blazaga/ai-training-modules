@@ -92,8 +92,28 @@ for (const stale of [join(resourceDir, `${plural}.controller.spec.ts`)]) {
   }
 }
 
+// When @nestjs/swagger is NOT installed, nest-cli 12's `nest g resource` adds
+// "@nestjs/mapped-types": "*" to package.json for its PartialType DTO (with swagger
+// installed it imports PartialType from swagger instead and adds nothing; both
+// measured). The templates use zod, so after templating nothing imports it.
+// Left in place it is an unpinned, uninstalled dependency that puts package.json
+// out of sync with the lockfile and fails every frozen install (CI, Docker).
+const pkgPath = join(root, 'package.json');
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+const MAPPED = '@nestjs/mapped-types';
+const importsMapped = walk(join(root, 'src')).some((f) =>
+  f.endsWith('.ts') && readFileSync(f, 'utf8').includes(`'${MAPPED}'`),
+);
+let droppedDep = false;
+if (pkg.dependencies?.[MAPPED] && !importsMapped) {
+  delete pkg.dependencies[MAPPED];
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  droppedDep = true;
+}
+
 console.log(`apply-resource-template: ${tokens.__Names__} (${name} / ${plural})`);
 for (const f of written) console.log(`  wrote   ${f}`);
 for (const f of removed) console.log(`  removed ${f}`);
+if (droppedDep) console.log(`  package.json: removed unused "${MAPPED}" added by nest g`);
 console.log(`files written: ${written.length}; AI-FILL markers to complete: ${markers}`);
 console.log('next: fill every AI-FILL marker, then run `pnpm verify`');

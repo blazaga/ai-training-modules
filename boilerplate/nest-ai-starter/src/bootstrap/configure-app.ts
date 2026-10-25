@@ -1,8 +1,7 @@
 import { INestApplication, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { cleanupOpenApiDoc } from 'nestjs-zod';
-import type { Env } from '../config/env.schema';
+import type { Env } from '../config/env.schema.js';
 
 /**
  * Everything that shapes the HTTP surface. main.ts AND the e2e tests call this,
@@ -24,6 +23,6 @@ export function configureApp(app: INestApplication): void {
       app,
       new DocumentBuilder().setTitle('nest-ai-starter').setVersion('1').build(),
     );
-    SwaggerModule.setup('api/docs', app, cleanupOpenApiDoc(doc));
+    SwaggerModule.setup('api/docs', app, doc);
   }
 }

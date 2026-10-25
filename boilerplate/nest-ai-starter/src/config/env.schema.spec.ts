@@ -1,4 +1,4 @@
-import { validateEnv } from './env.schema';
+import { validateEnv } from './env.schema.js';
 
 describe('validateEnv', () => {
   it('applies defaults', () => {

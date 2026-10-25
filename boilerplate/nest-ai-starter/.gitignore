@@ -13,3 +13,6 @@ coverage/
 .idea/
 .vscode/
 *.log
+
+# Lint config. Re-included because a parent repo may ignore dot-json files.
+!.oxlintrc.json

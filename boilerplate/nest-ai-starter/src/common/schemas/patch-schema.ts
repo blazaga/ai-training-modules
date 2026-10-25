@@ -6,7 +6,7 @@ import { z } from 'zod';
  *
  * Why not `fields.partial()`: zod applies `.default()` inside a partial, so
  * `PATCH { title }` would parse to `{ title, body: '', status: 'draft', tags: [] }`
- * and silently overwrite stored values with defaults. Measured on zod 4.4.3.
+ * and silently overwrite stored values with defaults. Measured on zod 4.4.3 and 4.6.7.
  * The unit test in patch-schema.spec.ts pins this behaviour.
  */
 export function patchSchema<S extends z.ZodRawShape>(fields: z.ZodObject<S>) {

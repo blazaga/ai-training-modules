@@ -31,7 +31,7 @@ export function validateEnv(raw: Record<string, unknown>): Env {
   const result = envSchema.safeParse(raw);
   if (!result.success) {
     // Names and messages only, built here rather than printing `result.error`.
-    // Measured on zod 4.4.3: its default messages do not include the input, but
+    // Measured on zod 4.4.3 and 4.6.7: default messages do not include the input, but
     // that is zod's choice (`reportInput` turns it on), not a guarantee we own.
     // env.schema.spec.ts pins that the raw value never appears.
     const problems = result.error.issues

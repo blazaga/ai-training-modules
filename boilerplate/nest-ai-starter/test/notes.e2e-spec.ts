@@ -1,9 +1,9 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import type { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/bootstrap/configure-app';
+import type { App } from 'supertest/types.js';
+import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/bootstrap/configure-app.js';
 
 /** Through the real HTTP stack: routing, validation pipe, error filter. */
 describe('notes (e2e)', () => {
@@ -35,6 +35,24 @@ describe('notes (e2e)', () => {
       .get(`${base}/${created.body.id}`)
       .expect(200)
       .expect((res) => expect(res.body).toEqual(created.body));
+  });
+
+  it('POST stores the PARSED body: unknown keys are stripped', async () => {
+    // Guards the validation pipe's contract over HTTP. A pipe that validated but
+    // passed the raw input through would store this key; unit tests cannot see it.
+    const created = await request(app.getHttpServer())
+      .post(base)
+      .send({ ...valid, notAField: 'x' })
+      .expect(201);
+    expect(created.body).not.toHaveProperty('notAField');
+  });
+
+  it('POST applies schema defaults over HTTP', async () => {
+    const created = await request(app.getHttpServer())
+      .post(base)
+      .send({ title: 'Defaults only' })
+      .expect(201);
+    expect(created.body).toMatchObject({ body: '', status: 'draft', tags: [] });
   });
 
   it('POST rejects an invalid body (400)', () =>

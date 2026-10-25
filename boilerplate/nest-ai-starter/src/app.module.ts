@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { DomainExceptionFilter } from './common/filters/domain-exception.filter';
-import { validateEnv } from './config/env.schema';
-import { HealthModule } from './health/health.module';
-import { NotesModule } from './notes/notes.module';
+import { ZodValidationPipe } from './common/zod/zod-validation.pipe.js';
+import { DomainExceptionFilter } from './common/filters/domain-exception.filter.js';
+import { validateEnv } from './config/env.schema.js';
+import { HealthModule } from './health/health.module.js';
+import { NotesModule } from './notes/notes.module.js';
 
 @Module({
   imports: [

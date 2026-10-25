@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
-import { UpdateNoteSchema } from '../note.schema';
+import { createZodDto } from '../../common/zod/zod-dto.js';
+import { UpdateNoteSchema } from '../note.schema.js';
 
 export class UpdateNoteDto extends createZodDto(UpdateNoteSchema) {}

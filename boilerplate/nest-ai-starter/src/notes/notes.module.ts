@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { InMemoryRepository } from '../common/persistence/repository';
-import { NotesController } from './notes.controller';
-import { NOTES_REPOSITORY } from './notes.repository';
-import { NotesService } from './notes.service';
-import type { Note } from './entities/note.entity';
+import { InMemoryRepository } from '../common/persistence/repository.js';
+import { NotesController } from './notes.controller.js';
+import { NOTES_REPOSITORY } from './notes.repository.js';
+import { NotesService } from './notes.service.js';
+import type { Note } from './entities/note.entity.js';
 
 @Module({
   controllers: [NotesController],
