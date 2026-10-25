@@ -1,4 +1,4 @@
-# Module 8 — Shipping safely: branch ≠ built ≠ delivered ≠ deployed
+# Principle P8 — Shipping safely: branch ≠ built ≠ delivered ≠ deployed
 
 ## Why it matters
 

@@ -1,4 +1,4 @@
-# Module 6 — Review gates and hooks: a guard checked only by its author is one check
+# Principle P6 — Review gates and hooks: a guard checked only by its author is one check
 
 ## Why it matters
 
@@ -65,7 +65,7 @@ block everyone on day one.
 
 ## Reviewing agent work
 
-In the orchestration (module 7), a worker agent finishes with:
+In the orchestration (P7), a worker agent finishes with:
 
 1. a local commit on its own branch,
 2. the diff,

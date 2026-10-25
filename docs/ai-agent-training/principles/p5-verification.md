@@ -1,4 +1,4 @@
-# Module 5 — Verification discipline: ask the artefact, not the exit code
+# Principle P5 — Verification discipline: ask the artefact, not the exit code
 
 ## Why it matters
 
@@ -94,11 +94,11 @@ check that the reason would actually have produced that artefact.**
 
 ## Three kinds of mistake, and what catches each
 
-| kind                                                            | example                                                                   | caught by                                                                |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| content vs identity                                             | `--is-ancestor` says no for a cherry-pick                                 | a different instrument (read the file)                                   |
-| artefact vs exit code                                           | CI exits 0, nothing shipped                                               | checking the artefact                                                    |
-| two correct numbers compared as if they measured the same thing | "5" vs "8", where one counts assignments and the other counts any mention | **nothing you re-run.** Only stating the predicate catches it (module 9) |
+| kind                                                            | example                                                                   | caught by                                                          |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| content vs identity                                             | `--is-ancestor` says no for a cherry-pick                                 | a different instrument (read the file)                             |
+| artefact vs exit code                                           | CI exits 0, nothing shipped                                               | checking the artefact                                              |
+| two correct numbers compared as if they measured the same thing | "5" vs "8", where one counts assignments and the other counts any mention | **nothing you re-run.** Only stating the predicate catches it (P9) |
 
 ## Exercises
 

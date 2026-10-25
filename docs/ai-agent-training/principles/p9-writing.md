@@ -1,4 +1,4 @@
-# Module 9 — Writing for humans and tools: make facts survive being quoted
+# Principle P9 — Writing for humans and tools: make facts survive being quoted
 
 ## Why it matters
 

@@ -1,68 +1,51 @@
-# Building Software with AI Agents — a course built on a real codebase
+# Building Apps with AI Agents: Skills, Templates, NestJS and MCP
 
-**Main hands-on track:** modules 10–11 build a NestJS service with agents, skills and
-templated code, on the boilerplate in `boilerplate/nest-ai-starter/`. Modules 1–9 are the
-discipline that makes that work.
+**Audience:** developers who want to build production services _with_ AI coding agents,
+and keep them consistent, tested and safe.
 
-**Audience:** developers and tech leads who already write code and now want to ship a
-production app _with_ AI coding agents (Claude Code and similar), not just autocomplete.
+**How it works:** you build one real service, `boilerplate/nest-ai-starter/` (NestJS 12),
+chapter by chapter. Every chapter is a commit (`git log --grep 'course(chNN)'`), so you can
+check out any step. Repeatable work is done by tools (nest-cli, templates, a verify gate);
+judgement is done by an agent inside marked regions, guided by skills in
+`.claude/skills/`. Every claim in the chapters was measured on this code, and the traps we
+hit are part of the material.
 
-**Worked example:** this repository — the DNA Forms portal (Next.js 16 App Router, tRPC,
-Mastra agents, PostgreSQL, a Docker Swarm estate with qa/staging/uat/production). It is
-built and operated day to day by a team of humans plus a standing pool of AI agent threads.
-Everything in this course is drawn from how that actually works, including where it broke.
+## The track
 
-**Ground rules for the material**
+| ch  | chapter                                                                   | you build                                                                             | key lesson                                                      |
+| --- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 01  | [Starting from the CLI and templates](01-cli-and-templates.md)            | Nest 12 project, `notes` via generate → template → fill → verify                      | tools for repeatable work, agents only inside markers           |
+| 02  | [A users table with drizzle and zod](02-users-drizzle-zod.md)             | database module, drizzle storage variant, `users` (controller + service + unit tests) | migrations are checked by the ledger; table/migration drift     |
+| 03  | [Auth: BasicAuth middleware, then Passport](03-auth-basic-to-passport.md) | hand-written middleware → Passport strategy + global guard                            | secure by default; one 401 for every failure                    |
+| 04  | [Devices: credentials, then merged with users](04-devices.md)             | device credentials (issue/rotate/activate/archive), ownership                         | server-issued, hash-only secrets; 404 not 403                   |
+| 05  | [The Model Context Protocol](05-mcp-concepts.md)                          | — (concepts from captured traffic)                                                    | JSON-RPC envelopes; stdio vs Streamable HTTP; SSE inside HTTP   |
+| 06  | [Your first MCP controller](06-first-mcp-controller.md)                   | `@rekog/mcp-nest` tools over existing services; stdio entrypoint                      | reuse the REST schema; test stdout as raw bytes                 |
+| 07  | [Using the MCP Inspector](07-mcp-inspector.md)                            | UI + scripted CLI checks                                                              | the CLI's exit code as a CI check                               |
+| 08  | [From stdio to Streamable HTTP](08-stdio-to-streamable-http.md)           | MCP over HTTP inside the app; transport configuration                                 | defaults matter; `MCP_ALLOWED_HOSTS`; `fetch` can't send `Host` |
+| 09  | [MCP auth with device access keys](09-mcp-device-auth.md)                 | `X-Access-Key-Id` / `X-Secret-Key` on `/mcp`, `whoami`                                | authenticate at the transport; order is load-bearing            |
+| 10  | [Capstone](10-capstone.md)                                                | device-scoped notes through every layer                                               | evidence, not claims                                            |
 
-- Every incident is an _anonymised lesson_: no credentials, tokens, internal hosts/IPs,
-  webhook URLs, account ids or customer data. Placeholders look like `<REGISTRY>`, `<TOKEN>`.
-- Every claim about the repo points at a file you can open (`CLAUDE.md`, `.husky/pre-push`,
-  `.gitlab-ci.yml`, `.claude/agents/*.md`, `skills/*/SKILL.md`).
-- Each module ends with **exercises** you can run against this repo or your own.
+## Principles (reference, linked from the chapters)
 
-## Course map
+How to work with agents at all: drawn from running a production estate with them.
 
-| #   | module                                                                  | the one idea                                                                                            | repo artefacts used                                                                   |
-| --- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 1   | [Orientation](01-orientation.md)                                        | an agent is a fast, literal, forgetful colleague — design the workplace for that                        | repo tour, `CLAUDE.md` Quick Start                                                    |
-| 2   | [Context files](02-context-files.md)                                    | the agent knows only what it reads; _existence is not reach_                                            | `CLAUDE.md`, memory index, project-mcp mirror                                         |
-| 3   | [Skills and specialist agents](03-skills-and-agents.md)                 | package repeatable know-how so it loads on demand                                                       | `skills/*/SKILL.md`, `.claude/agents/*.md`                                            |
-| 4   | [The OODA loop for agents](04-ooda.md)                                  | observe → orient → decide → act, and measure instead of recalling                                       | `CLAUDE.md` OODA section                                                              |
-| 5   | [Verification discipline](05-verification.md)                           | _ask the artefact, not the exit code_                                                                   | the "what reported / what was true" table, vitest/tsc/CI false greens                 |
-| 6   | [Review gates and hooks](06-review-gates.md)                            | a guard checked only by its author is one check, not two                                                | `.husky/pre-commit`, `.husky/pre-push`, CI `typecheck`, PRE-SHIP review               |
-| 7   | [Orchestrating many agents](07-orchestration.md)                        | roles, routing, state files, one committer                                                              | v84 triage orchestration (anonymised)                                                 |
-| 8   | [Shipping safely](08-shipping.md)                                       | branch ≠ built ≠ delivered ≠ deployed                                                                   | release train, QA tag-bump procedure, reconcile-against-running                       |
-| 9   | [Writing for humans and tools](09-writing.md)                           | state the predicate, the window and the frame                                                           | timestamps, Jira rendering, "a number travels, its predicate does not"                |
-| 10  | [Skills and templated code (NestJS)](10-skills-and-templates-nestjs.md) | the framework generates structure, templates fix conventions, agents fill marked gaps, a gate proves it | `boilerplate/nest-ai-starter/`: nest-cli, templates, `.claude/skills/`, `pnpm verify` |
-| 11  | [Capstone](11-capstone.md)                                              | ship a resource end to end with agents, with evidence                                                   | the boilerplate                                                                       |
+|     | principle                                                                          |
+| --- | ---------------------------------------------------------------------------------- |
+| P1  | [Orientation: a fast, literal, forgetful colleague](principles/p1-orientation.md)  |
+| P2  | [Context files: existence is not reach](principles/p2-context-files.md)            |
+| P3  | [Skills and specialist agents](principles/p3-skills-and-agents.md)                 |
+| P4  | [The OODA loop: measure, don't recall](principles/p4-ooda.md)                      |
+| P5  | [Verification: ask the artefact, not the exit code](principles/p5-verification.md) |
+| P6  | [Review gates and hooks](principles/p6-review-gates.md)                            |
+| P7  | [Orchestrating many agents](principles/p7-orchestration.md)                        |
+| P8  | [Shipping safely](principles/p8-shipping.md)                                       |
+| P9  | [Writing facts that survive being quoted](principles/p9-writing.md)                |
 
-Plus: [Glossary](glossary.md) · [Exercise answer notes](answers.md) · [WORKLOG](WORKLOG.md)
+Plus: [Glossary](glossary.md) · [Facilitator notes](answers.md) · [WORKLOG](WORKLOG.md)
 
-## Module skeleton (every module follows it)
+## Ground rules for the material
 
-1. **Why it matters** — one concrete failure from the estate, anonymised.
-2. **The principle** — stated in one sentence you can put on a wall.
-3. **How this repo does it** — the actual files, quoted briefly.
-4. **Anti-patterns** — what it looks like when it goes wrong, and the tell.
-5. **Exercises** — hands-on, each with a check that does not rely on an exit code.
-
-## Planned worked examples (from this repo)
-
-- **The false green catalogue:** `vitest` reporting "no failures" with `Errors 1`; `tsc` printing
-  `0 errors` from an OOM-killed process; a CI transfer job exiting 0 having shipped nothing;
-  a pipeline status `success` hiding a 77-minute wedged retry.
-- **Context-file rot:** a Quick Start that pointed at a file that did not exist; a quoted gate
-  value that went stale and nearly made an agent shut down a live loop ("quote the form, never
-  the value").
-- **Skills that lived where they were not loaded:** local overrides silently inert for months.
-- **Orchestration evolution:** one looping agent → a pickup/router + general + deep + shipper
-  pool, and the specific failure each version answered.
-- **Shipping:** a carried-over bump list that would have pointed live services at tags never
-  built; reconciling against _running_ services, not the stored stack file.
-- **Writes disguised as probes:** testing a tool's input format against a live field and
-  destroying its content.
-
-## Delivery formats
-
-Markdown in-repo first (this tree). Later, on request: slide deck, a one-page cheat sheet,
-and a facilitator guide with timings (~1 day workshop, or 10 × 45-min sessions).
+- No credentials, tokens, internal hosts or customer data; placeholders such as `<SECRET>`.
+  Every commit passes `tools/scan-sensitive.sh`.
+- Incidents from the estate appear only as anonymised lessons.
+- Every chapter ends with labs that are checked by evidence, never by "it worked".

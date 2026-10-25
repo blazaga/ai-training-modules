@@ -54,3 +54,23 @@ answer.
 
 **Worktree.** A separate working directory on its own branch (`git worktree add`), used to
 isolate one agent's batch from everyone else's.
+
+**Device access key.** A device's `AccessKeyId` (an identifier, safe to show) plus a secret
+(shown once, stored only as a hash). It authenticates MCP calls over HTTP (chapter 09).
+
+**JSON-RPC 2.0.** The message envelope MCP uses: requests (`id`, `method`, `params`),
+responses (the same `id`, `result` or `error`) and notifications (no `id`).
+
+**MCP (Model Context Protocol).** The protocol between an AI client and a server that
+exposes tools, resources and prompts.
+
+**Protocol error vs tool error.** A protocol error is the JSON-RPC `error` member: the
+request failed. A tool error is `result.isError: true`: the tool ran and refused, and the
+model can read why.
+
+**Streamable HTTP.** The current MCP HTTP transport: JSON-RPC POSTed to one endpoint,
+answered with JSON or a Server-Sent Events stream. It replaced the deprecated HTTP+SSE
+transport.
+
+**stdio transport.** The client starts the server process and exchanges one JSON-RPC
+message per line over stdin/stdout. Stdout belongs to the protocol.

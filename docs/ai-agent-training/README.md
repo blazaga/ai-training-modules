@@ -1,29 +1,29 @@
-# Building Software with AI Agents
+# Building Apps with AI Agents
 
-A course on developing and operating a production app with AI coding agents. It uses this
-repository, the DNA Forms portal, as the worked example: the app itself, the context files
-and skills that steer its agents, the multi-agent triage pool that maintains it, and the
-gates and procedures that ship it.
+Build a NestJS 12 service with AI agents, skills and templated code, then turn it into an
+authenticated **MCP server**. The service is `boilerplate/nest-ai-starter/`; each chapter
+is a commit you can check out.
 
-Start with the [outline](00-OUTLINE.md). The hands-on core is module 10, built on the
-NestJS boilerplate in [`boilerplate/nest-ai-starter/`](../../boilerplate/nest-ai-starter/README.md).
+Start with the [outline](00-OUTLINE.md).
 
-| #   | module                                                                  |
-| --- | ----------------------------------------------------------------------- |
-| 1   | [Orientation](01-orientation.md)                                        |
-| 2   | [Context files](02-context-files.md)                                    |
-| 3   | [Skills and specialist agents](03-skills-and-agents.md)                 |
-| 4   | [The OODA loop for agents](04-ooda.md)                                  |
-| 5   | [Verification discipline](05-verification.md)                           |
-| 6   | [Review gates and hooks](06-review-gates.md)                            |
-| 7   | [Orchestrating many agents](07-orchestration.md)                        |
-| 8   | [Shipping safely](08-shipping.md)                                       |
-| 9   | [Writing for humans and tools](09-writing.md)                           |
-| 10  | [Skills and templated code (NestJS)](10-skills-and-templates-nestjs.md) |
-| 11  | [Capstone](11-capstone.md)                                              |
+| ch  |                                                                            |
+| --- | -------------------------------------------------------------------------- |
+| 01  | [Starting from the CLI and templates](01-cli-and-templates.md)             |
+| 02  | [A users table with drizzle and zod](02-users-drizzle-zod.md)              |
+| 03  | [Auth: BasicAuth middleware, then Passport](03-auth-basic-to-passport.md)  |
+| 04  | [Devices: credentials, then merged with users](04-devices.md)              |
+| 05  | [The Model Context Protocol: envelopes and transports](05-mcp-concepts.md) |
+| 06  | [Your first MCP controller](06-first-mcp-controller.md)                    |
+| 07  | [Using the MCP Inspector](07-mcp-inspector.md)                             |
+| 08  | [From stdio to Streamable HTTP](08-stdio-to-streamable-http.md)            |
+| 09  | [MCP auth with device access keys](09-mcp-device-auth.md)                  |
+| 10  | [Capstone](10-capstone.md)                                                 |
 
-[Glossary](glossary.md) · [Facilitator answer notes](answers.md) · [WORKLOG](WORKLOG.md)
+Principles P1–P9 (working with agents) are in [`principles/`](principles/). Also:
+[Glossary](glossary.md) · [Facilitator notes](answers.md) · [WORKLOG](WORKLOG.md).
 
-**About the incidents:** every incident in this material is anonymised. There are no
-credentials, hosts, IPs, webhook URLs, account IDs or customer data. People are referred to by
-role.
+```bash
+cd boilerplate/nest-ai-starter
+corepack pnpm install
+corepack pnpm verify      # typecheck, lint, format, markers, migrations, unit, e2e
+```

@@ -1,4 +1,4 @@
-# Module 3 — Skills and specialist agents: package the know-how
+# Principle P3 — Skills and specialist agents: package the know-how
 
 ## Why it matters
 

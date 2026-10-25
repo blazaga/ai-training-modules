@@ -1,4 +1,4 @@
-# Module 7 — Orchestrating many agents: roles, routing, state, one committer
+# Principle P7 — Orchestrating many agents: roles, routing, state, one committer
 
 ## Why it matters
 
