@@ -1,0 +1,44 @@
+# Lab companion deck (lecturer)
+
+Put this deck on screen while the audience does the labs. It is a **draft**: the lab times
+are estimates, and nobody has run the labs with an audience yet.
+
+| file                 | use                                                                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lab-companion.pptx` | PowerPoint / Keynote / LibreOffice. Speaker notes are on each slide                                                                                                   |
+| `lab-companion.md`   | the same slides as Markdown. Present with [Marp](https://marp.app) (`marp lab-companion.md`), or just open it in any Markdown viewer. Speaker notes are HTML comments |
+| `build-lab-deck.mjs` | **the source of both files.** Edit content here, then rebuild. Never edit the two outputs by hand, or they drift apart                                                |
+
+Each chapter has four slides:
+
+1. **Divider:** chapter goal and draft lab time.
+2. **Run this:** the commands, in the terminal card.
+3. **Checkpoint:** what correct output looks like, and when the lab counts as done. The card
+   label says where the output came from: _captured_ means observed on this code while the
+   course was built, _from the code_ means literal values taken from the source, and
+   _expected_ means checking it is part of the lab.
+4. **If you're stuck:** the snags we actually hit while building the course.
+
+The commands assume `alias dev='docker compose run --rm dev'` (slide 3) and the
+`scripts/demo-device.mjs` helper in the starter, which creates a demo user and an active
+device and prints `export` lines. Keep its `grep '^export '` filter: when compose builds the
+image first, the build log goes to the same stdout.
+
+## Rebuild
+
+With Node and the packages `pptxgenjs react react-dom react-icons sharp` installed:
+
+```bash
+node build-lab-deck.mjs .     # writes lab-companion.pptx + lab-companion.md here
+```
+
+Without Node, run it in a container (no bind mount needed):
+
+```bash
+docker run --name deck -d node:24-bookworm-slim sleep infinity
+docker exec deck sh -c 'mkdir /w && cd /w && npm init -y >/dev/null && npm i pptxgenjs react react-dom react-icons sharp'
+docker cp build-lab-deck.mjs deck:/w/
+docker exec -w /w deck node build-lab-deck.mjs /w
+docker cp deck:/w/lab-companion.pptx . && docker cp deck:/w/lab-companion.md .
+docker rm -f deck
+```

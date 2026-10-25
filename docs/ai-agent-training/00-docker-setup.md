@@ -84,6 +84,20 @@ Calling the app's MCP endpoint by **service name** needs that name in
 both sides: without `app`, a call from another container with valid credentials got
 **403** `Invalid Host`; with it, 200.
 
+## Lab helper: a demo device in one command
+
+From chapter 04 on, the labs need a user with an active device. On a running stack:
+
+```bash
+eval "$(docker compose run --rm -T dev node scripts/demo-device.mjs | grep '^export ')"
+```
+
+This signs up (or reuses) `demo@example.com`, creates a fresh device, issues its
+credentials, activates it, and sets `DEVICE_ID`, `MCP_KEY_ID`, `MCP_SECRET` and
+`DEMO_BASIC` in your shell. **Keep the `grep '^export '`.** When compose builds the image
+first, the build log goes to the same stdout, and a bare `eval` would run those lines as
+shell commands (measured: their `>` created 13 stray files in our project). The secret is printed once, for your terminal only.
+
 ## The MCP Inspector in Docker
 
 The **CLI** works from the toolbox. This was measured end to end: a device created over
