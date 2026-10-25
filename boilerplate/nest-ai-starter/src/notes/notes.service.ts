@@ -3,7 +3,7 @@ import {
   NotFoundError,
   RuleViolationError,
 } from '../common/errors/domain-error.js';
-import type { Page } from '../common/persistence/repository.js';
+import type { Entity, Page } from '../common/persistence/repository.js';
 import { NOTES_REPOSITORY, type NotesRepository } from './notes.repository.js';
 import type { CreateNoteDto } from './dto/create-note.dto.js';
 import type { UpdateNoteDto } from './dto/update-note.dto.js';
@@ -20,9 +20,17 @@ export class NotesService {
     @Inject(NOTES_REPOSITORY) private readonly repo: NotesRepository,
   ) {}
 
-  create(input: CreateNoteDto): Promise<Note> {
+  async create(input: CreateNoteDto): Promise<Note> {
     // No create-time rules: R1 and R2 are payload-only and live in the schema.
-    return this.repo.create(input);
+    return this.repo.create(await this.toStored(input));
+  }
+
+  /** The create payload in its STORED shape: write-only inputs become private fields. */
+  private toStored(
+    input: CreateNoteDto,
+  ): Promise<Omit<Note, keyof Entity>> | Omit<Note, keyof Entity> {
+    // No write-only inputs.
+    return input;
   }
 
   findPage(limit: number, offset: number): Promise<Page<Note>> {
@@ -61,6 +69,7 @@ export class NotesService {
         field: 'body',
       });
     }
+    void current;
     const updated = await this.repo.update(id, patch);
     if (!updated) throw new NotFoundError('Note', id);
     return updated;

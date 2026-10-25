@@ -25,3 +25,6 @@ docker.com
 npmjs.com
 # docker-compose service name in an upstream example (not a DNS domain)
 redis
+# lockfile: npm deprecation notice URL (drizzle-kit dependency) and the @xata.io package scope (drizzle optional peer)
+hirok.io
+xata.io

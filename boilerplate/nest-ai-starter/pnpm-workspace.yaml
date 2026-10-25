@@ -3,5 +3,6 @@
 frozenLockfile: true
 allowBuilds:
   '@scarf/scarf': false
+  esbuild: false
 minimumReleaseAgeExclude:
   - '@nestjs/swagger@12.0.4'

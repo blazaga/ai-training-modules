@@ -8,3 +8,4 @@ boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/AGENTS.md|my-se
 boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/rules/test-e2e-supertest.md|Token = loginResponse|variable assignment, not a value
 boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/AGENTS.md|Token = loginResponse|same, compiled copy
 boilerplate/nest-ai-starter/src/common/zod/zod-validation.pipe.spec.ts|value-that-must-not-be-echoed|fake value used to prove validation errors never echo input
+boilerplate/nest-ai-starter/docker-compose.yml|PASSWORD: app-local-only|local-only placeholder for the learner's own docker Postgres (documented in .env.example); not a real credential

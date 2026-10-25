@@ -16,3 +16,6 @@ coverage/
 
 # Lint config. Re-included because a parent repo may ignore dot-json files.
 !.oxlintrc.json
+
+# scratch dir of scripts/check-migrations.mjs
+.drizzle-check/

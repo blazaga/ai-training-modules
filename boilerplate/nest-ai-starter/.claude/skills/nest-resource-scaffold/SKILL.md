@@ -40,7 +40,7 @@ pnpm exec nest g resource <plural> --type rest --crud
 ## 2. Apply the templates
 
 ```bash
-pnpm resource:template --name <singular> --plural <plural>
+pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]
 # e.g. --name line-item --plural line-items  (lower kebab-case, plural given explicitly)
 ```
 
@@ -55,19 +55,34 @@ pnpm resource:template --name <singular> --plural <plural>
 
 List them with `pnpm check:ai-fill`. Each marker names its topic:
 
-| marker                          | file                  | fill with                                                                |
-| ------------------------------- | --------------------- | ------------------------------------------------------------------------ |
-| `fields`                        | `<name>.schema.ts`    | one zod line per spec field, with constraints and defaults               |
-| `payload-rules`                 | `<name>.schema.ts`    | `.refine()` for rules that need **only the request** (cross-field)       |
-| `create-rules` / `update-rules` | `<plural>.service.ts` | rules that need **stored state**, each throwing a `DomainError` subclass |
-| `valid-input`                   | unit + e2e spec       | a minimal valid payload                                                  |
-| `rule-tests` / `rule-e2e`       | specs                 | for each rule, the allowed case **and** the refused case                 |
+| marker                          | file                          | fill with                                                                                     |
+| ------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
+| `fields`                        | `<name>.schema.ts`            | one zod line per spec field, with constraints and defaults (private fields included)          |
+| `private-fields`                | `<name>.schema.ts`            | `fieldName: true` for each field that is stored but never returned or client-set (hashes)     |
+| `payload-rules`                 | `<name>.schema.ts`            | `.extend()` for write-only inputs (a plain `password`), `.refine()` for payload-only rules    |
+| `queries`                       | `<plural>.repository.ts`      | extra lookups the spec lists (e.g. `findByEmail`)                                             |
+| `queries-impl`                  | memory or drizzle repository  | the same lookups, implemented for that storage                                                |
+| `columns`                       | `<plural>.table.ts` (drizzle) | one column per schema field: same TS name, snake_case SQL name                                |
+| `create-rules` / `update-rules` | `<plural>.service.ts`         | rules that need **stored state**, each throwing a `DomainError` subclass                      |
+| `create-mapping`                | `<plural>.service.ts`         | write-only inputs → private fields (hash the password). It fails to compile until done        |
+| `valid-input`                   | unit + e2e spec               | a minimal valid payload. In e2e, a **factory** returning a fresh value if any field is unique |
+| `rule-tests` / `rule-e2e`       | specs                         | for each rule, the allowed case **and** the refused case                                      |
 
 Placement rule: **payload-only → schema (400). Needs stored state → service (422/409).**
 
 Delete each marker comment once it is handled. If the spec has no rule for a marker,
 replace the marker with an explicit sentence such as `// No create-time rules.`, so the
 next reader knows it was considered and not forgotten.
+
+### Storage: `--storage drizzle`
+
+- Adds `<plural>.table.ts`, a drizzle repository, a module wired to it, a service spec that
+  runs on **real Postgres (PGlite)**, and a **drift test** (table columns == schema fields).
+- Registers the table in `src/database/schema.ts` automatically.
+- After filling `columns`, run `pnpm db:generate` and commit the **whole** `drizzle/`
+  folder. `verify` runs `check:migrations`, which fails if a table changed without a
+  migration. Tests cannot catch that by themselves, because PGlite is built from the
+  migration SQL, not from the TypeScript table.
 
 ## 4. Verify
 

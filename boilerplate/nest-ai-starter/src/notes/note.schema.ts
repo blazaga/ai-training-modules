@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { patchSchema } from '../common/schemas/patch-schema.js';
 
 /**
- * Single source of truth for a Note: validation, TypeScript types and the
- * OpenAPI schema all derive from these definitions. Change fields HERE only.
+ * Single source of truth for a Note AS STORED: validation, TypeScript types
+ * and the OpenAPI schema all derive from these definitions. Change fields HERE only.
  */
 export const NoteSchema = z.object({
   id: z.string().uuid(),
@@ -27,6 +27,16 @@ export const NoteSchema = z.object({
 });
 
 /**
+ * Stored but never RETURNED and never ACCEPTED from a client (a password or
+ * secret hash). Responses are parsed through NoteResponseSchema, which
+ * strips these. A test checks that no response carries them.
+ */
+const PRIVATE = {} as const;
+
+/** What every endpoint returns. */
+export const NoteResponseSchema = NoteSchema.omit(PRIVATE);
+
+/**
  * Client-settable fields, UNREFINED. Zod 4 throws on .omit()/.partial() of a
  * refined object, so derive from this and attach .refine() last.
  */
@@ -34,6 +44,7 @@ const NoteFields = NoteSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  ...PRIVATE,
 });
 
 /** POST body. */

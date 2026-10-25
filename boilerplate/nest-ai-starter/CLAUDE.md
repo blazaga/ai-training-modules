@@ -44,6 +44,7 @@ src/
 ├── app.module.ts               ConfigModule (validated), global ZodValidationPipe + DomainExceptionFilter
 ├── bootstrap/configure-app.ts  prefix /api, URI versioning v1, swagger; shared by main.ts AND e2e
 ├── config/env.schema.ts        the ONLY place env vars are declared and validated
+├── database/                   DatabaseModule (DB token: Postgres if DATABASE_URL, else PGlite), schema.ts, migrate.ts
 ├── common/
 │   ├── errors/domain-error.ts      NotFoundError 404 · ConflictError 409 · RuleViolationError 422
 │   ├── filters/                    DomainError → HTTP, one error body shape
@@ -60,7 +61,8 @@ specs/<plural>.md               one spec per resource; the input for step 3
 ## Adding a resource: always three steps
 
 1. `pnpm exec nest g resource <plural> --type rest --crud` (nest-cli: wiring)
-2. `pnpm resource:template --name <singular> --plural <plural>` (templates: conventions)
+2. `pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]`
+   (templates: conventions; `drizzle` adds a Postgres table + repository)
 3. Fill every `AI-FILL(...)` marker from `specs/<plural>.md`, then run `pnpm verify`.
 
 Full procedure and traps: `.claude/skills/nest-resource-scaffold/SKILL.md`. `src/notes/`
@@ -80,7 +82,14 @@ is the finished worked example, and `specs/notes.md` is its spec.
 - **Controllers:** parse, delegate, return. Use `ParseUUIDPipe` on ids. A successful
   DELETE returns 204.
 - **Data access:** inject the repository **token** (`<PLURAL>_REPOSITORY`), never a class.
-  Storage is swapped in the module only.
+  Storage is swapped in the module only. Postgres tables are drizzle (`*.table.ts`),
+  registered in `src/database/schema.ts`; after any table change, `pnpm db:generate` and
+  commit all of `drizzle/`. Verify a migration by reading `drizzle.__drizzle_migrations`,
+  never drizzle's log.
+- **Private fields** (password/secret hashes) live in the schema's `PRIVATE` set. Responses
+  go through `<Name>ResponseSchema`, so they never leave the API.
+- **Passwords:** `src/common/security/password.ts` (scrypt, salted, timing-safe). Never
+  log, return or store a plain password.
 - **Config:** read via `ConfigService<Env, true>`, never `process.env`. **Never log config
   values.**
 - **Imports:** relative within `src/`. If you add path aliases, use them everywhere.

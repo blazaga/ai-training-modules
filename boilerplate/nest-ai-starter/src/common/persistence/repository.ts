@@ -35,7 +35,7 @@ export interface Repository<T extends Entity> {
  * tests and e2e. Data is lost on restart, so swap it before production.
  */
 export class InMemoryRepository<T extends Entity> implements Repository<T> {
-  private readonly rows = new Map<string, T>();
+  protected readonly rows = new Map<string, T>();
 
   constructor(private readonly now: () => Date = () => new Date()) {}
 

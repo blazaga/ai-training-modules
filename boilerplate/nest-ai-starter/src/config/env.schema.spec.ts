@@ -10,14 +10,30 @@ describe('validateEnv', () => {
   });
 
   it('turns docs off by default in production', () => {
-    expect(validateEnv({ NODE_ENV: 'production' }).SWAGGER_ENABLED).toBe(false);
+    const prod = { NODE_ENV: 'production', DATABASE_URL: 'postgres://db/app' };
+    expect(validateEnv(prod).SWAGGER_ENABLED).toBe(false);
   });
 
   it('an explicit SWAGGER_ENABLED wins over the production default', () => {
     expect(
-      validateEnv({ NODE_ENV: 'production', SWAGGER_ENABLED: 'true' })
-        .SWAGGER_ENABLED,
+      validateEnv({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgres://db/app',
+        SWAGGER_ENABLED: 'true',
+      }).SWAGGER_ENABLED,
     ).toBe(true);
+  });
+
+  it('production refuses to start without DATABASE_URL', () => {
+    expect(() => validateEnv({ NODE_ENV: 'production' })).toThrow(
+      /DATABASE_URL: is required when NODE_ENV=production/,
+    );
+  });
+
+  it('a malformed DATABASE_URL is rejected without echoing it', () => {
+    const url = 'mysql://user:hunter2-not-real@host/db';
+    expect(() => validateEnv({ DATABASE_URL: url })).toThrow(/DATABASE_URL/);
+    expect(() => validateEnv({ DATABASE_URL: url })).not.toThrow(/hunter2/);
   });
 
   it('names the bad variable without echoing its value', () => {

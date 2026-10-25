@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError } from '../common/errors/domain-error.js';
-import type { Page } from '../common/persistence/repository.js';
+import type { Entity, Page } from '../common/persistence/repository.js';
 import {
   __NAMES___REPOSITORY,
   type __Names__Repository,
@@ -20,11 +20,21 @@ export class __Names__Service {
     @Inject(__NAMES___REPOSITORY) private readonly repo: __Names__Repository,
   ) {}
 
-  create(input: Create__Name__Dto): Promise<__Name__> {
+  async create(input: Create__Name__Dto): Promise<__Name__> {
     // AI-FILL(create-rules): enforce any create-time business rule from the spec
     // (throw ConflictError / RuleViolationError). If the spec has none, delete this
     // comment and write "No create-time rules." in its place.
-    return this.repo.create(input);
+    return this.repo.create(await this.toStored(input));
+  }
+
+  /** The create payload in its STORED shape: write-only inputs become private fields. */
+  private toStored(
+    input: Create__Name__Dto,
+  ): Promise<Omit<__Name__, keyof Entity>> | Omit<__Name__, keyof Entity> {
+    // AI-FILL(create-mapping): map write-only inputs to private fields (e.g. hash
+    // `password` into `passwordHash`). If the spec has none, replace this comment
+    // with "No write-only inputs." and keep the line below.
+    return input;
   }
 
   findPage(limit: number, offset: number): Promise<Page<__Name__>> {

@@ -15,6 +15,8 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
+# Migrations: `node dist/database/migrate.js` (pnpm db:migrate) applies these.
+COPY --from=build --chown=node:node /app/drizzle ./drizzle
 COPY --from=build --chown=node:node /app/package.json ./
 USER node
 EXPOSE 3000

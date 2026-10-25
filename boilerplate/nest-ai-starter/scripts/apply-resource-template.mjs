@@ -2,7 +2,9 @@
 // Step 2 of 3 in adding a resource (see .claude/skills/nest-resource-scaffold):
 //   1. nest g resource <plural>          structure + AppModule wiring (nest-cli)
 //   2. node scripts/apply-resource-template.mjs --name <singular> --plural <plural>
-//                                        house conventions (this script, deterministic)
+//        [--storage memory|drizzle]      house conventions (this script, deterministic)
+//      memory (default): in-process storage. drizzle: Postgres table + repository,
+//      registered in src/database/schema.ts; then run `pnpm db:generate`.
 //   3. an agent fills every AI-FILL marker, then `pnpm verify` must pass
 //
 // Deterministic on purpose: the same input always yields the same files, so the
@@ -17,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const templateRoot = join(root, 'templates', 'resource');
+const drizzleRoot = join(root, 'templates', 'resource-drizzle');
 
 function fail(msg) {
   console.error(`apply-resource-template: ${msg}`);
@@ -37,12 +40,16 @@ if (typeof name !== 'string' || typeof plural !== 'string') {
 }
 if (!KEBAB.test(name) || !KEBAB.test(plural)) fail('names must be lower kebab-case, e.g. line-item');
 if (name === plural) fail('--name and --plural must differ');
+const storage = args.storage ?? 'memory';
+if (storage !== 'memory' && storage !== 'drizzle') fail('--storage must be memory or drizzle');
 
 const pascal = (s) => s.split('-').map((p) => p[0].toUpperCase() + p.slice(1)).join('');
 const tokens = {
   __Names__: pascal(plural),
   __Name__: pascal(name),
   __NAMES__: plural.toUpperCase().replace(/-/g, '_'),
+  __namesCamel__: plural.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase()),
+  __names_sql__: plural.replace(/-/g, '_'),
   __names__: plural,
   __name__: name,
 };
@@ -66,10 +73,23 @@ function walk(dir) {
   });
 }
 
+// Template set: the base, with the drizzle overlay replacing/adding files when
+// --storage drizzle. The in-memory repository is not generated for drizzle.
+const sources = new Map();
+for (const tpl of walk(templateRoot).filter((p) => p.endsWith('.tpl'))) {
+  sources.set(relative(templateRoot, tpl), tpl);
+}
+if (storage === 'drizzle') {
+  sources.delete(join('src', '__names__', '__names__.memory-repository.ts.tpl'));
+  for (const tpl of walk(drizzleRoot).filter((p) => p.endsWith('.tpl'))) {
+    sources.set(relative(drizzleRoot, tpl), tpl);
+  }
+}
+
 const written = [];
 let markers = 0;
-for (const tpl of walk(templateRoot).filter((p) => p.endsWith('.tpl'))) {
-  const target = join(root, render(relative(templateRoot, tpl)).replace(/\.tpl$/, ''));
+for (const [rel, tpl] of sources) {
+  const target = join(root, render(rel).replace(/\.tpl$/, ''));
   const body = render(readFileSync(tpl, 'utf8'));
   if (/__[A-Za-z]+__/.test(body)) fail(`unrendered placeholder left in ${relative(root, target)}`);
   mkdirSync(dirname(target), { recursive: true });
@@ -111,9 +131,26 @@ if (pkg.dependencies?.[MAPPED] && !importsMapped) {
   droppedDep = true;
 }
 
-console.log(`apply-resource-template: ${tokens.__Names__} (${name} / ${plural})`);
+// drizzle-kit only sees tables exported from src/database/schema.ts.
+let registered = false;
+if (storage === 'drizzle') {
+  const schemaIndex = join(root, 'src', 'database', 'schema.ts');
+  const line = `export * from '../${plural}/${plural}.table.js';`;
+  const current = readFileSync(schemaIndex, 'utf8');
+  if (!current.includes(line)) {
+    writeFileSync(schemaIndex, current.replace(/\nexport \{\};\n?$/, '\n') + line + '\n');
+    registered = true;
+  }
+}
+
+console.log(`apply-resource-template: ${tokens.__Names__} (${name} / ${plural}, storage: ${storage})`);
 for (const f of written) console.log(`  wrote   ${f}`);
 for (const f of removed) console.log(`  removed ${f}`);
 if (droppedDep) console.log(`  package.json: removed unused "${MAPPED}" added by nest g`);
+if (registered) console.log(`  src/database/schema.ts: registered ${plural} table`);
 console.log(`files written: ${written.length}; AI-FILL markers to complete: ${markers}`);
-console.log('next: fill every AI-FILL marker, then run `pnpm verify`');
+console.log(
+  storage === 'drizzle'
+    ? 'next: fill every AI-FILL marker, run `pnpm db:generate`, then `pnpm verify`'
+    : 'next: fill every AI-FILL marker, then run `pnpm verify`',
+);

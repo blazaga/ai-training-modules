@@ -1,7 +1,6 @@
 import { NotFoundError } from '../common/errors/domain-error.js';
-import { InMemoryRepository } from '../common/persistence/repository.js';
+import { InMemory__Names__Repository } from './__names__.memory-repository.js';
 import { __Names__Service } from './__names__.service.js';
-import type { __Name__ } from './entities/__name__.entity.js';
 
 /** Unit tests: plain constructor injection, no Nest container needed. */
 describe('__Names__Service', () => {
@@ -11,7 +10,7 @@ describe('__Names__Service', () => {
   const valid = {} as never;
 
   beforeEach(() => {
-    service = new __Names__Service(new InMemoryRepository<__Name__>());
+    service = new __Names__Service(new InMemory__Names__Repository());
   });
 
   it('creates and reads back a __name__', async () => {

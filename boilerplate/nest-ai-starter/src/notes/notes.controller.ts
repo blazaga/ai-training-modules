@@ -14,10 +14,15 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import type { Page } from '../common/persistence/repository.js';
 import { PageQueryDto } from '../common/schemas/page-query.schema.js';
+import { NoteResponseSchema } from './note.schema.js';
 import { NotesService } from './notes.service.js';
 import { CreateNoteDto } from './dto/create-note.dto.js';
 import { UpdateNoteDto } from './dto/update-note.dto.js';
-import type { Note } from './entities/note.entity.js';
+import type { Note, NoteResponse } from './entities/note.entity.js';
+
+/** Strip private fields. Every value this controller returns passes through here. */
+const toResponse = (entity: Note): NoteResponse =>
+  NoteResponseSchema.parse(entity);
 
 /**
  * HTTP only: parse, delegate, return. No business logic here (it goes in the
@@ -30,26 +35,27 @@ export class NotesController {
   constructor(private readonly service: NotesService) {}
 
   @Post()
-  create(@Body() body: CreateNoteDto): Promise<Note> {
-    return this.service.create(body);
+  async create(@Body() body: CreateNoteDto): Promise<NoteResponse> {
+    return toResponse(await this.service.create(body));
   }
 
   @Get()
-  findPage(@Query() query: PageQueryDto): Promise<Page<Note>> {
-    return this.service.findPage(query.limit, query.offset);
+  async findPage(@Query() query: PageQueryDto): Promise<Page<NoteResponse>> {
+    const page = await this.service.findPage(query.limit, query.offset);
+    return { ...page, items: page.items.map(toResponse) };
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Note> {
-    return this.service.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<NoteResponse> {
+    return toResponse(await this.service.findOne(id));
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateNoteDto,
-  ): Promise<Note> {
-    return this.service.update(id, body);
+  ): Promise<NoteResponse> {
+    return toResponse(await this.service.update(id, body));
   }
 
   @Delete(':id')

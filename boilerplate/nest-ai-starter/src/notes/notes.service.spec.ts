@@ -2,9 +2,8 @@ import {
   NotFoundError,
   RuleViolationError,
 } from '../common/errors/domain-error.js';
-import { InMemoryRepository } from '../common/persistence/repository.js';
+import { InMemoryNotesRepository } from './notes.memory-repository.js';
 import { NotesService } from './notes.service.js';
-import type { Note } from './entities/note.entity.js';
 
 /** Unit tests: plain constructor injection, no Nest container needed. */
 describe('NotesService', () => {
@@ -20,7 +19,7 @@ describe('NotesService', () => {
   const publish = async () => service.create({ ...valid, status: 'published' });
 
   beforeEach(() => {
-    service = new NotesService(new InMemoryRepository<Note>());
+    service = new NotesService(new InMemoryNotesRepository());
   });
 
   it('creates and reads back a note', async () => {

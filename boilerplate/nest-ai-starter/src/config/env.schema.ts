@@ -16,6 +16,21 @@ export const envSchema = z
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     /** Serve OpenAPI docs at /api/docs. Unset: on, except in production. */
     SWAGGER_ENABLED: z.enum(['true', 'false']).optional(),
+    /**
+     * secret: may embed a password. Postgres connection URL. Unset → in-memory
+     * PGlite (dev/test only).
+     */
+    DATABASE_URL: z
+      .string()
+      .regex(
+        /^postgres(ql)?:\/\//,
+        'must start with postgres:// or postgresql://',
+      )
+      .optional(),
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || env.DATABASE_URL, {
+    message: 'is required when NODE_ENV=production',
+    path: ['DATABASE_URL'],
   })
   .transform(({ SWAGGER_ENABLED, ...env }) => ({
     ...env,

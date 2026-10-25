@@ -14,10 +14,18 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import type { Page } from '../common/persistence/repository.js';
 import { PageQueryDto } from '../common/schemas/page-query.schema.js';
+import { __Name__ResponseSchema } from './__name__.schema.js';
 import { __Names__Service } from './__names__.service.js';
 import { Create__Name__Dto } from './dto/create-__name__.dto.js';
 import { Update__Name__Dto } from './dto/update-__name__.dto.js';
-import type { __Name__ } from './entities/__name__.entity.js';
+import type {
+  __Name__,
+  __Name__Response,
+} from './entities/__name__.entity.js';
+
+/** Strip private fields. Every value this controller returns passes through here. */
+const toResponse = (entity: __Name__): __Name__Response =>
+  __Name__ResponseSchema.parse(entity);
 
 /**
  * HTTP only: parse, delegate, return. No business logic here (it goes in the
@@ -30,26 +38,31 @@ export class __Names__Controller {
   constructor(private readonly service: __Names__Service) {}
 
   @Post()
-  create(@Body() body: Create__Name__Dto): Promise<__Name__> {
-    return this.service.create(body);
+  async create(@Body() body: Create__Name__Dto): Promise<__Name__Response> {
+    return toResponse(await this.service.create(body));
   }
 
   @Get()
-  findPage(@Query() query: PageQueryDto): Promise<Page<__Name__>> {
-    return this.service.findPage(query.limit, query.offset);
+  async findPage(
+    @Query() query: PageQueryDto,
+  ): Promise<Page<__Name__Response>> {
+    const page = await this.service.findPage(query.limit, query.offset);
+    return { ...page, items: page.items.map(toResponse) };
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<__Name__> {
-    return this.service.findOne(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<__Name__Response> {
+    return toResponse(await this.service.findOne(id));
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: Update__Name__Dto,
-  ): Promise<__Name__> {
-    return this.service.update(id, body);
+  ): Promise<__Name__Response> {
+    return toResponse(await this.service.update(id, body));
   }
 
   @Delete(':id')
