@@ -28,3 +28,5 @@ redis
 # lockfile: npm deprecation notice URL (drizzle-kit dependency) and the @xata.io package scope (drizzle optional peer)
 hirok.io
 xata.io
+# docker compose service names (DNS names only inside the compose network)
+app

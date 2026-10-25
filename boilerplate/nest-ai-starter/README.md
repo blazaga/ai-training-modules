@@ -12,24 +12,27 @@ The idea: split every piece of work by who does it best.
 | domain      | an AI agent, guided by `.claude/skills/`                      | fields, business rules and their tests, only inside `AI-FILL` markers   |
 | proof       | `pnpm verify`                                                 | typecheck, lint, zero markers left, unit + e2e tests                    |
 
-## Run it
+## Run it (Docker only: no local Node needed)
 
 ```bash
-corepack pnpm install
-cp .env.example .env
-corepack pnpm start:dev
-curl localhost:3000/api/health          # {"status":"ok"}
-open http://localhost:3000/api/docs     # OpenAPI, generated from the zod schemas
-corepack pnpm verify
+docker compose up -d --build                # Postgres + Redis → migrate → app
+curl localhost:3000/api/health              # {"status":"ok"}
+open http://localhost:3000/api/docs         # OpenAPI, generated from the zod schemas
+docker compose run --rm dev pnpm verify     # the full gate, in the toolbox container
 ```
+
+Services: `db` (Postgres 17), `redis` (Redis 8, infrastructure for later chapters; not
+used by the app yet), `migrate` (one-shot), `app`, and `dev` (the toolbox, profile `dev`).
+See the course's Chapter 00 for details.
 
 ## Add a resource
 
 ```bash
-corepack pnpm exec nest g resource orders --type rest --crud    # 1. nest-cli
-corepack pnpm resource:template --name order --plural orders  # 2. templates
+T="docker compose run --rm dev"
+$T pnpm exec nest g resource orders --type rest --crud     # 1. nest-cli
+$T pnpm resource:template --name order --plural orders     # 2. templates
 # 3. ask your agent: "fill the AI-FILL markers for orders from specs/orders.md"
-corepack pnpm verify                                          # 4. proof
+$T pnpm verify                                             # 4. proof
 ```
 
 See `CLAUDE.md` for conventions and `.claude/skills/nest-resource-scaffold/SKILL.md` for

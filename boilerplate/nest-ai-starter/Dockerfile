@@ -1,13 +1,26 @@
 # syntax=docker/dockerfile:1
-# Multi-stage: build with dev dependencies, run with production dependencies only.
+# Stages:
+#   base     dependencies installed (all of them), as the unprivileged `node` user
+#   dev      base + source: the toolbox for `docker compose run --rm dev pnpm …`
+#   build    base + source, compiled, pruned to production dependencies
+#   runtime  the production image (the default target: `docker build .`)
 
-FROM node:24-bookworm-slim AS build
+FROM node:24-bookworm-slim AS base
+# corepack provides the pnpm version pinned in package.json (packageManager).
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && mkdir -p /app && chown node:node /app
 WORKDIR /app
-RUN corepack enable
+USER node
 # pnpm-workspace.yaml carries frozenLockfile, allowBuilds and the release-age policy (pnpm 12).
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
-COPY . .
+
+FROM base AS dev
+COPY --chown=node:node . .
+CMD ["pnpm", "verify"]
+
+FROM base AS build
+COPY --chown=node:node . .
 RUN pnpm build && pnpm prune --prod
 
 FROM node:24-bookworm-slim AS runtime
@@ -15,7 +28,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
-# Migrations: `node dist/database/migrate.js` (pnpm db:migrate) applies these.
+# Migrations: `node dist/database/migrate.js` (the compose `migrate` service) applies these.
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
 COPY --from=build --chown=node:node /app/package.json ./
 USER node

@@ -6,12 +6,18 @@ written spec. Every change ends with `pnpm verify`.
 
 ## Quick start
 
+Everything runs in Docker; no local Node is needed (`docker-compose.yml`):
+
 ```bash
-corepack pnpm install      # or `pnpm install` if pnpm is on PATH
-cp .env.example .env
-corepack pnpm start:dev    # http://localhost:3000/api/health, docs at /api/docs
-corepack pnpm verify       # typecheck, lint, AI-FILL check, unit, e2e
+docker compose up -d --build                 # db + redis → migrate (one-shot) → app on :3000
+docker compose run --rm dev pnpm verify      # the toolbox: ANY pnpm/nest command runs here
+docker compose down                          # add -v to delete the data volumes
 ```
+
+`pnpm X` anywhere in this file = `docker compose run --rm dev pnpm X`. Inside the compose
+network the app is `http://app:3000`, Postgres `db:5432`, Redis `redis:6379`. Redis is
+infrastructure only: the app does not connect to it yet. With Node installed you can
+also run `corepack pnpm install && corepack pnpm start:dev` (in-memory PGlite).
 
 `pnpm-workspace.yaml` sets `frozenLockfile: true` (pnpm 12 ignores that key in `.npmrc`). To
 change dependencies on purpose, run `pnpm install --no-frozen-lockfile` and commit the

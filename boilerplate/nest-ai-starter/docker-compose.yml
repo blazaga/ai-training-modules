@@ -1,4 +1,14 @@
-# Local Postgres for following the course. Credentials are for this machine only.
+# Everything for the course runs in Docker. Credentials here are for YOUR machine only.
+#
+#   docker compose up -d --build            db + redis → migrate (one-shot) → app on :3000
+#   docker compose run --rm dev pnpm verify the toolbox: any pnpm / nest command, no local Node
+#   docker compose down                     stop (data kept in volumes); add -v to wipe it
+#
+# Service names are DNS names on the compose network: the app reaches Postgres at `db`,
+# a tool container reaches the app at `app` (hence MCP_ALLOWED_HOSTS below, chapter 08).
+
+x-database-url: &database-url postgres://app:app-local-only@db:5432/app
+
 services:
   db:
     image: postgres:17-alpine
@@ -8,8 +18,74 @@ services:
       POSTGRES_DB: app
     ports:
       - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U app -d app']
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 20
+
+  # Supporting infra for later chapters and labs (caching, rate limits, queues).
+  # The app does NOT connect to it yet. From another container: redis://redis:6379
+  redis:
+    image: redis:8-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # One-shot: apply drizzle/ migrations, print the ledger, exit 0. `app` waits for it.
+  migrate:
+    build:
+      context: .
+      target: runtime
+    command: ['node', 'dist/database/migrate.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: *database-url
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
+  app:
+    build:
+      context: .
+      target: runtime
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: *database-url
+      SWAGGER_ENABLED: 'true' # docs at :3000/api/docs while learning
+      MCP_ALLOWED_HOSTS: localhost,app # `app` = callers inside the compose network
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # The toolbox. Not started by `up` (profile). Your source is mounted, so files that
+  # nest-cli or the template script write appear in your project.
+  dev:
+    profiles: ['dev']
+    build:
+      context: .
+      target: dev
+    volumes:
+      - .:/app
+      - dev_node_modules:/app/node_modules # the image's deps, not your host's
+    # From here the running app is http://app:3000 (e.g. the Inspector CLI, chapter 09).
+
+volumes:
+  pgdata:
+  redisdata:
+  dev_node_modules:

@@ -12,12 +12,13 @@ and build `users` (UserController + UserService + unit tests) through the pipeli
   driver, never the URL.
 - Tests use PGlite too, so `pnpm verify` needs no Docker, while the schema and migrations
   are the same ones production runs.
-- `docker compose up -d db` gives you a local Postgres when you want one (its password is
-  for your machine only).
+- In Docker (chapter 00), `docker compose up -d` runs Postgres and a one-shot `migrate`
+  service before the app starts, so the database is always migrated.
 
 ```bash
 pnpm db:generate            # drizzle-kit: diff tables vs drizzle/, write a migration
 pnpm build && pnpm db:migrate   # apply to DATABASE_URL, then PRINT THE LEDGER
+docker compose logs migrate     # the same, as the compose `migrate` service ran it
 ```
 
 Verify a migration by reading the **ledger** (`drizzle.__drizzle_migrations`), never

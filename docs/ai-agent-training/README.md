@@ -8,6 +8,7 @@ Start with the [outline](00-OUTLINE.md).
 
 | ch  |                                                                            |
 | --- | -------------------------------------------------------------------------- |
+| 00  | [Everything in Docker](00-docker-setup.md)                                 |
 | 01  | [Starting from the CLI and templates](01-cli-and-templates.md)             |
 | 02  | [A users table with drizzle and zod](02-users-drizzle-zod.md)              |
 | 03  | [Auth: BasicAuth middleware, then Passport](03-auth-basic-to-passport.md)  |
@@ -24,6 +25,6 @@ Principles P1–P9 (working with agents) are in [`principles/`](principles/). Al
 
 ```bash
 cd boilerplate/nest-ai-starter
-corepack pnpm install
-corepack pnpm verify      # typecheck, lint, format, markers, migrations, unit, e2e
+docker compose up -d --build               # Postgres + Redis → migrate → app on :3000
+docker compose run --rm dev pnpm verify    # typecheck, lint, format, markers, migrations, unit, e2e
 ```

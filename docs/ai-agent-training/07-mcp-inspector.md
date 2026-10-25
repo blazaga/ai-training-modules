@@ -5,6 +5,8 @@ scripts. **Commit:** `course(ch07)`. The version is pinned to `2.12.0`, the vers
 captures came from.
 
 ```bash
+# In Docker (chapter 00), prefix with `docker compose run --rm dev`; the web UI is not
+# reachable from your browser that way, so use the CLI.
 pnpm build
 pnpm mcp:inspect        # web UI   (npx @modelcontextprotocol/inspector@2.12.0 node dist/mcp-stdio.js)
 pnpm mcp:inspect:cli --method tools/list
