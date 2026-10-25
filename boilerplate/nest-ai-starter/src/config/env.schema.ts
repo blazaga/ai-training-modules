@@ -20,6 +20,21 @@ export const envSchema = z
      * secret: may embed a password. Postgres connection URL. Unset → in-memory
      * PGlite (dev/test only).
      */
+    /**
+     * ch08: Host names the MCP HTTP endpoint accepts (comma-separated). Unset →
+     * 'localhost' only (DNS-rebinding protection). Set it when deployed.
+     */
+    MCP_ALLOWED_HOSTS: z
+      .string()
+      .optional()
+      .transform((v) =>
+        v
+          ? v
+              .split(',')
+              .map((h) => h.trim())
+              .filter(Boolean)
+          : ('localhost' as const),
+      ),
     DATABASE_URL: z
       .string()
       .regex(

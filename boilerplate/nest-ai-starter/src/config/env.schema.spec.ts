@@ -6,7 +6,15 @@ describe('validateEnv', () => {
       NODE_ENV: 'development',
       PORT: 3000,
       SWAGGER_ENABLED: true,
+      MCP_ALLOWED_HOSTS: 'localhost',
     });
+  });
+
+  it('MCP_ALLOWED_HOSTS: a comma-separated list, trimmed', () => {
+    expect(
+      validateEnv({ MCP_ALLOWED_HOSTS: 'localhost, mcp.example.com ,' })
+        .MCP_ALLOWED_HOSTS,
+    ).toEqual(['localhost', 'mcp.example.com']);
   });
 
   it('turns docs off by default in production', () => {

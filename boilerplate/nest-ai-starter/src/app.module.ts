@@ -6,6 +6,7 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter.
 import { validateEnv } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
+import { McpToolsModule } from './mcp/mcp-tools.module.js';
 import { NotesModule } from './notes/notes.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -16,6 +17,7 @@ import { DevicesModule } from './devices/devices.module.js';
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     DatabaseModule,
     HealthModule,
+    McpToolsModule, // ch08: MCP tool controllers, served at /mcp
     // Feature modules. `nest g resource <name>` appends new ones here.
     NotesModule,
     UsersModule,
