@@ -248,7 +248,7 @@ db:migrate: ledger rows: 4
 **Done when**
 
 - [ ] check:migrations failed BEFORE generating
-- [ ] you read the SQL in drizzle/0003\_\*
+- [ ] you read the SQL in `drizzle/0003_*`
 - [ ] ledger rows: 4; phone appears in responses
 
 ---
