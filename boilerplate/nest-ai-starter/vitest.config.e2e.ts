@@ -6,5 +6,7 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
+    // Builds dist/ once: the MCP stdio test spawns the built server.
+    globalSetup: ['./test/global-setup.ts'],
   },
 });
