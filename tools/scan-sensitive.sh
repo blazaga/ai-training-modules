@@ -63,14 +63,17 @@ pattern() { # label, ERE, [grep flags]
 }
 pattern account-id   '[0-9]{6}:[0-9a-f-]{20,}'
 pattern token-shape  '(glpat-[A-Za-z0-9_-]{10,}|ghp_[A-Za-z0-9]{20,}|\bsk-[a-zA-Z0-9]{16,}|xox[abp]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{12}|eyJ[a-zA-Z0-9_-]{10,}\.)'
-# key-assign uses PCRE: the value must CONTAIN A DIGIT, so code like
-# `secret = generateSecret()` is not flagged while real keys/tokens are.
+# key-assign (PCRE): a key-like name assigned a 12+ char value, quoted or not (the
+# original rule, restored). The only exclusion is a FUNCTION CALL, e.g.
+# `secret = generateSecret()`. The value is matched POSSESSIVELY ({12,}+) so the
+# engine cannot backtrack to a 12-char prefix such as `generateSecr` and slip past
+# the `(` check.
 pcre() { # label, PCRE
   local hits
   hits=$(grep -nHoiP "$2" "${FILES[@]}" || true)
   report "$1" "$hits"
 }
-pcre key-assign "(password|passwd|secret|token|api[_-]?key)[a-z_]*\\s*[:=]\\s*[\"'\\x60]?(?=[A-Za-z0-9+/_-]*\\d)[A-Za-z0-9+/_-]{12,}"
+pcre key-assign "(password|passwd|secret|token|api[_-]?key)[a-z_]*\\s*[:=]\\s*[\"'\\x60]?[A-Za-z0-9+/_-]{12,}+(?!\\s*\\()"
 pattern webhook      'webhook[^ ]*(/hooks?/|/webhook/)[A-Za-z0-9]' -i
 pattern names        "\\b($(grep -v '^#' "$DENY" | sed '/^$/d' | paste -sd'|'))\\b" -i
 pattern ticket-key   '\b(AIF|DC|SK)[-0-9]{4,}'
