@@ -19,3 +19,6 @@ coverage/
 
 # scratch dir of scripts/check-migrations.mjs
 .drizzle-check/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
