@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Pre-commit sanitisation check for the training material AND the boilerplate.
+# REQUIRES BASH (arrays, mapfile, $'...'): run it as `bash tools/scan-sensitive.sh` or
+# `./tools/scan-sensitive.sh`, never `sh tools/scan-sensitive.sh`. Under sh it stops with a
+# syntax error and exits 2 ("could not run"), so it fails closed rather than passing.
 # Run before every commit and record the printed counts in the WORKLOG.
 #
 # Exit 0 = clean · 1 = a finding (each listed with file:line) · 2 = the scan could not
