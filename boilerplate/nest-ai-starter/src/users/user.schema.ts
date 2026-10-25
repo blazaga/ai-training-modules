@@ -25,6 +25,12 @@ const PRIVATE = {
   passwordHash: true,
 } as const;
 
+/**
+ * Returned to clients but never ACCEPTED from them: the server sets these, usually
+ * through actions (e.g. `status` only changes via POST /:id/activate).
+ */
+const SERVER_OWNED = {} as const;
+
 /** What every endpoint returns. */
 export const UserResponseSchema = UserSchema.omit(PRIVATE);
 
@@ -37,6 +43,7 @@ const UserFields = UserSchema.omit({
   createdAt: true,
   updatedAt: true,
   ...PRIVATE,
+  ...SERVER_OWNED,
 });
 
 /** POST body. */

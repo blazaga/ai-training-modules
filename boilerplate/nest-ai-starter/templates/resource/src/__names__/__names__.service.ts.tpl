@@ -32,8 +32,9 @@ export class __Names__Service {
     input: Create__Name__Dto,
   ): Promise<Omit<__Name__, keyof Entity>> | Omit<__Name__, keyof Entity> {
     // AI-FILL(create-mapping): map write-only inputs to private fields (e.g. hash
-    // `password` into `passwordHash`). If the spec has none, replace this comment
-    // with "No write-only inputs." and keep the line below.
+    // `password` into `passwordHash`) and give server-owned fields their initial
+    // values. If the spec has neither, replace this comment with "No write-only
+    // inputs." and keep the line below.
     return input;
   }
 
@@ -59,6 +60,10 @@ export class __Names__Service {
   }
 
   async remove(id: string): Promise<void> {
+    const current = await this.findOne(id);
+    // AI-FILL(remove-rules): enforce rules on WHETHER this may be deleted (e.g. only
+    // drafts). If none, delete this comment and write "No remove-time rules.".
+    void current;
     const deleted = await this.repo.delete(id);
     if (!deleted) throw new NotFoundError('__Name__', id);
   }

@@ -24,6 +24,15 @@ const PRIVATE = {
   // If the spec has none, delete this comment and leave the object empty.
 } as const;
 
+/**
+ * Returned to clients but never ACCEPTED from them: the server sets these, usually
+ * through actions (e.g. `status` only changes via POST /:id/activate).
+ */
+const SERVER_OWNED = {
+  // AI-FILL(server-fields): one `fieldName: true` per server-owned field from the
+  // spec. If the spec has none, delete this comment and leave the object empty.
+} as const;
+
 /** What every endpoint returns. */
 export const __Name__ResponseSchema = __Name__Schema.omit(PRIVATE);
 
@@ -36,6 +45,7 @@ const __Name__Fields = __Name__Schema.omit({
   createdAt: true,
   updatedAt: true,
   ...PRIVATE,
+  ...SERVER_OWNED,
 });
 
 /** POST body. */

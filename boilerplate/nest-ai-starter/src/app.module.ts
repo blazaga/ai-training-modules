@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module.js';
 import { NotesModule } from './notes/notes.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { DevicesModule } from './devices/devices.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthModule } from './auth/auth.module.js';
     NotesModule,
     UsersModule,
     AuthModule,
+    DevicesModule,
   ],
   providers: [
     // Every @Body/@Query/@Param typed with a createZodDto class is validated.

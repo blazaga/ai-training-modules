@@ -1,0 +1,160 @@
+import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import type { App } from 'supertest/types.js';
+import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/bootstrap/configure-app.js';
+import { DeviceResponseSchema } from '../src/devices/device.schema.js';
+
+/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
+describe('devices (e2e)', () => {
+  let app: INestApplication<App>;
+  const base = '/api/v1/devices';
+  const missing = '00000000-0000-4000-8000-000000000000';
+
+  const valid = () => ({ name: 'Sensor' });
+
+  /** Headers that authenticate a request (set by e2e-setup). */
+  let authHeaders: Record<string, string> = {};
+
+  /** Every request in this file is authenticated unless it uses `request` directly. */
+  const http = {
+    get: (url: string) =>
+      request(app.getHttpServer()).get(url).set(authHeaders),
+    post: (url: string) =>
+      request(app.getHttpServer()).post(url).set(authHeaders),
+    patch: (url: string) =>
+      request(app.getHttpServer()).patch(url).set(authHeaders),
+    delete: (url: string) =>
+      request(app.getHttpServer()).delete(url).set(authHeaders),
+  };
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    // Routes are authenticated by default: sign up (public), then use Basic auth.
+    const owner = {
+      email: 'e2e-owner@example.com',
+      name: 'E2E Owner',
+      password: 'e2e owner passphrase',
+    };
+    await request(app.getHttpServer())
+      .post('/api/v1/users')
+      .send(owner)
+      .expect(201);
+    authHeaders = {
+      Authorization: `Basic ${Buffer.from(`${owner.email}:${owner.password}`).toString('base64')}`,
+    };
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('rejects requests without credentials (401)', () =>
+    request(app.getHttpServer()).get(base).expect(401));
+
+  it('POST creates (201) and GET reads it back (200)', async () => {
+    const created = await http.post(base).send(valid()).expect(201);
+    await http
+      .get(`${base}/${created.body.id}`)
+      .expect(200)
+      .expect((res) => expect(res.body).toEqual(created.body));
+  });
+
+  it('responses carry only public fields (no private field ever leaves)', async () => {
+    const publicKeys = new Set(Object.keys(DeviceResponseSchema.shape));
+    const leaked = (body: object) =>
+      Object.keys(body).filter((key) => !publicKeys.has(key));
+    const created = await http.post(base).send(valid()).expect(201);
+    expect(leaked(created.body)).toEqual([]);
+    const list = await http.get(base).expect(200);
+    expect(list.body.items.length).toBeGreaterThan(0);
+    for (const item of list.body.items) expect(leaked(item)).toEqual([]);
+  });
+
+  it('POST stores the PARSED body: unknown keys are stripped', async () => {
+    // Guards the validation pipe's contract over HTTP. A pipe that validated but
+    // passed the raw input through would store this key; unit tests cannot see it.
+    const created = await http
+      .post(base)
+      .send({ ...valid(), notAField: 'x' })
+      .expect(201);
+    expect(created.body).not.toHaveProperty('notAField');
+  });
+
+  it('POST rejects an invalid body (400)', () =>
+    http.post(base).send({ unexpected: 'shape' }).expect(400));
+
+  it('GET unknown id is 404 with the DomainError body', () =>
+    http
+      .get(`${base}/${missing}`)
+      .expect(404)
+      .expect((res) => expect(res.body.code).toBe('NOT_FOUND')));
+
+  it('GET a non-uuid id is 400', () =>
+    http.get(`${base}/not-a-uuid`).expect(400));
+
+  it('PATCH with an empty body is 400', async () => {
+    const created = await http.post(base).send(valid()).expect(201);
+    await http.patch(`${base}/${created.body.id}`).send({}).expect(400);
+  });
+
+  it('DELETE is 204, then GET is 404', async () => {
+    const created = await http.post(base).send(valid()).expect(201);
+    await http.delete(`${base}/${created.body.id}`).expect(204);
+    await http.get(`${base}/${created.body.id}`).expect(404);
+  });
+
+  it('R1: server-owned fields sent by a client are ignored', async () => {
+    const created = await http
+      .post(base)
+      .send({
+        ...valid(),
+        status: 'active',
+        accessKeyId: 'AKIDAAAAAAAAAAAAAAAA',
+      })
+      .expect(201);
+    expect(created.body).toMatchObject({ status: 'draft', accessKeyId: null });
+  });
+
+  it('credentials: the secret appears in exactly one response, never again', async () => {
+    const { body: device } = await http.post(base).send(valid()).expect(201);
+    const issued = await http
+      .post(`${base}/${device.id}/credentials`)
+      .expect(200);
+    expect(issued.body.secret).toMatch(/^dsk_[A-Za-z0-9_-]{43}$/);
+    expect(issued.body.secretLast4).toBe(issued.body.secret.slice(-4));
+    const fetched = await http.get(`${base}/${device.id}`).expect(200);
+    expect(fetched.body).not.toHaveProperty('secret');
+    expect(fetched.body).not.toHaveProperty('secretHash');
+    expect(JSON.stringify(fetched.body)).not.toContain(issued.body.secret);
+  });
+
+  it('R3: activate before credentials is 422', async () => {
+    const { body: device } = await http.post(base).send(valid()).expect(201);
+    await http
+      .post(`${base}/${device.id}/activate`)
+      .expect(422)
+      .expect((res) => expect(res.body.code).toBe('RULE_VIOLATION'));
+  });
+
+  it('R4 + R5: active cannot be deleted; archive, then edits are 422', async () => {
+    const { body: device } = await http.post(base).send(valid()).expect(201);
+    await http.post(`${base}/${device.id}/credentials`).expect(200);
+    await http.post(`${base}/${device.id}/activate`).expect(200);
+    await http.delete(`${base}/${device.id}`).expect(422);
+    const archived = await http
+      .post(`${base}/${device.id}/archive`)
+      .expect(200);
+    expect(archived.body.status).toBe('archived');
+    await http
+      .patch(`${base}/${device.id}`)
+      .send({ name: 'renamed' })
+      .expect(422);
+  });
+});

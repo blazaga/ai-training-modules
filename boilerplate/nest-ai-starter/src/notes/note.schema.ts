@@ -33,6 +33,12 @@ export const NoteSchema = z.object({
  */
 const PRIVATE = {} as const;
 
+/**
+ * Returned to clients but never ACCEPTED from them: the server sets these, usually
+ * through actions (e.g. `status` only changes via POST /:id/activate).
+ */
+const SERVER_OWNED = {} as const;
+
 /** What every endpoint returns. */
 export const NoteResponseSchema = NoteSchema.omit(PRIVATE);
 
@@ -45,6 +51,7 @@ const NoteFields = NoteSchema.omit({
   createdAt: true,
   updatedAt: true,
   ...PRIVATE,
+  ...SERVER_OWNED,
 });
 
 /** POST body. */

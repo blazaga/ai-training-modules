@@ -55,6 +55,9 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<void> {
+    const current = await this.findOne(id);
+    // No remove-time rules.
+    void current;
     const deleted = await this.repo.delete(id);
     if (!deleted) throw new NotFoundError('User', id);
   }
