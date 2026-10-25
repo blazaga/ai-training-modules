@@ -21,7 +21,13 @@ export function configureApp(app: INestApplication): void {
   if (config.get('SWAGGER_ENABLED', { infer: true })) {
     const doc = SwaggerModule.createDocument(
       app,
-      new DocumentBuilder().setTitle('nest-ai-starter').setVersion('1').build(),
+      new DocumentBuilder()
+        .setTitle('nest-ai-starter')
+        .setVersion('1')
+        // Enables "Authorize" in the docs UI. Deliberately NOT a global security
+        // requirement: @Public() routes (health, sign-up) would be documented wrongly.
+        .addBasicAuth()
+        .build(),
     );
     SwaggerModule.setup('api/docs', app, doc);
   }

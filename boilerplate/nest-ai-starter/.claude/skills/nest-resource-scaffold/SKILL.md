@@ -55,18 +55,20 @@ pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]
 
 List them with `pnpm check:ai-fill`. Each marker names its topic:
 
-| marker                          | file                          | fill with                                                                                     |
-| ------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| `fields`                        | `<name>.schema.ts`            | one zod line per spec field, with constraints and defaults (private fields included)          |
-| `private-fields`                | `<name>.schema.ts`            | `fieldName: true` for each field that is stored but never returned or client-set (hashes)     |
-| `payload-rules`                 | `<name>.schema.ts`            | `.extend()` for write-only inputs (a plain `password`), `.refine()` for payload-only rules    |
-| `queries`                       | `<plural>.repository.ts`      | extra lookups the spec lists (e.g. `findByEmail`)                                             |
-| `queries-impl`                  | memory or drizzle repository  | the same lookups, implemented for that storage                                                |
-| `columns`                       | `<plural>.table.ts` (drizzle) | one column per schema field: same TS name, snake_case SQL name                                |
-| `create-rules` / `update-rules` | `<plural>.service.ts`         | rules that need **stored state**, each throwing a `DomainError` subclass                      |
-| `create-mapping`                | `<plural>.service.ts`         | write-only inputs → private fields (hash the password). It fails to compile until done        |
-| `valid-input`                   | unit + e2e spec               | a minimal valid payload. In e2e, a **factory** returning a fresh value if any field is unique |
-| `rule-tests` / `rule-e2e`       | specs                         | for each rule, the allowed case **and** the refused case                                      |
+| marker                          | file                          | fill with                                                                                                |
+| ------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `fields`                        | `<name>.schema.ts`            | one zod line per spec field, with constraints and defaults (private fields included)                     |
+| `private-fields`                | `<name>.schema.ts`            | `fieldName: true` for each field that is stored but never returned or client-set (hashes)                |
+| `payload-rules`                 | `<name>.schema.ts`            | `.extend()` for write-only inputs (a plain `password`), `.refine()` for payload-only rules               |
+| `queries`                       | `<plural>.repository.ts`      | extra lookups the spec lists (e.g. `findByEmail`)                                                        |
+| `queries-impl`                  | memory or drizzle repository  | the same lookups, implemented for that storage                                                           |
+| `columns`                       | `<plural>.table.ts` (drizzle) | one column per schema field: same TS name, snake_case SQL name                                           |
+| `create-rules` / `update-rules` | `<plural>.service.ts`         | rules that need **stored state**, each throwing a `DomainError` subclass                                 |
+| `create-mapping`                | `<plural>.service.ts`         | write-only inputs → private fields (hash the password). It fails to compile until done                   |
+| `access-create`                 | `<plural>.controller.ts`      | `@Public()` above `@Post()` only if the spec makes creation public (sign-up); else delete                |
+| `e2e-setup`                     | e2e spec                      | sign up a user (public route) and set `authHeaders` (Basic); delete only if the resource is fully public |
+| `valid-input`                   | unit + e2e spec               | a minimal valid payload. In e2e, a **factory** returning a fresh value if any field is unique            |
+| `rule-tests` / `rule-e2e`       | specs                         | for each rule, the allowed case **and** the refused case                                                 |
 
 Placement rule: **payload-only → schema (400). Needs stored state → service (422/409).**
 

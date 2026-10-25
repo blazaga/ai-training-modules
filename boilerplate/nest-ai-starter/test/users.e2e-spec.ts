@@ -6,7 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/bootstrap/configure-app.js';
 import { UserResponseSchema } from '../src/users/user.schema.js';
 
-/** Through the real HTTP stack: routing, validation pipe, error filter. */
+/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
 describe('users (e2e)', () => {
   let app: INestApplication<App>;
   const base = '/api/v1/users';
@@ -20,6 +20,21 @@ describe('users (e2e)', () => {
     password: 'correct horse battery',
   });
 
+  /** Headers that authenticate a request (set by e2e-setup). */
+  let authHeaders: Record<string, string> = {};
+
+  /** Every request in this file is authenticated unless it uses `request` directly. */
+  const http = {
+    get: (url: string) =>
+      request(app.getHttpServer()).get(url).set(authHeaders),
+    post: (url: string) =>
+      request(app.getHttpServer()).post(url).set(authHeaders),
+    patch: (url: string) =>
+      request(app.getHttpServer()).patch(url).set(authHeaders),
+    delete: (url: string) =>
+      request(app.getHttpServer()).delete(url).set(authHeaders),
+  };
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -27,18 +42,31 @@ describe('users (e2e)', () => {
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
+    // Routes are authenticated by default: sign up (public), then use Basic auth.
+    const owner = {
+      email: 'e2e-owner@example.com',
+      name: 'E2E Owner',
+      password: 'e2e owner passphrase',
+    };
+    await request(app.getHttpServer())
+      .post('/api/v1/users')
+      .send(owner)
+      .expect(201);
+    authHeaders = {
+      Authorization: `Basic ${Buffer.from(`${owner.email}:${owner.password}`).toString('base64')}`,
+    };
   });
 
   afterAll(async () => {
     await app.close();
   });
 
+  it('rejects requests without credentials (401)', () =>
+    request(app.getHttpServer()).get(base).expect(401));
+
   it('POST creates (201) and GET reads it back (200)', async () => {
-    const created = await request(app.getHttpServer())
-      .post(base)
-      .send(valid())
-      .expect(201);
-    await request(app.getHttpServer())
+    const created = await http.post(base).send(valid()).expect(201);
+    await http
       .get(`${base}/${created.body.id}`)
       .expect(200)
       .expect((res) => expect(res.body).toEqual(created.body));
@@ -48,12 +76,9 @@ describe('users (e2e)', () => {
     const publicKeys = new Set(Object.keys(UserResponseSchema.shape));
     const leaked = (body: object) =>
       Object.keys(body).filter((key) => !publicKeys.has(key));
-    const created = await request(app.getHttpServer())
-      .post(base)
-      .send(valid())
-      .expect(201);
+    const created = await http.post(base).send(valid()).expect(201);
     expect(leaked(created.body)).toEqual([]);
-    const list = await request(app.getHttpServer()).get(base).expect(200);
+    const list = await http.get(base).expect(200);
     expect(list.body.items.length).toBeGreaterThan(0);
     for (const item of list.body.items) expect(leaked(item)).toEqual([]);
   });
@@ -61,7 +86,7 @@ describe('users (e2e)', () => {
   it('POST stores the PARSED body: unknown keys are stripped', async () => {
     // Guards the validation pipe's contract over HTTP. A pipe that validated but
     // passed the raw input through would store this key; unit tests cannot see it.
-    const created = await request(app.getHttpServer())
+    const created = await http
       .post(base)
       .send({ ...valid(), notAField: 'x' })
       .expect(201);
@@ -69,48 +94,32 @@ describe('users (e2e)', () => {
   });
 
   it('POST rejects an invalid body (400)', () =>
-    request(app.getHttpServer())
-      .post(base)
-      .send({ unexpected: 'shape' })
-      .expect(400));
+    http.post(base).send({ unexpected: 'shape' }).expect(400));
 
   it('GET unknown id is 404 with the DomainError body', () =>
-    request(app.getHttpServer())
+    http
       .get(`${base}/${missing}`)
       .expect(404)
       .expect((res) => expect(res.body.code).toBe('NOT_FOUND')));
 
   it('GET a non-uuid id is 400', () =>
-    request(app.getHttpServer()).get(`${base}/not-a-uuid`).expect(400));
+    http.get(`${base}/not-a-uuid`).expect(400));
 
   it('PATCH with an empty body is 400', async () => {
-    const created = await request(app.getHttpServer())
-      .post(base)
-      .send(valid())
-      .expect(201);
-    await request(app.getHttpServer())
-      .patch(`${base}/${created.body.id}`)
-      .send({})
-      .expect(400);
+    const created = await http.post(base).send(valid()).expect(201);
+    await http.patch(`${base}/${created.body.id}`).send({}).expect(400);
   });
 
   it('DELETE is 204, then GET is 404', async () => {
-    const created = await request(app.getHttpServer())
-      .post(base)
-      .send(valid())
-      .expect(201);
-    await request(app.getHttpServer())
-      .delete(`${base}/${created.body.id}`)
-      .expect(204);
-    await request(app.getHttpServer())
-      .get(`${base}/${created.body.id}`)
-      .expect(404);
+    const created = await http.post(base).send(valid()).expect(201);
+    await http.delete(`${base}/${created.body.id}`).expect(204);
+    await http.get(`${base}/${created.body.id}`).expect(404);
   });
 
   it('R1: the same email in a different case is 409', async () => {
     const body = valid();
-    await request(app.getHttpServer()).post(base).send(body).expect(201);
-    await request(app.getHttpServer())
+    await http.post(base).send(body).expect(201);
+    await http
       .post(base)
       .send({ ...body, email: body.email.toUpperCase() })
       .expect(409)
@@ -118,20 +127,15 @@ describe('users (e2e)', () => {
   });
 
   it('R3: neither password nor passwordHash ever appears in a response', async () => {
-    const created = await request(app.getHttpServer())
-      .post(base)
-      .send(valid())
-      .expect(201);
+    const created = await http.post(base).send(valid()).expect(201);
     const text = JSON.stringify(created.body);
     expect(text).not.toMatch(/password/i);
-    const fetched = await request(app.getHttpServer())
-      .get(`${base}/${created.body.id}`)
-      .expect(200);
+    const fetched = await http.get(`${base}/${created.body.id}`).expect(200);
     expect(JSON.stringify(fetched.body)).not.toMatch(/password/i);
   });
 
   it('a short password is 400 and is not echoed back', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await http
       .post(base)
       .send({ ...valid(), password: 'short-1' })
       .expect(400);

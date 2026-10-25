@@ -88,6 +88,12 @@ is the finished worked example, and `specs/notes.md` is its spec.
   never drizzle's log.
 - **Private fields** (password/secret hashes) live in the schema's `PRIVATE` set. Responses
   go through `<Name>ResponseSchema`, so they never leave the API.
+- **Auth (secure by default):** `BasicAuthGuard` is a global `APP_GUARD` (Passport,
+  strategy `basic`). Every route needs valid credentials unless marked `@Public()`
+  (`src/auth/public.decorator.ts`); a forgotten decorator fails CLOSED (401). Every auth
+  failure is the same 401 body plus `WWW-Authenticate`. `req.user` is the PUBLIC user.
+  Do not swap in `passport-http`'s BasicStrategy: it truncates passwords at a second colon
+  and answers 400 for malformed headers (measured).
 - **Passwords:** `src/common/security/password.ts` (scrypt, salted, timing-safe). Never
   log, return or store a plain password.
 - **Config:** read via `ConfigService<Env, true>`, never `process.env`. **Never log config

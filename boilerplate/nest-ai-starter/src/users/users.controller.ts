@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Page } from '../common/persistence/repository.js';
+import { Public } from '../auth/public.decorator.js';
 import { PageQueryDto } from '../common/schemas/page-query.schema.js';
 import { UserResponseSchema } from './user.schema.js';
 import { UsersService } from './users.service.js';
@@ -34,6 +35,7 @@ const toResponse = (entity: User): UserResponse =>
 export class UsersController {
   constructor(private readonly service: UsersService) {}
 
+  @Public()
   @Post()
   async create(@Body() body: CreateUserDto): Promise<UserResponse> {
     return toResponse(await this.service.create(body));

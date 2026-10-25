@@ -18,10 +18,7 @@ import { __Name__ResponseSchema } from './__name__.schema.js';
 import { __Names__Service } from './__names__.service.js';
 import { Create__Name__Dto } from './dto/create-__name__.dto.js';
 import { Update__Name__Dto } from './dto/update-__name__.dto.js';
-import type {
-  __Name__,
-  __Name__Response,
-} from './entities/__name__.entity.js';
+import type { __Name__, __Name__Response } from './entities/__name__.entity.js';
 
 /** Strip private fields. Every value this controller returns passes through here. */
 const toResponse = (entity: __Name__): __Name__Response =>
@@ -37,6 +34,9 @@ const toResponse = (entity: __Name__): __Name__Response =>
 export class __Names__Controller {
   constructor(private readonly service: __Names__Service) {}
 
+  // AI-FILL(access-create): every route is authenticated by default (global
+  // guard). If the spec makes CREATE public (e.g. sign-up), put `@Public()` here
+  // (import it from '../auth/public.decorator.js'); otherwise delete this comment.
   @Post()
   async create(@Body() body: Create__Name__Dto): Promise<__Name__Response> {
     return toResponse(await this.service.create(body));

@@ -37,6 +37,10 @@ session, and again after changing any config:
 - After a pipe, `$?` belongs to the last command. Use `${PIPESTATUS[0]}`, or do not pipe.
 - `Tests: 0 total`, `No tests found` or a missing summary line is a **failure**, whatever
   the exit code says.
+- **`skipped` is not `passed`.** When a `beforeAll` throws (e.g. the e2e setup cannot sign
+  up its user), vitest SKIPS that file's tests. The `Tests` line then shows **no failures**
+  (`2 passed | 30 skipped`). The failure is only on the `Test Files … failed` line and in
+  the exit code. Read all three. Measured in this repo with sign-up made non-public.
 - When an e2e test passes, check that it went through `configureApp(app)`. Without it the
   prefix and versioning differ from production, and the test proves nothing about
   `/api/v1`.

@@ -1,20 +1,19 @@
-import {
-  type MiddlewareConsumer,
-  Module,
-  type NestModule,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
-import { BasicAuthMiddleware } from './basic-auth.middleware.js';
+import { BasicAuthGuard } from './basic-auth.guard.js';
+import { BasicStrategy } from './basic.strategy.js';
 
+/**
+ * Step 2: Passport replaces the step-1 middleware. Registering the guard as
+ * APP_GUARD makes EVERY route authenticated; opt out with @Public(). Compare
+ * step 1, where each route had to be remembered in configure().
+ */
 @Module({
-  imports: [UsersModule],
+  imports: [UsersModule, PassportModule],
   controllers: [AuthController],
+  providers: [BasicStrategy, { provide: APP_GUARD, useClass: BasicAuthGuard }],
 })
-export class AuthModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    // Middleware is attached to routes here, not on the controller. Easy to
-    // forget a route, which is one reason step 2 moves to a guard.
-    consumer.apply(BasicAuthMiddleware).forRoutes(AuthController);
-  }
-}
+export class AuthModule {}
