@@ -30,3 +30,5 @@ hirok.io
 xata.io
 # docker compose service names (DNS names only inside the compose network)
 app
+# Postman collection format: the public v2.1 schema identifier every collection carries in info.schema
+schema.getpostman.com

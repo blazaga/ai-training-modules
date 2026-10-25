@@ -7,12 +7,16 @@
 // Rebuild (any machine with Docker; see README.md in this folder):
 //   node build-lab-deck.mjs [outDir]
 // Requires the npm packages pptxgenjs, react, react-dom, react-icons and sharp.
+// Reads the Postman collection (POSTMAN_COLLECTION, default: the starter's postman/ folder)
+// and fails if a slide names a folder or request the collection does not have.
 // MD_ONLY=1 writes only the two Markdown files.
 // Optional: APPLY_THEME_JS=/path/to/apply_theme.js also writes the colours into the
 // .pptx theme, so PowerPoint's theme picker shows them.
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const pptxgen = require('pptxgenjs');
@@ -22,6 +26,23 @@ const sharp = require('sharp');
 const Fi = require('react-icons/fi');
 
 const OUT = process.argv[2] ?? '.';
+
+// The Postman collection the labs use instead of curl. Slides name its folders and
+// requests; every name is checked against the file below, so a renamed request fails
+// the build instead of leaving a slide that points at nothing.
+const COLLECTION =
+  process.env.POSTMAN_COLLECTION ??
+  join(dirname(fileURLToPath(import.meta.url)), '../../../boilerplate/nest-ai-starter/postman/nest-ai-starter.postman_collection.json');
+const PM = JSON.parse(readFileSync(COLLECTION, 'utf8'));
+// [folderPrefix, [requestName, ...]] -> [{ folder, requests }], verified against the collection.
+const postman = (...groups) =>
+  groups.map(([prefix, names]) => {
+    const f = PM.item.find((x) => x.name.startsWith(`${prefix} ·`));
+    if (!f) throw new Error(`Postman folder "${prefix} ·" is not in ${COLLECTION}`);
+    for (const n of names)
+      if (!f.item.some((x) => x.name === n)) throw new Error(`Postman request "${n}" is not in folder "${f.name}"`);
+    return { folder: f.name, requests: names };
+  });
 const FOOTER = 'Lab companion · Building apps with AI agents · NestJS + MCP';
 
 // ---- palette (charcoal "terminal" + mint for checkpoints + amber for snags) ----
@@ -50,6 +71,7 @@ const THEME = {
   },
 };
 const CODE_FONT = 'Courier New';
+const POSTMAN = 'EF5B25'; // Postman orange, used only on the Postman panel
 
 // ---- the content ----------------------------------------------------------------
 // Draft lab times are ESTIMATES, not measured with learners: adjust after a dry run.
@@ -107,6 +129,17 @@ const SLIDES = [
       'PowerShell has no alias for multi-word commands: function dev { docker compose run --rm dev @args }. Not tested here; Linux, macOS and WSL shells were the target.',
   },
   {
+    type: 'rules',
+    title: 'Postman instead of curl',
+    rows: [
+      ['FiDownload', 'Import one file', 'In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.'],
+      ['FiPlay', 'Folders follow the labs', 'Numbered by chapter, and each name says the lite module. Every request has tests: read the Test Results tab, not just the status.'],
+      ['FiLock', 'It stores a live secret', 'Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.'],
+    ],
+    notes:
+      'Verified with newman against the Docker stack: 24 requests, 0 failed, on a fresh database and again on a re-run; with a wrong password 17 assertions fail, so the tests can fail. The Inspector CLI (chapters 07 and 09) stays in the terminal on purpose: it is a real MCP client.',
+  },
+  {
     type: 'agenda',
     title: 'The track (draft lab times)',
     notes:
@@ -122,11 +155,11 @@ const SLIDES = [
       'docker compose up -d --build',
       'docker compose ps -a',
       'docker compose logs migrate',
-      'curl localhost:3000/api/health',
       '',
       "alias dev='docker compose run --rm dev'",
       'dev pnpm verify',
     ],
+    postman: postman(['00', ['Health']]),
     notes: 'The first build takes a few minutes. While it runs, walk through docker-compose.yml: db, redis (infra only), migrate (one-shot), app, dev (profile).',
   },
   {
@@ -138,7 +171,7 @@ const SLIDES = [
       'migrate   Exited (0)',
       '# docker compose logs migrate',
       'db:migrate: ledger rows: 3',
-      '# curl …/api/health',
+      '# Postman: 00 › Health',
       '{"status":"ok"}',
       '# dev pnpm verify',
       'Tests  67 passed (67)',
@@ -254,16 +287,12 @@ const SLIDES = [
     type: 'run', ch: '03', title: 'Run this: see the 401, then break it',
     code: [
       "git log --oneline --grep 'course(ch03'",
-      'curl -s localhost:3000/api/v1/users \\',
-      "  -H 'content-type: application/json' -d \\",
-      '  \'{"email":"me@example.com","name":"Me",',
-      '    "password":"my long passphrase"}\'',
-      'curl -i localhost:3000/api/v1/auth/me',
-      "curl -i -u me@example.com:'my long passphrase' \\",
-      '  localhost:3000/api/v1/auth/me',
-      '# lab: change the message for unknown emails',
+      '# send the Postman requests, then the lab:',
+      '# change the message for unknown emails',
       'dev pnpm test:e2e     # which test fails?',
+      '# re-send "Me: unknown email" in Postman too',
     ],
+    postman: postman(['03', ['Sign up (public)', 'Me: no credentials → 401', 'Me: wrong password → the same 401', 'Me: unknown email → the same 401', 'Me (Basic auth)']]),
     notes: 'Then revert. `git show 8e46c2097` is the hand-written middleware version, worth reading next to the Passport one.',
   },
   {
@@ -275,7 +304,7 @@ const SLIDES = [
       '  realm="nest-ai-starter", charset="UTF-8"',
       '{"statusCode":401,"error":"Unauthorized",',
       ' "message":"Invalid credentials"}',
-      '# with -u: HTTP/1.1 200 OK, no password',
+      '# Me (Basic auth): 200 OK, no password',
       '# after your change, e2e reports:',
       '× every failure is the SAME 401 …',
     ],
@@ -299,15 +328,14 @@ const SLIDES = [
   {
     type: 'run', ch: '04', title: 'Run this: credentials, rotation, ownership',
     code: [
-      DEMO,
-      'curl -s -H "Authorization: $DEMO_BASIC" \\',
-      '  localhost:3000/api/v1/devices/$DEVICE_ID',
-      'curl -s -X POST -H "Authorization: $DEMO_BASIC" \\',
-      '  localhost:3000/api/v1/devices/$DEVICE_ID/credentials',
-      '# lab: add expiresAt: spec → schema → table',
-      '#      → migration → rule → tests',
+      '# send the Postman requests first, then the lab:',
+      '# add expiresAt: spec → schema → table',
+      '#   → migration → rule → tests',
+      'dev pnpm verify',
+      '# re-send "Issue credentials" = a rotation',
     ],
-    notes: 'The helper prints exports only; keep the grep. With a bare eval, compose build-log lines would run as shell commands (measured).',
+    postman: postman(['04', ['Create device', 'Issue credentials (secret shown once)', 'Activate device', 'Get device (no secret, no hash)']]),
+    notes: 'The collection keeps the issued secret in a collection variable for the MCP folders. Remind learners it is a live credential.',
   },
   {
     type: 'checkpoint', ch: '04', title: 'Checkpoint: the secret appears once',
@@ -340,18 +368,9 @@ const SLIDES = [
   { type: 'section', ch: '05' },
   {
     type: 'run', ch: '05', title: 'Run this: a raw MCP initialize',
-    code: [
-      DEMO,
-      'curl -s -i -X POST localhost:3000/mcp \\',
-      "  -H 'content-type: application/json' \\",
-      "  -H 'accept: application/json, text/event-stream' \\",
-      '  -H "X-Access-Key-Id: $MCP_KEY_ID" \\',
-      '  -H "X-Secret-Key: $MCP_SECRET" \\',
-      '  -d \'{"jsonrpc":"2.0","id":1,"method":"initialize",',
-      '   "params":{"protocolVersion":"2025-06-18",',
-      '   "capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}\'',
-    ],
-    notes: 'Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?',
+    code: [],
+    postman: postman(['05', ['initialize', 'tools/list', 'tools/call whoami', 'No device headers → 401']]),
+    notes: 'Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?',
   },
   {
     type: 'checkpoint', ch: '05', title: 'Checkpoint: JSON-RPC inside SSE',
@@ -375,7 +394,7 @@ const SLIDES = [
   {
     type: 'stuck', ch: '05', title: 'If you are stuck: chapter 05',
     rows: [
-      ['401 Unauthorized', 'Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-run the helper.'],
+      ['401 Unauthorized', 'Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-send folder 04 · Devices.'],
       ['403 Invalid Host', 'You called the app by a name not in MCP_ALLOWED_HOSTS (compose sets localhost,app).'],
       ['Plain JSON, no SSE', 'enableJsonResponse is true: the DEFAULT of @rekog/mcp-nest 2.0.8. Ours sets false.'],
     ],
@@ -469,15 +488,15 @@ const SLIDES = [
   {
     type: 'run', ch: '08', title: 'Run this: JSON vs SSE on the wire',
     code: [
-      '# 1. capture the chapter 05 initialize (SSE)',
+      '# 1. Postman 05 › initialize: note the',
+      '#    Content-Type and the Body',
       '# 2. src/bootstrap/attach-mcp.ts:',
       '#      enableJsonResponse: true',
       'docker compose up -d --build app',
-      '# 3. same curl again: what changed?',
-      'curl -s -o /dev/null -w "%{http_code}\\n" \\',
-      "  -X POST -H 'Host: evil.example' \\",
-      '  localhost:3000/mcp       # Host check',
+      '# 3. re-send initialize: what changed?',
+      '# 4. revert, rebuild',
     ],
+    postman: postman(['05', ['initialize']], ['08', ['Foreign Host → 403']]),
     notes: 'Revert enableJsonResponse afterwards. Ask why the e2e Host test uses node:http and not fetch.',
   },
   {
@@ -502,7 +521,7 @@ const SLIDES = [
     type: 'stuck', ch: '08', title: 'If you are stuck: chapter 08',
     rows: [
       ['Host test without credentials', 'You get 401, not 403: device auth runs first. Send the device headers too.'],
-      ['My fetch Host test passes 200', 'fetch silently replaces Host (measured). Use curl or node:http.'],
+      ['My fetch Host test passes 200', 'fetch silently replaces Host (measured). node:http, curl and Postman send it as written.'],
       ['Called by service name: 403', 'Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).'],
     ],
   },
@@ -518,22 +537,21 @@ const SLIDES = [
       '  --method tools/call --tool-name whoami \\',
       '  --header "X-Access-Key-Id: $MCP_KEY_ID" \\',
       '  --header "X-Secret-Key: $MCP_SECRET"',
-      'curl -s -X POST -H "Authorization: $DEMO_BASIC" \\',
-      '  localhost:3000/api/v1/devices/$DEVICE_ID/credentials',
-      '# run the same Inspector command again',
     ],
-    notes: 'The rotation output contains the NEW secret. Tell learners not to paste it anywhere; redirect it to /dev/null if screens are shared.',
+    postman: postman(['09', ['Rotate credentials', 'whoami with the OLD secret → 401', 'whoami with the NEW secret']]),
+    notes: 'Two clients, two devices: the Inspector uses the helper\'s device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.',
   },
   {
     type: 'checkpoint', ch: '09', title: 'Checkpoint: rotation bites immediately',
-    outputSource: 'first call captured, second expected',
+    outputSource: 'captured',
     output: [
-      '# first whoami (captured)',
+      '# Inspector whoami',
       '"device": { … "status": "active" … },',
       '"owner":  { … "email": "demo@example.com" }',
-      '# after rotation, same headers (expected)',
-      'HTTP 401 → the Inspector reports',
-      '  auth_required (it expects OAuth)',
+      '# Postman 09 · Rotate mid-session',
+      'Rotate credentials           200',
+      'whoami with the OLD secret   401',
+      'whoami with the NEW secret   200',
     ],
     done: [
       'the old secret failed on the NEXT call',
@@ -657,16 +675,17 @@ const LITE_SLIDES = [
   {
     type: 'run', ch: '3', title: 'Run this: break the 401, then rotate a key',
     code: [
-      'curl -i localhost:3000/api/v1/auth/me     # 401',
-      '# lab: give unknown emails a different message',
-      'dev pnpm test:e2e         # which test fails? revert.',
-      DEMO,
-      'curl -s -H "Authorization: $DEMO_BASIC" \\',
-      '  localhost:3000/api/v1/devices/$DEVICE_ID',
-      'curl -s -X POST -H "Authorization: $DEMO_BASIC" \\',
-      '  localhost:3000/api/v1/devices/$DEVICE_ID/credentials',
+      '# send folder 03, then the lab:',
+      '# unknown emails get a different message',
+      'dev pnpm test:e2e   # which test fails?',
+      '# re-send 03 in Postman, then revert',
+      '# then send folder 04',
     ],
-    notes: 'The helper prints exports only; keep the grep. Unfiltered, compose build-log lines run as shell commands (measured: they created stray files). The rotation output contains a NEW secret: do not paste it anywhere.',
+    postman: postman(
+      ['03', ['Sign up (public)', 'Me: no credentials → 401', 'Me: unknown email → the same 401', 'Me (Basic auth)']],
+      ['04', ['Create device', 'Issue credentials (secret shown once)', 'Activate device', 'Get device (no secret, no hash)']],
+    ),
+    notes: 'Issuing credentials stores a live secret in a collection variable: never export or share the collection after a run. Re-sending Issue credentials is a rotation.',
   },
   {
     type: 'checkpoint', ch: '3', title: 'Checkpoint: one 401, one secret',
@@ -738,11 +757,12 @@ const LITE_SLIDES = [
       '  --tool-name get-note \\',
       '  --tool-arg id=00000000-0000-4000-8000-000000000000',
       'echo "exit: $?"',
-      '# src/bootstrap/attach-mcp.ts: enableJsonResponse: true',
+      '# attach-mcp.ts: enableJsonResponse: true',
       'docker compose up -d --build app',
-      '# re-run the module 4 initialize: what changed?',
+      '# re-send Postman 05 › initialize: what changed?',
       '# then revert enableJsonResponse',
     ],
+    postman: postman(['05', ['initialize']], ['08', ['Foreign Host → 403']]),
     notes: 'The Inspector web UI binds 127.0.0.1 inside its container: use the CLI in Docker. Exit 5 comes from the tool\'s own isError, which is why it is a sound CI signal.',
   },
   {
@@ -838,6 +858,9 @@ async function buildPptx(file, track) {
     FiTerminal: await icon('FiTerminal'),
     FiCheckCircle: await icon('FiCheckCircle'),
     FiLock: await icon('FiLock'),
+    FiDownload: await icon('FiDownload'),
+    FiPlay: await icon('FiPlay'),
+    pm: await icon('FiSend', COL.paper),
     arrow: await icon('FiArrowRight', COL.muted),
   };
 
@@ -855,6 +878,27 @@ async function buildPptx(file, track) {
       return { text: line === '' ? ' ' : line, options: { color: isComment ? COL.comment : COL.code, breakLine: i < lines.length - 1 } };
     });
     slide.addText(runs, { x: x + 0.25, y: y + 0.42, w: w - 0.5, h: h - 0.55, fontFace: CODE_FONT, fontSize: opts.fontSize ?? 14, valign: 'top', margin: 0, isTextBox: true, objectName: 'terminal-text' });
+  }
+  // Largest code size at which the longest line and every line fit (Courier: 0.6em wide).
+  function fitCode(lines, w, h) {
+    const long = Math.max(...lines.map((l) => l.length));
+    return [14, 12, 11, 10].find((fs) => (long * fs * 0.6) / 72 <= w && (lines.length * fs * 1.2) / 72 <= h) ?? 10;
+  }
+  // The Postman panel: which folder, which requests, in order.
+  function postmanCard(slide, x, y, w, h, groups) {
+    const wide = w > 5;
+    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color: POSTMAN }, line: { color: POSTMAN }, objectName: 'postman' });
+    slide.addImage({ data: icons.pm, x: x + 0.2, y: y + 0.17, w: 0.26, h: 0.26 });
+    slide.addText('In Postman', { x: x + 0.55, y: y + 0.12, w: w - 0.75, h: 0.36, fontSize: wide ? 18 : 16, bold: true, color: COL.paper, margin: 0, isTextBox: true });
+    const fs = wide ? 16 : 13;
+    const runs = [];
+    groups.forEach((g, gi) => {
+      runs.push({ text: g.folder, options: { bold: true, fontSize: fs, color: COL.paper, breakLine: true, paraSpaceBefore: gi ? 6 : 0 } });
+      g.requests.forEach((r, ri) =>
+        runs.push({ text: `${ri + 1}. ${r}`, options: { fontSize: fs, color: COL.paper, breakLine: !(gi === groups.length - 1 && ri === g.requests.length - 1) } }),
+      );
+    });
+    slide.addText(runs, { x: x + 0.2, y: y + 0.6, w: w - 0.4, h: h - 0.75, valign: 'top', margin: 0, isTextBox: true, objectName: 'postman-requests' });
   }
   function badge(slide, x, y, d, color, img) {
     slide.addShape(pres.shapes.OVAL, { x, y, w: d, h: d, fill: { color }, line: { color } });
@@ -884,10 +928,13 @@ async function buildPptx(file, track) {
     } else if (s.type === 'run') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
-      const long = Math.max(...s.code.flatMap((l) => l.split('\n')).map((l) => l.length));
       const lines = s.code.flatMap((l) => l.split('\n'));
-      const fontSize = long > 66 || lines.length > 11 ? 12 : 14;
-      terminal(slide, 0.5, 1.2, 9.0, 3.85, lines, { fontSize, label: `${track.unit.toLowerCase()} ${s.ch} · run this` });
+      const pmW = s.postman ? (lines.length ? 3.1 : 9.0) : 0;
+      if (lines.length) {
+        const termW = s.postman ? 9.0 - pmW - 0.2 : 9.0;
+        terminal(slide, 0.5, 1.2, termW, 3.85, lines, { fontSize: fitCode(lines, termW - 0.65, 3.3), label: `${track.unit.toLowerCase()} ${s.ch} · run this` });
+      }
+      if (s.postman) postmanCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, s.postman);
     } else if (s.type === 'checkpoint') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
@@ -999,7 +1046,11 @@ function buildMarkdown(track) {
       const c = chap(s.ch);
       p.push(`<!-- _class: lead -->`, '', `**${track.unit} ${c.n}**`, '', `# ${c.title}`, '', c.goal, '', `⏱ ${c.minutes} min lab (draft estimate)`);
     }
-    if (s.type === 'run') p.push(`## ${s.title}`, '', ...fence(s.code));
+    if (s.type === 'run') {
+      p.push(`## ${s.title}`);
+      if (s.code.length) p.push('', ...fence(s.code));
+      if (s.postman) p.push('', '**In Postman**', '', ...s.postman.map((g) => `- **${g.folder}**: ${g.requests.join(' · ')}`));
+    }
     if (s.type === 'checkpoint') {
       p.push(`## ${s.title}`, '', `_Output: ${s.outputSource}_`, '', ...fence(s.output), '', '**Done when**', '', ...s.done.map((d) => `- [ ] ${d}`));
     }

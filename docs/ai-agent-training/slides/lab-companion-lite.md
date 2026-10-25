@@ -44,6 +44,18 @@ PowerShell has no alias for multi-word commands: function dev { docker compose r
 
 ---
 
+## Postman instead of curl
+
+- **Import one file**: In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.
+- **Folders follow the labs**: Numbered by chapter, and each name says the lite module. Every request has tests: read the Test Results tab, not just the status.
+- **It stores a live secret**: Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.
+
+<!--
+Verified with newman against the Docker stack: 24 requests, 0 failed, on a fresh database and again on a re-run; with a wrong password 17 assertions fail, so the tests can fail. The Inspector CLI (chapters 07 and 09) stays in the terminal on purpose: it is a real MCP client.
+-->
+
+---
+
 ## The lite track (draft lab times)
 
 | mod | module                        | lab |
@@ -217,19 +229,20 @@ Covers full-track chapters 03 + 04. Cut for time: reading the hand-written middl
 ## Run this: break the 401, then rotate a key
 
 ```bash
-curl -i localhost:3000/api/v1/auth/me     # 401
-# lab: give unknown emails a different message
-dev pnpm test:e2e         # which test fails? revert.
-eval "$(docker compose run --rm -T dev \
-  node scripts/demo-device.mjs | grep '^export ')"
-curl -s -H "Authorization: $DEMO_BASIC" \
-  localhost:3000/api/v1/devices/$DEVICE_ID
-curl -s -X POST -H "Authorization: $DEMO_BASIC" \
-  localhost:3000/api/v1/devices/$DEVICE_ID/credentials
+# send folder 03, then the lab:
+# unknown emails get a different message
+dev pnpm test:e2e   # which test fails?
+# re-send 03 in Postman, then revert
+# then send folder 04
 ```
 
+**In Postman**
+
+- **03 · Auth (lite module 3)**: Sign up (public) · Me: no credentials → 401 · Me: unknown email → the same 401 · Me (Basic auth)
+- **04 · Devices (lite module 3)**: Create device · Issue credentials (secret shown once) · Activate device · Get device (no secret, no hash)
+
 <!--
-The helper prints exports only; keep the grep. Unfiltered, compose build-log lines run as shell commands (measured: they created stray files). The rotation output contains a NEW secret: do not paste it anywhere.
+Issuing credentials stores a live secret in a collection variable: never export or share the collection after a run. Re-sending Issue credentials is a rotation.
 -->
 
 ---
@@ -284,21 +297,12 @@ Covers full-track chapters 05 + 06. Cut for time: the separate envelope-discussi
 
 ## Run this (1/2): a raw MCP initialize
 
-```bash
-eval "$(docker compose run --rm -T dev \
-  node scripts/demo-device.mjs | grep '^export ')"
-curl -s -i -X POST localhost:3000/mcp \
-  -H 'content-type: application/json' \
-  -H 'accept: application/json, text/event-stream' \
-  -H "X-Access-Key-Id: $MCP_KEY_ID" \
-  -H "X-Secret-Key: $MCP_SECRET" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize",
-   "params":{"protocolVersion":"2025-06-18",
-   "capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}'
-```
+**In Postman**
+
+- **05 · MCP over HTTP (lite module 4)**: initialize · tools/list · tools/call whoami · No device headers → 401
 
 <!--
-Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?
+Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?
 -->
 
 ---
@@ -379,11 +383,16 @@ dev pnpm mcp:inspect:cli --method tools/call \
   --tool-name get-note \
   --tool-arg id=00000000-0000-4000-8000-000000000000
 echo "exit: $?"
-# src/bootstrap/attach-mcp.ts: enableJsonResponse: true
+# attach-mcp.ts: enableJsonResponse: true
 docker compose up -d --build app
-# re-run the module 4 initialize: what changed?
+# re-send Postman 05 › initialize: what changed?
 # then revert enableJsonResponse
 ```
+
+**In Postman**
+
+- **05 · MCP over HTTP (lite module 4)**: initialize
+- **08 · Host check (lite module 5)**: Foreign Host → 403
 
 <!--
 The Inspector web UI binds 127.0.0.1 inside its container: use the CLI in Docker. Exit 5 comes from the tool's own isError, which is why it is a sound CI signal.
@@ -447,28 +456,30 @@ dev npx -y @modelcontextprotocol/inspector@2.12.0 \
   --method tools/call --tool-name whoami \
   --header "X-Access-Key-Id: $MCP_KEY_ID" \
   --header "X-Secret-Key: $MCP_SECRET"
-curl -s -X POST -H "Authorization: $DEMO_BASIC" \
-  localhost:3000/api/v1/devices/$DEVICE_ID/credentials
-# run the same Inspector command again
 ```
 
+**In Postman**
+
+- **09 · Rotate mid-session (lite module 6)**: Rotate credentials · whoami with the OLD secret → 401 · whoami with the NEW secret
+
 <!--
-The rotation output contains the NEW secret. Tell learners not to paste it anywhere; redirect it to /dev/null if screens are shared.
+Two clients, two devices: the Inspector uses the helper's device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.
 -->
 
 ---
 
 ## Checkpoint: rotation bites immediately
 
-_Output: first call captured, second expected_
+_Output: captured_
 
 ```bash
-# first whoami (captured)
+# Inspector whoami
 "device": { … "status": "active" … },
 "owner":  { … "email": "demo@example.com" }
-# after rotation, same headers (expected)
-HTTP 401 → the Inspector reports
-  auth_required (it expects OAuth)
+# Postman 09 · Rotate mid-session
+Rotate credentials           200
+whoami with the OLD secret   401
+whoami with the NEW secret   200
 ```
 
 **Done when**

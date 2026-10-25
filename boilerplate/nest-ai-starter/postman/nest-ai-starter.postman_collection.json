@@ -1,0 +1,1137 @@
+{
+  "info": {
+    "_postman_id": "c74dabb4-902e-5f8a-a4c6-401f45cc8254",
+    "name": "nest-ai-starter labs",
+    "description": "Every REST and MCP call the course labs make, so you do not need curl.\n\n1. `docker compose up -d --build` in boilerplate/nest-ai-starter.\n2. Import this file into Postman. `baseUrl` is http://localhost:3000.\n3. Run the folders in order (or the whole collection with the Runner).\n\nFolders are numbered by full-track chapter; each name also says the lite-track module.\n\nAuth: the collection uses Basic auth with {{email}} / {{password}} (a local demo user). Requests that must not send credentials override it with No Auth.\n\nSECRETS: issuing credentials stores the device secret in the `secret` variable (current value). Never export, share or commit the collection after running it. Re-import the clean file instead.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{email}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{password}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "email",
+      "value": "demo@example.com"
+    },
+    {
+      "key": "password",
+      "value": "demo passphrase for labs"
+    },
+    {
+      "key": "deviceId",
+      "value": ""
+    },
+    {
+      "key": "accessKeyId",
+      "value": ""
+    },
+    {
+      "key": "secret",
+      "value": ""
+    },
+    {
+      "key": "rotatedSecret",
+      "value": ""
+    },
+    {
+      "key": "noteId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "id": "529aab21-d88a-58b5-9215-43bd5b062e42",
+      "name": "00 · Stack (lite module 1)",
+      "description": "Is the app up? Run this first.",
+      "item": [
+        {
+          "id": "ece7d0de-9e82-5a31-ba43-5c258bb360f1",
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Unversioned and public. 200 `{\"status\":\"ok\"}` once migrate has run and the app has started.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 ok', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('ok'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e5636fbf-87ea-5ad5-9977-2b32dc142280",
+      "name": "03 · Auth (lite module 3)",
+      "description": "Sign up, then see that EVERY auth failure is the same 401. Chapter 03 lab: change the message for unknown emails and re-run this folder: the \"same body\" test fails, and so does the e2e test that pins the rule.",
+      "item": [
+        {
+          "id": "ee807d98-a9ce-5d7a-8fd0-d9c7fb2302a8",
+          "name": "Sign up (public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "The one public write. 201 creates the user; 409 means it already exists, which is fine for a re-run. Chapter 02 lab: once you add `phone`, add it to this body.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"name\": \"Demo\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created, or 409 already exists', () => { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                  "if (pm.response.code === 201) {",
+                  "  const u = pm.response.json();",
+                  "  pm.test('no password or hash in the response', () => { pm.expect(u).to.not.have.any.keys('password', 'passwordHash'); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "57491ac0-c7c0-58c3-b8a2-3035bf46a1a0",
+          "name": "Me: no credentials → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "No Authorization header at all.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 with a Basic challenge', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic');",
+                  "});",
+                  "pm.test('the same body as every other auth failure', () => {",
+                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "5666710f-7208-556b-aedd-04d50b0b1336",
+          "name": "Me: wrong password → the same 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "A known email with a wrong password must be indistinguishable from no credentials.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{email}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "not-the-password",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 with a Basic challenge', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic');",
+                  "});",
+                  "pm.test('the same body as every other auth failure', () => {",
+                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "6a2d2b92-c7f0-5058-a504-ec9aa46ae5fd",
+          "name": "Me: unknown email → the same 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "An email nobody registered. Same 401 again, so emails cannot be probed.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "nobody@example.com",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 with a Basic challenge', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic');",
+                  "});",
+                  "pm.test('the same body as every other auth failure', () => {",
+                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "ffa1b797-8655-53df-89a7-b346bea56965",
+          "name": "Me (Basic auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Uses the collection auth: Basic with {{email}} / {{password}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, the public user', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const u = pm.response.json();",
+                  "  pm.expect(u.email).to.eql(pm.collectionVariables.get('email'));",
+                  "  pm.expect(u).to.not.have.any.keys('password', 'passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b015e910-61ea-5c74-a291-791f6006df1d",
+      "name": "04 · Devices (lite module 3)",
+      "description": "Create a device, issue its credentials (the secret is shown ONCE and stored in the `secret` variable), activate it, then read it back: the secret never appears again.",
+      "item": [
+        {
+          "id": "420c6709-7f16-5abb-819e-abfe44f5b7f6",
+          "name": "Create device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "devices"]
+            },
+            "description": "Owned by the signed-in user. Starts as `draft`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"postman device\",\n  \"description\": \"created from the Postman collection\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 draft device', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('draft'); });",
+                  "pm.collectionVariables.set('deviceId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "1a78b939-85bd-5c36-94b2-5705b8fb6b64",
+          "name": "Issue credentials (secret shown once)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/credentials",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "devices", "{{deviceId}}", "credentials"]
+            },
+            "description": "Returns `accessKeyId` and the plaintext `secret`, ONCE. The test stores both in collection variables. Never paste the secret anywhere, and never share or export the collection with its current values."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with a key id and a one-time secret', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const c = pm.response.json();",
+                  "  pm.expect(c.accessKeyId).to.match(/^AKID[A-Z2-7]{16}$/);",
+                  "  pm.expect(c.secret).to.match(/^dsk_/);",
+                  "  pm.collectionVariables.set('accessKeyId', c.accessKeyId);",
+                  "  pm.collectionVariables.set('secret', c.secret);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "63390b43-b88e-5b0e-99e9-8e9e90d444bc",
+          "name": "Activate device",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "devices", "{{deviceId}}", "activate"]
+            },
+            "description": "Only an ACTIVE device can call /mcp."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 active', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('active'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "184c39d7-67fa-5b1d-bb60-b2e07b1c4f01",
+          "name": "Get device (no secret, no hash)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "devices", "{{deviceId}}"]
+            },
+            "description": "Chapter 04 checkpoint: only /credentials ever shows a secret."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, secret and hash never returned', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const d = pm.response.json();",
+                  "  pm.expect(d).to.not.have.any.keys('secret', 'secretHash');",
+                  "  pm.expect(d.accessKeyId).to.eql(pm.collectionVariables.get('accessKeyId'));",
+                  "  pm.expect(d.secretLast4).to.eql(pm.collectionVariables.get('secret').slice(-4));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "e371eb20-7431-57f0-8c5b-a65d25b9ced4",
+          "name": "List my devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "devices"]
+            },
+            "description": "Only the signed-in user's devices. Another user's device id answers 404, never 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1f724469-a318-52b4-ba0f-9052dad1205d",
+      "name": "05 · MCP over HTTP (lite module 4)",
+      "description": "Raw JSON-RPC to /mcp with device headers. The server is stateless: every POST stands alone, and the answer is one SSE `message` event. Read the Body tab: `event: message` then `data: {...}`.",
+      "item": [
+        {
+          "id": "d0b32d19-d0cd-5f81-9ad0-999df3f36a69",
+          "name": "initialize",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{secret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Chapter 05: match the response `id` to the request `id`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-06-18\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('200 SSE with the matching id', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('text/event-stream');",
+                  "  const m = rpc();",
+                  "  pm.expect(m.id).to.eql(1);",
+                  "  pm.expect(m.result.serverInfo.name).to.eql('nest-ai-starter');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "b4d59d99-1227-5a89-a9d4-b44119e1f9b1",
+          "name": "tools/list",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{secret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "The tools this server exposes. Chapter 06 lab: after you add publish-note, it appears here.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('lists the tools', () => {",
+                  "  const names = rpc().result.tools.map((t) => t.name);",
+                  "  pm.expect(names).to.include.members(['create-note', 'get-note', 'list-notes', 'whoami']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "c0e06eb5-7ae2-581a-a3e0-a54869c671fb",
+          "name": "tools/call whoami",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{secret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Who is calling: the device and its owner, resolved from the X-Access-Key-Id / X-Secret-Key headers.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('the active device and its owner', () => {",
+                  "  const r = rpc().result;",
+                  "  pm.expect(r.isError).to.not.eql(true);",
+                  "  const text = r.content[0].text;",
+                  "  pm.expect(text).to.include(pm.collectionVariables.get('email'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "aaf2cecd-fc0b-5ba6-8822-54179254de29",
+          "name": "tools/call create-note (empty published → tool error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{secret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "A rule violation comes back as a TOOL error (`isError: true`, readable by the model), not a protocol error. Chapter 07 lab: this is the input your CI check must reject.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"create-note\",\n    \"arguments\": {\n      \"title\": \"from postman\",\n      \"status\": \"published\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('isError, not a JSON-RPC error', () => {",
+                  "  const m = rpc();",
+                  "  pm.expect(m.error).to.be.undefined;",
+                  "  pm.expect(m.result.isError).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "350cf546-ecf0-5b89-8fb4-1c70759eeda5",
+          "name": "tools/call create-note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{secret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "A valid note. The result text carries the note as JSON.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"create-note\",\n    \"arguments\": {\n      \"title\": \"from postman\",\n      \"body\": \"created over MCP\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('created', () => { pm.expect(rpc().result.isError).to.not.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "924e9bef-441e-5a84-ae10-d319f6d75571",
+          "name": "No device headers → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Device auth runs BEFORE the MCP transport. Missing, wrong, draft, archived or rotated: all the same 401.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"ping\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "05bd0597-a410-56c8-bf89-195df477f750",
+      "name": "06 · Notes over REST (lite module 4)",
+      "description": "The same rule as the MCP tool, at the HTTP boundary: a published note needs a non-empty body.",
+      "item": [
+        {
+          "id": "48a07907-501c-5e7d-962a-1bf09b74a686",
+          "name": "Create note (draft, empty body)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes"]
+            },
+            "description": "Defaults: status `draft`, body empty.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"from postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 draft', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('draft'); });",
+                  "pm.collectionVariables.set('noteId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "f05b20a3-9f7e-5d86-89fc-0d5a7044d009",
+          "name": "Publish it → 422 RULE_VIOLATION",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes", "{{noteId}}"]
+            },
+            "description": "A rule that needs stored state lives in the service and answers 422. Delete the rule in the service and this test goes red: that is the chapter 01 mutation check.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"published\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 rule violation', () => { pm.response.to.have.status(422); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "51e63642-2352-580e-be76-ab42e5eba3e2",
+          "name": "Get note",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes", "{{noteId}}"]
+            },
+            "description": "Still a draft."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 still draft', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('draft'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0b1f6bf0-433c-5854-993c-7abe3df440c4",
+      "name": "08 · Host check (lite module 5)",
+      "description": "DNS-rebinding protection: a Host that is not in MCP_ALLOWED_HOSTS gets 403 even with valid credentials. Postman lets you override Host; fetch() in a test silently does not.",
+      "item": [
+        {
+          "id": "15562283-2a1b-5ffe-8bad-2ac3c5b9fcaa",
+          "name": "Foreign Host → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{secret}}"
+              },
+              {
+                "key": "Host",
+                "value": "evil.example"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Valid device headers, Host set to evil.example.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 7,\n  \"method\": \"ping\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fe9e73f4-2f23-5c5e-bb90-a49b280d8753",
+      "name": "09 · Rotate mid-session (lite module 6)",
+      "description": "Rotate the secret, then call whoami with the OLD one: it fails at once. The new one works.",
+      "item": [
+        {
+          "id": "c99b732d-8c74-59ec-bb70-77cafc2991e4",
+          "name": "Rotate credentials",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/credentials",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "devices", "{{deviceId}}", "credentials"]
+            },
+            "description": "Same accessKeyId, new secret. The OLD secret stays in `secret` for the next request; the new one goes to `rotatedSecret`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('same key id, new secret', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const c = pm.response.json();",
+                  "  pm.expect(c.accessKeyId).to.eql(pm.collectionVariables.get('accessKeyId'));",
+                  "  pm.expect(c.secret).to.not.eql(pm.collectionVariables.get('secret'));",
+                  "  pm.collectionVariables.set('rotatedSecret', c.secret);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "6cba0e96-f95b-5112-9371-b236e292bd2e",
+          "name": "whoami with the OLD secret → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{secret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "The rotation took effect on the very next call.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 8,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "64bcbdca-36bc-5e89-b1d2-80c16825c883",
+          "name": "whoami with the NEW secret",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "X-Access-Key-Id",
+                "value": "{{accessKeyId}}"
+              },
+              {
+                "key": "X-Secret-Key",
+                "value": "{{rotatedSecret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Uses `rotatedSecret`, then promotes it to `secret`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 9,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('200 and not a tool error', () => { pm.response.to.have.status(200); pm.expect(rpc().result.isError).to.not.eql(true); });",
+                  "pm.collectionVariables.set('secret', pm.collectionVariables.get('rotatedSecret'));",
+                  "pm.collectionVariables.set('rotatedSecret', '');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

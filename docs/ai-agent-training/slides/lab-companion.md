@@ -44,6 +44,18 @@ PowerShell has no alias for multi-word commands: function dev { docker compose r
 
 ---
 
+## Postman instead of curl
+
+- **Import one file**: In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.
+- **Folders follow the labs**: Numbered by chapter, and each name says the lite module. Every request has tests: read the Test Results tab, not just the status.
+- **It stores a live secret**: Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.
+
+<!--
+Verified with newman against the Docker stack: 24 requests, 0 failed, on a fresh database and again on a re-run; with a wrong password 17 assertions fail, so the tests can fail. The Inspector CLI (chapters 07 and 09) stays in the terminal on purpose: it is a real MCP client.
+-->
+
+---
+
 ## The track (draft lab times)
 
 | ch  | chapter                         | lab |
@@ -85,11 +97,14 @@ cd boilerplate/nest-ai-starter
 docker compose up -d --build
 docker compose ps -a
 docker compose logs migrate
-curl localhost:3000/api/health
 
 alias dev='docker compose run --rm dev'
 dev pnpm verify
 ```
+
+**In Postman**
+
+- **00 · Stack (lite module 1)**: Health
 
 <!--
 The first build takes a few minutes. While it runs, walk through docker-compose.yml: db, redis (infra only), migrate (one-shot), app, dev (profile).
@@ -107,7 +122,7 @@ app       Up … (healthy)
 migrate   Exited (0)
 # docker compose logs migrate
 db:migrate: ledger rows: 3
-# curl …/api/health
+# Postman: 00 › Health
 {"status":"ok"}
 # dev pnpm verify
 Tests  67 passed (67)
@@ -277,16 +292,15 @@ Break the "one identical 401" rule on purpose and see which test catches it.
 
 ```bash
 git log --oneline --grep 'course(ch03'
-curl -s localhost:3000/api/v1/users \
-  -H 'content-type: application/json' -d \
-  '{"email":"me@example.com","name":"Me",
-    "password":"my long passphrase"}'
-curl -i localhost:3000/api/v1/auth/me
-curl -i -u me@example.com:'my long passphrase' \
-  localhost:3000/api/v1/auth/me
-# lab: change the message for unknown emails
+# send the Postman requests, then the lab:
+# change the message for unknown emails
 dev pnpm test:e2e     # which test fails?
+# re-send "Me: unknown email" in Postman too
 ```
+
+**In Postman**
+
+- **03 · Auth (lite module 3)**: Sign up (public) · Me: no credentials → 401 · Me: wrong password → the same 401 · Me: unknown email → the same 401 · Me (Basic auth)
 
 <!--
 Then revert. `git show 8e46c2097` is the hand-written middleware version, worth reading next to the Passport one.
@@ -304,7 +318,7 @@ WWW-Authenticate: Basic
   realm="nest-ai-starter", charset="UTF-8"
 {"statusCode":401,"error":"Unauthorized",
  "message":"Invalid credentials"}
-# with -u: HTTP/1.1 200 OK, no password
+# Me (Basic auth): 200 OK, no password
 # after your change, e2e reports:
 × every failure is the SAME 401 …
 ```
@@ -340,18 +354,19 @@ Issue, rotate and inspect device credentials; then add `expiresAt`.
 ## Run this: credentials, rotation, ownership
 
 ```bash
-eval "$(docker compose run --rm -T dev \
-  node scripts/demo-device.mjs | grep '^export ')"
-curl -s -H "Authorization: $DEMO_BASIC" \
-  localhost:3000/api/v1/devices/$DEVICE_ID
-curl -s -X POST -H "Authorization: $DEMO_BASIC" \
-  localhost:3000/api/v1/devices/$DEVICE_ID/credentials
-# lab: add expiresAt: spec → schema → table
-#      → migration → rule → tests
+# send the Postman requests first, then the lab:
+# add expiresAt: spec → schema → table
+#   → migration → rule → tests
+dev pnpm verify
+# re-send "Issue credentials" = a rotation
 ```
 
+**In Postman**
+
+- **04 · Devices (lite module 3)**: Create device · Issue credentials (secret shown once) · Activate device · Get device (no secret, no hash)
+
 <!--
-The helper prints exports only; keep the grep. With a bare eval, compose build-log lines would run as shell commands (measured).
+The collection keeps the issued secret in a collection variable for the MCP folders. Remind learners it is a live credential.
 -->
 
 ---
@@ -400,21 +415,12 @@ Send a raw `initialize` and read the JSON-RPC and SSE framing.
 
 ## Run this: a raw MCP initialize
 
-```bash
-eval "$(docker compose run --rm -T dev \
-  node scripts/demo-device.mjs | grep '^export ')"
-curl -s -i -X POST localhost:3000/mcp \
-  -H 'content-type: application/json' \
-  -H 'accept: application/json, text/event-stream' \
-  -H "X-Access-Key-Id: $MCP_KEY_ID" \
-  -H "X-Secret-Key: $MCP_SECRET" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize",
-   "params":{"protocolVersion":"2025-06-18",
-   "capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}'
-```
+**In Postman**
+
+- **05 · MCP over HTTP (lite module 4)**: initialize · tools/list · tools/call whoami · No device headers → 401
 
 <!--
-Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?
+Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?
 -->
 
 ---
@@ -444,7 +450,7 @@ data: {"result":{
 
 ## If you are stuck: chapter 05
 
-- **401 Unauthorized**: Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-run the helper.
+- **401 Unauthorized**: Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-send folder 04 · Devices.
 - **403 Invalid Host**: You called the app by a name not in MCP_ALLOWED_HOSTS (compose sets localhost,app).
 - **Plain JSON, no SSE**: enableJsonResponse is true: the DEFAULT of @rekog/mcp-nest 2.0.8. Ours sets false.
 
@@ -587,15 +593,19 @@ Flip `enableJsonResponse` and compare what goes over the wire.
 ## Run this: JSON vs SSE on the wire
 
 ```bash
-# 1. capture the chapter 05 initialize (SSE)
+# 1. Postman 05 › initialize: note the
+#    Content-Type and the Body
 # 2. src/bootstrap/attach-mcp.ts:
 #      enableJsonResponse: true
 docker compose up -d --build app
-# 3. same curl again: what changed?
-curl -s -o /dev/null -w "%{http_code}\n" \
-  -X POST -H 'Host: evil.example' \
-  localhost:3000/mcp       # Host check
+# 3. re-send initialize: what changed?
+# 4. revert, rebuild
 ```
+
+**In Postman**
+
+- **05 · MCP over HTTP (lite module 4)**: initialize
+- **08 · Host check (lite module 5)**: Foreign Host → 403
 
 <!--
 Revert enableJsonResponse afterwards. Ask why the e2e Host test uses node:http and not fetch.
@@ -628,7 +638,7 @@ content-type: application/json
 ## If you are stuck: chapter 08
 
 - **Host test without credentials**: You get 401, not 403: device auth runs first. Send the device headers too.
-- **My fetch Host test passes 200**: fetch silently replaces Host (measured). Use curl or node:http.
+- **My fetch Host test passes 200**: fetch silently replaces Host (measured). node:http, curl and Postman send it as written.
 - **Called by service name: 403**: Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).
 
 ---
@@ -655,28 +665,30 @@ dev npx -y @modelcontextprotocol/inspector@2.12.0 \
   --method tools/call --tool-name whoami \
   --header "X-Access-Key-Id: $MCP_KEY_ID" \
   --header "X-Secret-Key: $MCP_SECRET"
-curl -s -X POST -H "Authorization: $DEMO_BASIC" \
-  localhost:3000/api/v1/devices/$DEVICE_ID/credentials
-# run the same Inspector command again
 ```
 
+**In Postman**
+
+- **09 · Rotate mid-session (lite module 6)**: Rotate credentials · whoami with the OLD secret → 401 · whoami with the NEW secret
+
 <!--
-The rotation output contains the NEW secret. Tell learners not to paste it anywhere; redirect it to /dev/null if screens are shared.
+Two clients, two devices: the Inspector uses the helper's device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.
 -->
 
 ---
 
 ## Checkpoint: rotation bites immediately
 
-_Output: first call captured, second expected_
+_Output: captured_
 
 ```bash
-# first whoami (captured)
+# Inspector whoami
 "device": { … "status": "active" … },
 "owner":  { … "email": "demo@example.com" }
-# after rotation, same headers (expected)
-HTTP 401 → the Inspector reports
-  auth_required (it expects OAuth)
+# Postman 09 · Rotate mid-session
+Rotate credentials           200
+whoami with the OLD secret   401
+whoami with the NEW secret   200
 ```
 
 **Done when**

@@ -8,7 +8,7 @@ are estimates, and nobody has run the labs with an audience yet.
 | `lab-companion.pptx`              | PowerPoint / Keynote / LibreOffice. Speaker notes are on each slide                                                                                                   |
 | `lab-companion.md`                | the same slides as Markdown. Present with [Marp](https://marp.app) (`marp lab-companion.md`), or just open it in any Markdown viewer. Speaker notes are HTML comments |
 | `build-lab-deck.mjs`              | **the source of both files.** Edit content here, then rebuild. Never edit the two outputs by hand, or they drift apart                                                |
-| `lab-companion-lite.pptx` / `.md` | the **lite track**: six modules, 31 slides. See `../LITE-TRACK.md`                                                                                                    |
+| `lab-companion-lite.pptx` / `.md` | the **lite track**: six modules, 32 slides. See `../LITE-TRACK.md`                                                                                                    |
 
 Each chapter has four slides:
 
@@ -19,6 +19,11 @@ Each chapter has four slides:
    course was built, _from the code_ means literal values taken from the source, and
    _expected_ means checking it is part of the lab.
 4. **If you're stuck:** the snags we actually hit while building the course.
+
+Slides that used to show curl now show an orange **In Postman** panel: the folder and the
+requests to send, in order. The script reads the starter's Postman collection and **fails
+the build** if a slide names a folder or request that the collection does not have, so the
+deck cannot point at a request that was renamed.
 
 The commands assume `alias dev='docker compose run --rm dev'` (slide 3) and the
 `scripts/demo-device.mjs` helper in the starter, which creates a demo user and an active
@@ -40,7 +45,8 @@ Without Node, run it in a container (no bind mount needed):
 docker run --name deck -d node:24-bookworm-slim sleep infinity
 docker exec deck sh -c 'mkdir /w && cd /w && npm init -y >/dev/null && npm i pptxgenjs react react-dom react-icons sharp'
 docker cp build-lab-deck.mjs deck:/w/
-docker exec -w /w deck node build-lab-deck.mjs /w
+docker cp ../../../boilerplate/nest-ai-starter/postman/nest-ai-starter.postman_collection.json deck:/w/c.json
+docker exec -w /w -e POSTMAN_COLLECTION=/w/c.json deck node build-lab-deck.mjs /w
 for f in lab-companion lab-companion-lite; do docker cp deck:/w/$f.pptx . && docker cp deck:/w/$f.md .; done
 docker rm -f deck
 ```
