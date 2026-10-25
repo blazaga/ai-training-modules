@@ -29,19 +29,21 @@ export class DevicesService {
     @Inject(DEVICES_REPOSITORY) private readonly repo: DevicesRepository,
   ) {}
 
-  async create(input: CreateDeviceDto): Promise<Device> {
+  async create(ownerId: string, input: CreateDeviceDto): Promise<Device> {
     // No create-time rules.
-    return this.repo.create(await this.toStored(input));
+    return this.repo.create(await this.toStored(ownerId, input));
   }
 
   /** The create payload in its STORED shape: write-only inputs become private fields. */
   private toStored(
+    ownerId: string,
     input: CreateDeviceDto,
   ): Promise<Omit<Device, keyof Entity>> | Omit<Device, keyof Entity> {
     // A new device is a draft with no credentials (spec); everything else is
     // server-owned and starts empty.
     return {
       ...input,
+      ownerUserId: ownerId, // ch04b: the creating user owns it
       status: 'draft',
       accessKeyId: null,
       secretHash: null,
@@ -52,18 +54,32 @@ export class DevicesService {
     };
   }
 
-  findPage(limit: number, offset: number): Promise<Page<Device>> {
-    return this.repo.findPage(limit, offset);
+  findPage(
+    ownerId: string,
+    limit: number,
+    offset: number,
+  ): Promise<Page<Device>> {
+    return this.repo.findPageByOwner(ownerId, limit, offset);
   }
 
-  async findOne(id: string): Promise<Device> {
+  /**
+   * ch04b: scoped to the owner. Another user's device is NOT FOUND (404), not
+   * forbidden, so device ids cannot be probed. Every method below goes through here.
+   */
+  async findOne(ownerId: string, id: string): Promise<Device> {
     const found = await this.repo.findById(id);
-    if (!found) throw new NotFoundError('Device', id);
+    if (!found || found.ownerUserId !== ownerId) {
+      throw new NotFoundError('Device', id);
+    }
     return found;
   }
 
-  async update(id: string, patch: UpdateDeviceDto): Promise<Device> {
-    const current = await this.findOne(id);
+  async update(
+    ownerId: string,
+    id: string,
+    patch: UpdateDeviceDto,
+  ): Promise<Device> {
+    const current = await this.findOne(ownerId, id);
     // Spec R5: an archived device cannot be edited.
     if (current.status === 'archived') {
       throw new RuleViolationError('An archived device cannot be edited');
@@ -74,8 +90,8 @@ export class DevicesService {
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    const current = await this.findOne(id);
+  async remove(ownerId: string, id: string): Promise<void> {
+    const current = await this.findOne(ownerId, id);
     // Spec R4: only drafts are deleted; active devices are archived instead.
     if (current.status !== 'draft') {
       throw new RuleViolationError(
@@ -95,9 +111,10 @@ export class DevicesService {
    * id and invalidates the old secret immediately: nothing caches it (spec).
    */
   async issueCredentials(
+    ownerId: string,
     id: string,
   ): Promise<{ device: Device; accessKeyId: string; secret: string }> {
-    const current = await this.findOne(id);
+    const current = await this.findOne(ownerId, id);
     if (current.status === 'archived') {
       throw new RuleViolationError(
         'Credentials cannot be issued for an archived device',
@@ -116,8 +133,8 @@ export class DevicesService {
   }
 
   /** Spec R3: needs credentials and must not be archived. */
-  async activate(id: string): Promise<Device> {
-    const current = await this.findOne(id);
+  async activate(ownerId: string, id: string): Promise<Device> {
+    const current = await this.findOne(ownerId, id);
     if (current.status === 'archived') {
       throw new RuleViolationError('An archived device cannot be activated');
     }
@@ -130,8 +147,8 @@ export class DevicesService {
   }
 
   /** Spec R5: soft delete. Idempotent: archiving an archived device is a no-op. */
-  async archive(id: string): Promise<Device> {
-    const current = await this.findOne(id);
+  async archive(ownerId: string, id: string): Promise<Device> {
+    const current = await this.findOne(ownerId, id);
     if (current.status === 'archived') return current;
     const device = await this.repo.update(id, {
       status: 'archived',

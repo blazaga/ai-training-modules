@@ -110,6 +110,52 @@ describe('devices (e2e)', () => {
     await http.get(`${base}/${created.body.id}`).expect(404);
   });
 
+  describe('ownership (ch04b)', () => {
+    const stranger = {
+      email: 'e2e-stranger@example.com',
+      name: 'Stranger',
+      password: 'stranger passphrase',
+    };
+    const strangerAuth = () => ({
+      Authorization: `Basic ${Buffer.from(`${stranger.email}:${stranger.password}`).toString('base64')}`,
+    });
+
+    beforeAll(async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/users')
+        .send(stranger)
+        .expect(201);
+    });
+
+    it('another user gets 404 for my device and does not see it listed', async () => {
+      const { body: mine } = await http.post(base).send(valid()).expect(201);
+      expect(mine.ownerUserId).toMatch(/^[0-9a-f-]{36}$/);
+      await request(app.getHttpServer())
+        .get(`${base}/${mine.id}`)
+        .set(strangerAuth())
+        .expect(404);
+      await request(app.getHttpServer())
+        .post(`${base}/${mine.id}/credentials`)
+        .set(strangerAuth())
+        .expect(404);
+      const theirs = await request(app.getHttpServer())
+        .get(base)
+        .set(strangerAuth())
+        .expect(200);
+      expect(theirs.body.items).toEqual([]);
+    });
+
+    it('a user who still owns a device cannot be deleted (409)', async () => {
+      const { body: device } = await http.post(base).send(valid()).expect(201);
+      const me = await http.get('/api/v1/auth/me').expect(200);
+      await http
+        .delete(`/api/v1/users/${me.body.id}`)
+        .expect(409)
+        .expect((res) => expect(res.body.code).toBe('CONFLICT'));
+      expect(device.ownerUserId).toBe(me.body.id);
+    });
+  });
+
   it('R1: server-owned fields sent by a client are ignored', async () => {
     const created = await http
       .post(base)

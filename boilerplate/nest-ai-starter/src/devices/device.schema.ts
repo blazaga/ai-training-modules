@@ -7,6 +7,8 @@ import { patchSchema } from '../common/schemas/patch-schema.js';
  */
 export const DeviceSchema = z.object({
   id: z.string().uuid(),
+  /** ch04b: the user who created the device. Server-owned. */
+  ownerUserId: z.string().uuid(),
   name: z.string().trim().min(1).max(100),
   description: z.string().max(500).default(''),
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
@@ -37,6 +39,7 @@ const PRIVATE = {
  * through actions (e.g. `status` only changes via POST /:id/activate).
  */
 const SERVER_OWNED = {
+  ownerUserId: true,
   status: true,
   accessKeyId: true,
   secretLast4: true,

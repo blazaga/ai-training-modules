@@ -94,6 +94,14 @@ is the finished worked example, and `specs/notes.md` is its spec.
   failure is the same 401 body plus `WWW-Authenticate`. `req.user` is the PUBLIC user.
   Do not swap in `passport-http`'s BasicStrategy: it truncates passwords at a second colon
   and answers 400 for malformed headers (measured).
+- **Ownership:** user-owned resources take the owner id from `@CurrentUser()` and scope
+  every read and write to it (see `DevicesService.findOne`). Another user's row is **404**,
+  never 403, so ids cannot be probed. FK deletes that are blocked map to 409 (SQLSTATE 23001
+  for RESTRICT, 23503 for NO ACTION; the adapter handles both).
+- **Generated migrations are not automatically safe.** drizzle-kit emits `ADD COLUMN …
+  NOT NULL` with no warning, and it fails on any populated table. Read every generated SQL
+  file; hand-edit it to nullable → backfill/decide → `SET NOT NULL`, and say why in a SQL
+  comment (see `drizzle/0002_*`).
 - **Passwords:** `src/common/security/password.ts` (scrypt, salted, timing-safe). Never
   log, return or store a plain password.
 - **Config:** read via `ConfigService<Env, true>`, never `process.env`. **Never log config

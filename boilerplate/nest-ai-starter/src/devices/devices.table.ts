@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { users } from '../users/users.table.js';
 
 /**
  * The devices table. TS keys are camelCase; SQL columns are snake_case.
@@ -8,6 +9,9 @@ import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
  */
 export const devices = pgTable('devices', {
   id: uuid('id').primaryKey().defaultRandom(),
+  ownerUserId: uuid('owner_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
   name: text('name').notNull(),
   description: text('description').notNull().default(''),
   status: text('status', { enum: ['draft', 'active', 'archived'] })

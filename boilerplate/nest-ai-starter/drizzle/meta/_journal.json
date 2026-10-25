@@ -15,6 +15,13 @@
       "when": 1792932051072,
       "tag": "0001_high_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792932234157,
+      "tag": "0002_light_human_fly",
+      "breakpoints": true
     }
   ]
 }

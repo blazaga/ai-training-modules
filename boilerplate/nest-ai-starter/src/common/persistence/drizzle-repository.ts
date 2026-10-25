@@ -11,16 +11,26 @@ export type EntityTable = PgTable & {
   updatedAt: PgColumn;
 };
 
-/** Postgres SQLSTATE for unique_violation. PGlite is real Postgres, so it is the same. */
+/** Postgres SQLSTATEs. PGlite is real Postgres, so they are the same. */
 const UNIQUE_VIOLATION = '23505';
+/**
+ * A delete blocked by a foreign key reports a DIFFERENT SQLSTATE depending on
+ * how the key was declared (measured on PGlite / Postgres): ON DELETE RESTRICT
+ * → 23001 restrict_violation; NO ACTION (the default) → 23503
+ * foreign_key_violation. Handle both, or one kind surfaces as a 500.
+ */
+const RESTRICT_VIOLATION = '23001';
+const FOREIGN_KEY_VIOLATION = '23503';
 
-function isUniqueViolation(error: unknown): boolean {
+function hasSqlState(error: unknown, code: string): boolean {
   // drizzle wraps driver errors; the SQLSTATE is on the error or on its cause.
   for (let e: unknown = error; e; e = (e as { cause?: unknown }).cause) {
-    if ((e as { code?: unknown }).code === UNIQUE_VIOLATION) return true;
+    if ((e as { code?: unknown }).code === code) return true;
   }
   return false;
 }
+const isUniqueViolation = (error: unknown) =>
+  hasSqlState(error, UNIQUE_VIOLATION);
 
 /** Timestamps come back from Postgres as Date. The API contract is ISO strings. */
 function toEntity<T>(row: Record<string, unknown>): T {
@@ -135,10 +145,23 @@ export class DrizzleRepository<T extends Entity> implements Repository<T> {
   }
 
   async delete(id: string): Promise<boolean> {
-    const rows = await this.db
-      .delete(this.table)
-      .where(eq(this.table.id, id))
-      .returning({ id: this.table.id });
-    return rows.length > 0;
+    try {
+      const rows = await this.db
+        .delete(this.table)
+        .where(eq(this.table.id, id))
+        .returning({ id: this.table.id });
+      return rows.length > 0;
+    } catch (error) {
+      // Another row still references this one (e.g. a user who owns devices).
+      if (
+        hasSqlState(error, RESTRICT_VIOLATION) ||
+        hasSqlState(error, FOREIGN_KEY_VIOLATION)
+      ) {
+        throw new ConflictError(
+          `${this.entityName} is still referenced and cannot be deleted`,
+        );
+      }
+      throw error;
+    }
   }
 }
