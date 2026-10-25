@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError } from '../common/errors/domain-error.js';
-import { hashPassword } from '../common/security/password.js';
+import { hashPassword, verifyPassword } from '../common/security/password.js';
 import type { Entity, Page } from '../common/persistence/repository.js';
 import { USERS_REPOSITORY, type UsersRepository } from './users.repository.js';
 import type { CreateUserDto } from './dto/create-user.dto.js';
@@ -57,5 +57,30 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     const deleted = await this.repo.delete(id);
     if (!deleted) throw new NotFoundError('User', id);
+  }
+
+  // ---- added in ch03 (auth); not part of the resource template ----
+
+  /** A real scrypt hash of a random value, so unknown emails cost the same work. */
+  private readonly decoyHash = hashPassword(
+    `decoy-${Math.random()}-${Date.now()}`,
+  );
+
+  /**
+   * The user for these credentials, or undefined. Every failure looks the same to
+   * the caller (unknown email, wrong password, disabled account), and an unknown
+   * email still runs one scrypt verify, so response time does not reveal which
+   * emails exist.
+   */
+  async verifyCredentials(
+    email: string,
+    password: string,
+  ): Promise<User | undefined> {
+    const user = await this.repo.findByEmail(email.trim().toLowerCase());
+    const ok = await verifyPassword(
+      password,
+      user?.passwordHash ?? (await this.decoyHash),
+    );
+    return user && ok && user.status === 'active' ? user : undefined;
   }
 }
