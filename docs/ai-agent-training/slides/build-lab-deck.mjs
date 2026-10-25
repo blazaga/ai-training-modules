@@ -7,6 +7,7 @@
 // Rebuild (any machine with Docker; see README.md in this folder):
 //   node build-lab-deck.mjs [outDir]
 // Requires the npm packages pptxgenjs, react, react-dom, react-icons and sharp.
+// MD_ONLY=1 writes only the two Markdown files.
 // Optional: APPLY_THEME_JS=/path/to/apply_theme.js also writes the colours into the
 // .pptx theme, so PowerPoint's theme picker shows them.
 import { createRequire } from 'node:module';
@@ -574,6 +575,214 @@ const SLIDES = [
   },
 ];
 
+// ---- the LITE track: the same process in six modules ------------------------------
+// Same loop (spec → generate → template → fill → verify) and the same four-slide pattern
+// per module; chapters are merged, and each module keeps ONE lab. What was cut is in the
+// divider notes, so a lecturer can pull a full-track lab back in as a stretch.
+// Slides marked fromFull() are the full track's slides, unchanged apart from the label.
+const MOD = (n, title, minutes, goal, covers) => ({ n, title, minutes, goal, covers });
+const MODULES = [
+  MOD('1', 'Setup and the loop', 40, 'Start the stack, then add an `orders` resource: generate → template → fill → verify.', '00 + 01'),
+  MOD('2', 'Data: drizzle and zod', 25, 'Add a `phone` column and watch the migration checks work for you.', '02'),
+  MOD('3', 'Identity: auth and devices', 30, 'Break the "one identical 401" rule on purpose, then issue and rotate device credentials.', '03 + 04'),
+  MOD('4', 'Your first MCP server', 30, 'Read one raw JSON-RPC exchange, then add a `publish-note` tool and pin it with tests.', '05 + 06'),
+  MOD('5', 'Inspector and transports', 25, 'Turn an Inspector call into a CI check, then flip `enableJsonResponse` and compare the wire.', '07 + 08'),
+  MOD('6', 'Secure MCP, then the capstone', 20, 'Rotate a device secret mid-session and watch the next call fail. The capstone is homework.', '09 + 10'),
+];
+const fromFull = (ch, to, types) =>
+  SLIDES.filter((s) => s.ch === ch && types.includes(s.type)).map((s) => ({
+    ...s,
+    ch: to,
+    title: s.title.replace(`chapter ${ch}`, `module ${to}`),
+  }));
+const cutNote = (m, cut) => `Covers full-track chapters ${m.covers}. Cut for time: ${cut}`;
+
+const LITE_SLIDES = [
+  { ...SLIDES.find((s) => s.type === 'title'), subtitle: 'Lab companion, LITE track · six modules · NestJS 12 · drizzle · Passport · MCP · Docker' },
+  ...SLIDES.filter((s) => s.type === 'flow' || s.type === 'rules'),
+  { type: 'agenda', title: 'The lite track (draft lab times)', notes: 'Six modules, about 170 minutes of labs plus the capstone as homework. Times are ESTIMATES: nobody has run these labs with an audience yet. The full track (ch00-ch10) has the labs this one cuts.' },
+
+  { type: 'section', ch: '1', notes: cutNote(MODULES[0], 'the stack-persistence and clean-wipe demos (chapter 00).') },
+  {
+    type: 'run', ch: '1', title: 'Run this: stack up, then an orders resource',
+    code: [
+      'cd boilerplate/nest-ai-starter',
+      'docker compose up -d --build',
+      "alias dev='docker compose run --rm dev'",
+      'dev pnpm verify                # 67 + 61 tests',
+      '# write specs/orders.md (copy specs/notes.md), then:',
+      'dev pnpm exec nest g resource orders --type rest --crud',
+      'dev pnpm resource:template --name order --plural orders',
+      "dev pnpm check:ai-fill         # your agent's to-do list",
+      '# your agent fills every AI-FILL marker, then:',
+      'dev pnpm verify',
+    ],
+    notes: 'The first image build takes a few minutes: use it to walk through docker-compose.yml and specs/notes.md. Learners give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.',
+  },
+  {
+    type: 'checkpoint', ch: '1', title: 'Checkpoint: stack green, markers to zero',
+    outputSource: 'captured, then expected',
+    output: [
+      '# docker compose ps -a  (STATUS)',
+      'app       Up … (healthy)',
+      'migrate   Exited (0)',
+      '# dev pnpm verify (before your resource)',
+      'Tests  67 passed (67)',
+      'Tests  61 passed (61)',
+      '# after the template step (captured)',
+      'files written: 11;',
+      'AI-FILL markers to complete: 16',
+      '# after your agent (expected)',
+      'AI-FILL markers: 0',
+    ],
+    done: [
+      'app healthy, migrate exited 0, both gates green',
+      'check:ai-fill prints 0 markers',
+      'delete one service rule: exactly one test goes red',
+    ],
+  },
+  {
+    type: 'stuck', ch: '1', title: 'If you are stuck: module 1',
+    rows: [
+      ['A port is already in use', 'Something local owns 5432, 6379 or 3000. Stop it, or change the LEFT side of that `ports:` entry.'],
+      ['"Run step 1 first"', 'The template script refuses before `nest g resource`, and refuses a second run. Never use --force after filling.'],
+      ['Unit green, e2e red', 'Validation, defaults and status codes live at the HTTP boundary. Only e2e sees them.'],
+    ],
+  },
+
+  { type: 'section', ch: '2', notes: cutNote(MODULES[1], 'nothing. This is chapter 02 as it stands.') },
+  ...fromFull('02', '2', ['run', 'checkpoint', 'stuck']),
+
+  { type: 'section', ch: '3', notes: cutNote(MODULES[2], 'reading the hand-written middleware commit (chapter 03) and the expiresAt lab (chapter 04). Offer expiresAt as a stretch.') },
+  {
+    type: 'run', ch: '3', title: 'Run this: break the 401, then rotate a key',
+    code: [
+      'curl -i localhost:3000/api/v1/auth/me     # 401',
+      '# lab: give unknown emails a different message',
+      'dev pnpm test:e2e         # which test fails? revert.',
+      DEMO,
+      'curl -s -H "Authorization: $DEMO_BASIC" \\',
+      '  localhost:3000/api/v1/devices/$DEVICE_ID',
+      'curl -s -X POST -H "Authorization: $DEMO_BASIC" \\',
+      '  localhost:3000/api/v1/devices/$DEVICE_ID/credentials',
+    ],
+    notes: 'The helper prints exports only; keep the grep. Unfiltered, compose build-log lines run as shell commands (measured: they created stray files). The rotation output contains a NEW secret: do not paste it anywhere.',
+  },
+  {
+    type: 'checkpoint', ch: '3', title: 'Checkpoint: one 401, one secret',
+    outputSource: 'from the code, then expected',
+    output: [
+      'HTTP/1.1 401 Unauthorized',
+      'WWW-Authenticate: Basic',
+      '  realm="nest-ai-starter", charset="UTF-8"',
+      '# after your change, e2e reports:',
+      '× every failure is the SAME 401 …',
+      '# GET device (expected)',
+      '"status":"active", "secretLast4":"…"',
+      '# POST …/credentials (expected)',
+      '"secret":"dsk_…"   (shown ONCE)',
+    ],
+    done: [
+      'you saw the test that pins the 401 rule fail, then reverted',
+      'no response but /credentials ever shows a secret',
+      "another user's device → 404, not 403",
+    ],
+  },
+  {
+    type: 'stuck', ch: '3', title: 'If you are stuck: module 3',
+    rows: [
+      ['"2 passed | 30 skipped", exit 1', 'A beforeAll threw (e.g. sign-up lost @Public()). The failure is on the Test Files line.'],
+      ['My new route answers 401', 'Secure by default: the guard is global. Add @Public() only on purpose.'],
+      ['Deleting a user gives a 500', 'Blocked FK deletes report 23001 (RESTRICT) or 23503 (NO ACTION). The adapter maps both to 409.'],
+    ],
+  },
+
+  { type: 'section', ch: '4', notes: cutNote(MODULES[3], 'the separate envelope-discussion lab (chapter 05): the raw initialize below replaces it.') },
+  { ...SLIDES.find((s) => s.type === 'run' && s.ch === '05'), ch: '4', title: 'Run this (1/2): a raw MCP initialize' },
+  { ...SLIDES.find((s) => s.type === 'run' && s.ch === '06'), ch: '4', title: 'Run this (2/2): add a publish-note tool' },
+  {
+    type: 'checkpoint', ch: '4', title: 'Checkpoint: JSON-RPC in SSE, rule over MCP',
+    outputSource: 'captured',
+    output: [
+      'content-type: text/event-stream',
+      'event: message',
+      'data: {"result":{"protocolVersion":…},',
+      ' "jsonrpc":"2.0","id":1}',
+      '# publish-note on a note with no body',
+      '{"content":[{"type":"text","text":',
+      '  "RULE_VIOLATION: A published note',
+      '   needs a non-empty body"}],',
+      ' "isError":true}',
+    ],
+    done: [
+      'you matched the response id to the request',
+      'the stdio e2e tool list updated on purpose',
+      'tool error (isError) vs protocol error (error)',
+    ],
+  },
+  {
+    type: 'stuck', ch: '4', title: 'If you are stuck: module 4',
+    rows: [
+      ['401 on /mcp', 'Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-run the helper.'],
+      ['console.log "for debugging"', 'It goes into the protocol stream. The SDK client ignores it, so only the RAW stdout test fails.'],
+      ['A crash instead of isError', 'Wrap tool bodies in runTool(): DomainError → tool error the model can read.'],
+    ],
+  },
+
+  { type: 'section', ch: '5', notes: cutNote(MODULES[4], 'the Host-header lab (chapter 08). Mention MCP_ALLOWED_HOSTS; the stuck slide covers its snags.') },
+  {
+    type: 'run', ch: '5', title: 'Run this: a CI check, then the wire',
+    code: [
+      'dev pnpm build',
+      'dev pnpm mcp:inspect:cli --method tools/call \\',
+      '  --tool-name get-note \\',
+      '  --tool-arg id=00000000-0000-4000-8000-000000000000',
+      'echo "exit: $?"',
+      '# src/bootstrap/attach-mcp.ts: enableJsonResponse: true',
+      'docker compose up -d --build app',
+      '# re-run the module 4 initialize: what changed?',
+      '# then revert enableJsonResponse',
+    ],
+    notes: 'The Inspector web UI binds 127.0.0.1 inside its container: use the CLI in Docker. Exit 5 comes from the tool\'s own isError, which is why it is a sound CI signal.',
+  },
+  {
+    type: 'checkpoint', ch: '5', title: 'Checkpoint: exit 5, then two framings',
+    outputSource: 'captured, then expected',
+    output: [
+      '{ "content": [ { "type": "text",',
+      '  "text": "NOT_FOUND: Note … not found" } ],',
+      '  "isError": true }',
+      'exit: 5',
+      '# enableJsonResponse: true (expected)',
+      'content-type: application/json',
+      '{"result":…}',
+    ],
+    done: [
+      "a script that FAILS when create-note accepts `{title:'x', status:'published'}`",
+      'both framings captured and compared',
+      'MCP_ALLOWED_HOSTS explained in one sentence',
+    ],
+  },
+  {
+    type: 'stuck', ch: '5', title: 'If you are stuck: module 5',
+    rows: [
+      ['No such file dist/mcp-stdio.js', 'Build first: dev pnpm build.'],
+      ['Sharing the Inspector UI URL', 'Don\'t: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.'],
+      ['Called by service name: 403', 'Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).'],
+    ],
+  },
+
+  { type: 'section', ch: '6', notes: cutNote(MODULES[5], 'nothing from chapter 09; the chapter 10 capstone moves to homework.') },
+  ...fromFull('09', '6', ['run', 'checkpoint', 'stuck']),
+  { ...SLIDES.find((s) => s.type === 'capstone'), title: 'Capstone (homework): evidence, not claims' },
+  SLIDES.find((s) => s.type === 'closing'),
+];
+
+const TRACKS = [
+  { file: 'lab-companion', label: 'Lab companion', unit: 'CHAPTER', units: CHAPTERS, slides: SLIDES },
+  { file: 'lab-companion-lite', label: 'Lab companion (lite)', unit: 'MODULE', units: MODULES, slides: LITE_SLIDES },
+];
+
 // ---- icons -----------------------------------------------------------------------
 async function icon(name, color = 'FFFFFF') {
   const svg = renderToStaticMarkup(
@@ -584,10 +793,10 @@ async function icon(name, color = 'FFFFFF') {
 }
 
 // ---- pptx --------------------------------------------------------------------------
-async function buildPptx(file) {
+async function buildPptx(file, track) {
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_16x9'; // 10 x 5.625 in
-  pres.title = 'Lab companion: Building Apps with AI Agents';
+  pres.title = `${track.label}: Building Apps with AI Agents`;
   pres.author = 'edu-training';
   pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
 
@@ -651,11 +860,11 @@ async function buildPptx(file) {
     slide.addShape(pres.shapes.OVAL, { x, y, w: d, h: d, fill: { color }, line: { color } });
     slide.addImage({ data: img, x: x + d * 0.22, y: y + d * 0.22, w: d * 0.56, h: d * 0.56 });
   }
-  const chap = (n) => CHAPTERS.find((c) => c.n === n);
+  const chap = (n) => track.units.find((c) => c.n === n);
   const md2runs = (s, base = {}) =>
     s.split('`').map((part, i) => ({ text: part, options: { ...base, ...(i % 2 ? { fontFace: CODE_FONT } : {}) } }));
 
-  for (const s of SLIDES) {
+  for (const s of track.slides) {
     let slide;
     if (s.type === 'title') {
       slide = pres.addSlide({ masterName: 'TITLE' });
@@ -665,7 +874,7 @@ async function buildPptx(file) {
     } else if (s.type === 'section') {
       const c = chap(s.ch);
       slide = pres.addSlide({ masterName: 'SECTION' });
-      slide.addText(`CHAPTER ${c.n}`, { placeholder: 'kicker' });
+      slide.addText(`${track.unit} ${c.n}`, { placeholder: 'kicker' });
       slide.addText(c.title, { placeholder: 'title' });
       slide.addText(md2runs(c.goal), { placeholder: 'goal' });
       // lab-time card
@@ -678,7 +887,7 @@ async function buildPptx(file) {
       const long = Math.max(...s.code.flatMap((l) => l.split('\n')).map((l) => l.length));
       const lines = s.code.flatMap((l) => l.split('\n'));
       const fontSize = long > 66 || lines.length > 11 ? 12 : 14;
-      terminal(slide, 0.5, 1.2, 9.0, 3.85, lines, { fontSize, label: `chapter ${s.ch} · run this` });
+      terminal(slide, 0.5, 1.2, 9.0, 3.85, lines, { fontSize, label: `${track.unit.toLowerCase()} ${s.ch} · run this` });
     } else if (s.type === 'checkpoint') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
@@ -723,8 +932,8 @@ async function buildPptx(file) {
     } else if (s.type === 'agenda') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
-      const half = Math.ceil(CHAPTERS.length / 2);
-      CHAPTERS.forEach((c, i) => {
+      const half = Math.ceil(track.units.length / 2);
+      track.units.forEach((c, i) => {
         const col = i < half ? 0 : 1, row = i < half ? i : i - half;
         const x = 0.5 + col * 4.6, y = 1.25 + row * 0.62;
         slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w: 4.4, h: 0.52, rectRadius: 0.06, fill: { color: COL.mist }, line: { color: COL.mist } });
@@ -762,19 +971,19 @@ async function buildPptx(file) {
 }
 
 // ---- markdown (Marp) -----------------------------------------------------------------
-function buildMarkdown() {
+function buildMarkdown(track) {
   const out = [
     '---',
     'marp: true',
-    "title: 'Lab companion: Building Apps with AI Agents'",
+    `title: '${track.label}: Building Apps with AI Agents'`,
     'paginate: true',
-    '# Generated by build-lab-deck.mjs from the same source as lab-companion.pptx.',
+    `# Generated by build-lab-deck.mjs from the same source as ${track.file}.pptx.`,
     '# Edit the script, not this file.',
     '---',
     '',
     '',
   ];
-  const chap = (n) => CHAPTERS.find((c) => c.n === n);
+  const chap = (n) => track.units.find((c) => c.n === n);
   // Tables padded the way prettier writes them, so the repo's format hook is a no-op.
   const table = (rows) => {
     const w = rows[0].map((_, c) => Math.max(3, ...rows.map((row) => row[c].length)));
@@ -783,12 +992,12 @@ function buildMarkdown() {
   };
   const fence = (lines) => ['```bash', ...lines.flatMap((l) => l.split('\n')), '```'];
   const page = [];
-  for (const s of SLIDES) {
+  for (const s of track.slides) {
     const p = [];
     if (s.type === 'title') p.push(`# ${s.title}`, '', `**${s.subtitle}**`);
     if (s.type === 'section') {
       const c = chap(s.ch);
-      p.push(`<!-- _class: lead -->`, '', `**CHAPTER ${c.n}**`, '', `# ${c.title}`, '', c.goal, '', `⏱ ${c.minutes} min lab (draft estimate)`);
+      p.push(`<!-- _class: lead -->`, '', `**${track.unit} ${c.n}**`, '', `# ${c.title}`, '', c.goal, '', `⏱ ${c.minutes} min lab (draft estimate)`);
     }
     if (s.type === 'run') p.push(`## ${s.title}`, '', ...fence(s.code));
     if (s.type === 'checkpoint') {
@@ -797,7 +1006,7 @@ function buildMarkdown() {
     if (s.type === 'stuck') p.push(`## ${s.title}`, '', ...s.rows.map(([h, b]) => `- **${h}**: ${b}`));
     if (s.type === 'flow') p.push(`## ${s.title}`, '', ...s.steps.map(([h, b], i) => `${i + 1}. **${h}**: ${b}`), '', '_Repeatable work → tools. Judgement → the agent, fenced in._');
     if (s.type === 'rules') p.push(`## ${s.title}`, '', ...s.rows.map(([, h, b]) => `- **${h}**: ${b}`));
-    if (s.type === 'agenda') p.push(`## ${s.title}`, '', ...table([['ch', 'chapter', 'lab'], ...CHAPTERS.map((c) => [c.n, c.title, `${c.minutes}'`])]));
+    if (s.type === 'agenda') p.push(`## ${s.title}`, '', ...table([[track.unit === 'MODULE' ? 'mod' : 'ch', track.unit.toLowerCase(), 'lab'], ...track.units.map((c) => [c.n, c.title, `${c.minutes}'`])]));
     if (s.type === 'capstone') p.push(`## ${s.title}`, '', ...s.items.map((t, i) => `${i + 1}. ${t}`));
     if (s.type === 'closing') p.push(`# ${s.title}`, '', s.chain.join(' → '), '', s.next);
     if (s.notes) p.push('', `<!--\n${s.notes}\n-->`);
@@ -806,6 +1015,9 @@ function buildMarkdown() {
   return out.join('\n') + page.join('\n\n---\n\n') + '\n';
 }
 
-writeFileSync(join(OUT, 'lab-companion.md'), buildMarkdown());
-await buildPptx(join(OUT, 'lab-companion.pptx'));
-console.log(`build-lab-deck: ${SLIDES.length} slides → lab-companion.pptx + lab-companion.md`);
+for (const track of TRACKS) {
+  writeFileSync(join(OUT, `${track.file}.md`), buildMarkdown(track));
+  if (process.env.MD_ONLY === '1') continue; // Markdown only: no pptx rendering
+  await buildPptx(join(OUT, `${track.file}.pptx`), track);
+  console.log(`build-lab-deck: ${track.slides.length} slides → ${track.file}.pptx + ${track.file}.md`);
+}
