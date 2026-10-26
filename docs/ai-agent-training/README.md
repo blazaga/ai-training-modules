@@ -21,7 +21,7 @@ module to the chapters below. The lecturer deck is in [`slides/`](slides/README.
 | 10  | [Capstone](10-capstone.md)                                                 |
 
 Principles P1–P9 (working with agents) are in [`principles/`](principles/). Also:
-[Glossary](glossary.md) · [Facilitator notes](answers.md) · [WORKLOG](WORKLOG.md).
+[Glossary](glossary.md) · [Facilitator notes](answers.md).
 
 ```bash
 cd boilerplate/nest-ai-starter

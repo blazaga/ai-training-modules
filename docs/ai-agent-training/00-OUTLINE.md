@@ -86,7 +86,7 @@ How to work with agents at all: drawn from running a production estate with them
 | P8  | [Shipping safely](principles/p8-shipping.md)                                       |
 | P9  | [Writing facts that survive being quoted](principles/p9-writing.md)                |
 
-Plus: [Glossary](glossary.md) · [Facilitator notes](answers.md) · [WORKLOG](WORKLOG.md)
+Plus: [Glossary](glossary.md) · [Facilitator notes](answers.md)
 
 ## Ground rules for the material
 
