@@ -10,7 +10,7 @@ import {
 } from './lab-harness.js';
 
 /**
- * Lab 10 (capstone; lite module 6 homework): device-scoped notes.
+ * Lab 10 (capstone; module 6 homework): device-scoped notes.
  *
  * The contract:
  *   - every note has an owner: the signed-in user over REST, the device's owner over MCP

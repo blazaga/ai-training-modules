@@ -8,7 +8,7 @@ import {
 } from './lab-harness.js';
 
 /**
- * Lab 08 (lite module 5): the Streamable HTTP settings, back as the starter ships them.
+ * Lab 08 (module 5): the Streamable HTTP settings, back as the starter ships them.
  *
  * This check passes on the starter. In the lab you flip `enableJsonResponse` (and,
  * optionally, `statefulMode`) in src/bootstrap/attach-mcp.ts and compare the wire: this

@@ -4,8 +4,8 @@ Build a NestJS 12 service with AI agents, skills and templated code, then turn i
 authenticated **MCP server**. The service is `boilerplate/nest-ai-starter/`; each chapter
 is a commit you can check out.
 
-Start with the [outline](00-OUTLINE.md). Short on time? The [lite track](LITE-TRACK.md) covers the same process in six
-modules. Lecturer decks for both tracks are in [`slides/`](slides/README.md).
+The course runs in six modules; start with the [outline](00-OUTLINE.md), which maps each
+module to the chapters below. The lecturer deck is in [`slides/`](slides/README.md).
 
 | ch  |                                                                            |
 | --- | -------------------------------------------------------------------------- |

@@ -8,10 +8,10 @@ paginate: true
 
 # Building Apps with AI Agents
 
-**Lab companion · NestJS 12 · drizzle · SQLite · Passport · MCP**
+**Lab companion · six modules · NestJS 12 · drizzle · SQLite · Passport · MCP**
 
 <!--
-Keep this deck on screen during lab work. Each chapter has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.
+Keep this deck on screen during lab work. Each module has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.
 -->
 
 ---
@@ -47,7 +47,7 @@ Linux, macOS and WSL shells were the target. The `eval "$(…)"` lab helper need
 ## Calling the API with Postman
 
 - **Import one file**: In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.
-- **Folders follow the labs**: Numbered by chapter, and each name says the lite module. Every request has tests: read the Test Results tab, not just the status.
+- **Folders follow the labs**: Numbered by chapter, and each name says its module. Every request has tests: read the Test Results tab, not just the status.
 - **It stores a live secret**: Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.
 
 <!--
@@ -58,7 +58,7 @@ The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP c
 
 ## Lab checks: is my lab done?
 
-- **One check per lab**: `pnpm lab 04` runs the check for lab 04, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
+- **One check per lab**: `pnpm lab 01` runs the check for lab 01, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
 - **Build labs start red**: Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.
 - **Guard labs start green**: Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.
 
@@ -70,173 +70,107 @@ The checks drive the app over HTTP and MCP and never import learner code, so the
 
 ## The track (draft lab times)
 
-| ch  | chapter                         | lab |
-| --- | ------------------------------- | --- |
-| 00  | Setup: Node, pnpm, SQLite       | 15' |
-| 01  | CLI and templates               | 30' |
-| 02  | Users with drizzle and zod      | 25' |
-| 03  | Auth: middleware, then Passport | 15' |
-| 04  | Devices and ownership           | 25' |
-| 05  | MCP: envelopes and transports   | 10' |
-| 06  | Your first MCP controller       | 25' |
-| 07  | Using the MCP Inspector         | 15' |
-| 08  | stdio → Streamable HTTP         | 15' |
-| 09  | MCP auth with device keys       | 15' |
-| 10  | Capstone                        | 60' |
+| mod | module                        | lab |
+| --- | ----------------------------- | --- |
+| 1   | Setup and the loop            | 40' |
+| 2   | Data: drizzle and zod         | 25' |
+| 3   | Identity: auth and devices    | 30' |
+| 4   | Your first MCP server         | 30' |
+| 5   | Inspector and transports      | 25' |
+| 6   | Secure MCP, then the capstone | 20' |
 
 <!--
-Times are ESTIMATES. Nobody has run these labs with an audience yet. Adjust after the first session. Chapter 10 works well as homework.
+Six modules, about 170 minutes of labs plus the capstone as homework. Times are ESTIMATES: nobody has run these labs with an audience yet. Adjust after the first session.
 -->
 
 ---
 
 <!-- _class: lead -->
 
-**CHAPTER 00**
+**MODULE 1**
 
-# Setup: Node, pnpm, SQLite
+# Setup and the loop
 
-Install, migrate the SQLite file, start the app, run the gate.
+Set up and start the app, then add an `orders` resource: generate → template → fill → verify.
 
-⏱ 15 min lab (draft estimate)
+⏱ 40 min lab (draft estimate)
+
+<!--
+Covers chapters 00 + 01. Left out for time: the persistence and clean-wipe demos (chapter 00).
+-->
 
 ---
 
-## Run this: install, migrate, start
+## Run this: set up, then an orders resource
 
 ```bash
 cd boilerplate/nest-ai-starter
 corepack enable && pnpm install
 cp .env.example .env
 pnpm build && pnpm db:migrate
-pnpm start          # leave it running
-
-# in a second terminal:
-pnpm verify
-```
-
-**In Postman**
-
-- **00 · Setup (lite module 1)**: Health
-
-<!--
-While pnpm install runs, open .env.example: DATABASE_URL=file:./data/app.db is the whole database. db:migrate creates that file and applies drizzle/; the app never migrates a file database itself.
--->
-
----
-
-## Checkpoint: app up, gate green
-
-_Output: captured (abridged)_
-
-```bash
-# pnpm db:migrate
-db:migrate: ledger rows: 3
-# pnpm start
-Nest application successfully started
-# Postman: 00 › Health
-{"status":"ok"}
-# pnpm verify
-Tests  69 passed (69)
-Tests  61 passed (61)
-```
-
-**Done when**
-
-- [ ] data/app.db exists, ledger rows: 3 (read the ledger, not a log line)
-- [ ] health answers {"status":"ok"}
-- [ ] both Tests lines AND both "Test Files … passed"
-
-<!--
-Counts are from the final starter. If a learner sees fewer tests, they are on an older commit.
--->
-
----
-
-## If you are stuck: chapter 00
-
-- **pnpm: command not found**: Run `corepack enable`, or write `corepack pnpm` instead of `pnpm`.
-- **Port 3000 is already in use**: Something local owns it. Stop it, or set PORT=3001 in .env and use that port everywhere (Postman baseUrl too).
-- **no such table: users**: The file was never migrated: `pnpm build && pnpm db:migrate`, then start again.
-
----
-
-<!-- _class: lead -->
-
-**CHAPTER 01**
-
-# CLI and templates
-
-Add an `orders` resource: generate → template → fill → verify.
-
-⏱ 30 min lab (draft estimate)
-
----
-
-## Run this: add an orders resource
-
-```bash
-# 1. write specs/orders.md (copy specs/notes.md)
-pnpm exec nest g resource orders \
-  --type rest --crud
-pnpm resource:template \
-  --name order --plural orders
-pnpm check:ai-fill      # your to-do list
-# 2. your agent fills every AI-FILL marker
-#    from specs/orders.md
+pnpm verify                # 69 + 61 tests
+# write specs/orders.md (copy specs/notes.md), then:
+pnpm exec nest g resource orders --type rest --crud
+pnpm resource:template --name order --plural orders
+pnpm check:ai-fill         # your agent's to-do list
+# your agent fills every AI-FILL marker, then:
 pnpm verify
 pnpm lab 01   # the lab check: all green?
 ```
 
 <!--
-Learners should give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.
+While pnpm install runs, walk through specs/notes.md. Learners give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.
 -->
 
 ---
 
-## Checkpoint: markers to zero, rules pinned
+## Checkpoint: gate green, markers to zero
 
 _Output: captured, then expected_
 
 ```bash
-# captured: after the template step
+# pnpm db:migrate
+db:migrate: ledger rows: 3
+# pnpm verify (before your resource)
+Tests  69 passed (69)
+Tests  61 passed (61)
+# after the template step (captured)
 files written: 11;
 AI-FILL markers to complete: 16
-# expected: after your agent filled them
+# after your agent (expected)
 AI-FILL markers: 0
-Tests  N passed  (N > 69)
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 01`: every test passes
+- [ ] ledger rows: 3, both gates green
 - [ ] check:ai-fill prints 0 markers
-- [ ] delete each service rule once: exactly one test goes red
-- [ ] verify green, counts read aloud
-
-<!--
-The mutation step is the point: a rule nobody has tried deleting is a rule nobody has proven is tested.
--->
+- [ ] delete one service rule: exactly one test goes red
 
 ---
 
-## If you are stuck: chapter 01
+## If you are stuck: module 1
 
+- **pnpm: command not found**: Run `corepack enable`, or write `corepack pnpm` instead of `pnpm`.
 - **"Run step 1 first"**: The template script refuses before `nest g resource`, and refuses a second run. Never use --force after filling.
-- **PATCH wiped my fields**: Keep `patchSchema()`: zod `.partial()` re-applies defaults (measured on zod 4.4.3 and 4.6.7).
 - **Unit green, e2e red**: Validation, defaults and status codes live at the HTTP boundary. Only e2e sees them.
 
 ---
 
 <!-- _class: lead -->
 
-**CHAPTER 02**
+**MODULE 2**
 
-# Users with drizzle and zod
+# Data: drizzle and zod
 
 Add a `phone` column and watch the migration checks work for you.
 
 ⏱ 25 min lab (draft estimate)
+
+<!--
+Covers chapter 02. Left out for time: nothing. This is chapter 02 as it stands.
+-->
 
 ---
 
@@ -285,7 +219,7 @@ db:migrate: ledger rows: 4
 
 ---
 
-## If you are stuck: chapter 02
+## If you are stuck: module 2
 
 - **All tests pass, check fails**: Correct: tests run on the MIGRATION SQL (in-memory SQLite), not your TypeScript table. Generate the migration.
 - **Drift test fails**: The zod schema and the table must declare exactly the same fields, with the same TS names.
@@ -295,150 +229,96 @@ db:migrate: ledger rows: 4
 
 <!-- _class: lead -->
 
-**CHAPTER 03**
+**MODULE 3**
 
-# Auth: middleware, then Passport
+# Identity: auth and devices
 
-Break the "one identical 401" rule on purpose and see which test catches it.
+Break the "one identical 401" rule on purpose, then issue and rotate device credentials.
 
-⏱ 15 min lab (draft estimate)
+⏱ 30 min lab (draft estimate)
+
+<!--
+Covers chapters 03 + 04. Left out for time: reading the hand-written middleware commit (chapter 03) and the expiresAt lab (chapter 04). Offer expiresAt as a stretch.
+-->
 
 ---
 
-## Run this: see the 401, then break it
+## Run this: break the 401, then rotate a key
 
 ```bash
-git log --oneline --grep 'course(ch03'
-# send the Postman requests, then the lab:
-# change the message for unknown emails
-pnpm test:e2e     # which test fails?
-# re-send "Me: unknown email" in Postman too
+# send folder 03, then the lab:
+# unknown emails get a different message
+pnpm test:e2e   # which test fails?
+# re-send 03 in Postman, then revert
+# then send folder 04
 pnpm lab 03   # green now; break it, see red, revert
 ```
 
 **In Postman**
 
-- **03 · Auth (lite module 3)**: Sign up (public) · Me: no credentials → 401 · Me: wrong password → the same 401 · Me: unknown email → the same 401 · Me (Basic auth)
+- **03 · Auth (module 3)**: Sign up (public) · Me: no credentials → 401 · Me: unknown email → the same 401 · Me (Basic auth)
+- **04 · Devices (module 3)**: Create device · Issue credentials (secret shown once) · Activate device · Get device (no secret, no hash)
 
 <!--
-Then revert. `git show 8e46c2097` is the hand-written middleware version, worth reading next to the Passport one.
+Issuing credentials stores a live secret in a collection variable: never export or share the collection after a run. Re-sending Issue credentials is a rotation.
 -->
 
 ---
 
-## Checkpoint: one 401 for every failure
+## Checkpoint: one 401, one secret
 
-_Output: values from the code_
+_Output: from the code, then expected_
 
 ```bash
 HTTP/1.1 401 Unauthorized
 WWW-Authenticate: Basic
   realm="nest-ai-starter", charset="UTF-8"
-{"statusCode":401,"error":"Unauthorized",
- "message":"Invalid credentials"}
-# Me (Basic auth): 200 OK, no password
 # after your change, e2e reports:
 × every failure is the SAME 401 …
+# GET device (expected)
+"status":"active", "secretLast4":"…"
+# POST …/credentials (expected)
+"secret":"dsk_…"   (shown ONCE)
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 03`: every test passes
-- [ ] you saw the test that pins the rule fail
-- [ ] you can say why the bodies must be identical
-- [ ] reverted; verify green
+- [ ] you saw the test that pins the 401 rule fail, then reverted
+- [ ] no response but /credentials ever shows a secret
+- [ ] another user's device → 404, not 403
 
 ---
 
-## If you are stuck: chapter 03
+## If you are stuck: module 3
 
 - **"2 passed | 30 skipped", exit 1**: A beforeAll threw (e.g. sign-up lost @Public()). The failure is on the Test Files line.
 - **My new route answers 401**: Secure by default: the guard is global. Add @Public() only on purpose.
-- **Password with a colon fails**: Not with our parser. passport-http truncates at the 2nd colon (measured). Do not swap it in.
+- **Deleting a user gives a 500**: A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.
 
 ---
 
 <!-- _class: lead -->
 
-**CHAPTER 04**
+**MODULE 4**
 
-# Devices and ownership
+# Your first MCP server
 
-Issue, rotate and inspect device credentials; then add `expiresAt`.
+Read one raw JSON-RPC exchange, then add a `publish-note` tool and pin it with tests.
 
-⏱ 25 min lab (draft estimate)
-
----
-
-## Run this: credentials, rotation, ownership
-
-```bash
-# send the Postman requests first, then the lab:
-# add expiresAt: spec → schema → table
-#   → migration → rule → tests
-pnpm verify
-# re-send "Issue credentials" = a rotation
-pnpm lab 04   # the lab check: all green?
-```
-
-**In Postman**
-
-- **04 · Devices (lite module 3)**: Create device · Issue credentials (secret shown once) · Activate device · Get device (no secret, no hash)
+⏱ 30 min lab (draft estimate)
 
 <!--
-The collection keeps the issued secret in a collection variable for the MCP folders. Remind learners it is a live credential.
+Covers chapters 05 + 06. Left out for time: the separate envelope-discussion lab (chapter 05): the raw initialize below covers it.
 -->
 
 ---
 
-## Checkpoint: the secret appears once
-
-_Output: expected (asserted by e2e)_
-
-```bash
-# GET device
-"status":"active",
-"accessKeyId":"AKID…",
-"secretLast4":"…"     (no secret, no hash)
-# POST …/credentials (rotation)
-"secret":"dsk_…"      (shown ONCE)
-same accessKeyId, new secretLast4
-```
-
-**Done when**
-
-- [ ] `pnpm lab 04`: every test passes
-- [ ] no response but /credentials ever shows a secret
-- [ ] an expired secret fails verifyAccessKey (unit test)
-- [ ] another user's device → 404 still holds
-
----
-
-## If you are stuck: chapter 04
-
-- **"Cannot add a NOT NULL column"**: Your migration hit existing rows (measured). Hand-edit: deal with those rows first, as drizzle/0002 does.
-- **Deleting a user gives a 500**: A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.
-- **Another user's device is 404**: By design: 404, not 403, so ids cannot be probed.
-
----
-
-<!-- _class: lead -->
-
-**CHAPTER 05**
-
-# MCP: envelopes and transports
-
-Send a raw `initialize` and read the JSON-RPC and SSE framing.
-
-⏱ 10 min lab (draft estimate)
-
----
-
-## Run this: a raw MCP initialize
+## Run this (1/2): a raw MCP initialize
 
 **In Postman**
 
-- **05 · MCP over HTTP (lite module 4)**: initialize · tools/list · tools/call whoami · No device headers → 401
+- **05 · MCP over HTTP (module 4)**: initialize · tools/list · tools/call whoami · No device headers → 401
 
 <!--
 Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?
@@ -446,50 +326,7 @@ Open the Body tab of initialize: one SSE event, `event: message` then `data: {..
 
 ---
 
-## Checkpoint: JSON-RPC inside SSE
-
-_Output: captured_
-
-```bash
-HTTP/1.1 200 OK
-content-type: text/event-stream
-
-event: message
-data: {"result":{
-  "protocolVersion":"2025-06-18", …
-  "serverInfo":{"name":"nest-ai-starter",…}},
- "jsonrpc":"2.0","id":1}
-```
-
-**Done when**
-
-- [ ] you matched the response id to the request
-- [ ] you named request / response / notification
-- [ ] tool error (isError) vs protocol error (error)
-
----
-
-## If you are stuck: chapter 05
-
-- **401 Unauthorized**: Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-send folder 04 · Devices.
-- **403 Invalid Host**: You called the app by a name not in MCP_ALLOWED_HOSTS (default: localhost and 127.0.0.1 only).
-- **Plain JSON, no SSE**: enableJsonResponse is true: the DEFAULT of @rekog/mcp-nest 2.0.8. Ours sets false.
-
----
-
-<!-- _class: lead -->
-
-**CHAPTER 06**
-
-# Your first MCP controller
-
-Add a `publish-note` tool and pin it with tests.
-
-⏱ 25 min lab (draft estimate)
-
----
-
-## Run this: add a publish-note tool
+## Run this (2/2): add a publish-note tool
 
 ```bash
 // src/mcp/notes.tools.ts
@@ -510,51 +347,56 @@ Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails unti
 
 ---
 
-## Checkpoint: the rule holds over MCP
+## Checkpoint: JSON-RPC in SSE, rule over MCP
 
 _Output: captured_
 
 ```bash
+content-type: text/event-stream
+event: message
+data: {"result":{"protocolVersion":…},
+ "jsonrpc":"2.0","id":1}
 # publish-note on a note with no body
 {"content":[{"type":"text","text":
   "RULE_VIOLATION: A published note
    needs a non-empty body"}],
  "isError":true}
-# tools/list
-create-note, get-note, list-notes,
-publish-note, whoami
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 06`: every test passes
+- [ ] you matched the response id to the request
 - [ ] the stdio e2e tool list updated on purpose
-- [ ] a test: publishing an empty note → isError
-- [ ] the RAW stdout test still green
+- [ ] tool error (isError) vs protocol error (error)
 
 ---
 
-## If you are stuck: chapter 06
+## If you are stuck: module 4
 
+- **401 on /mcp**: Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-run the helper.
 - **console.log "for debugging"**: It goes into the protocol stream. The SDK client ignores it, so only the RAW stdout test fails.
-- **Old behaviour in tests**: The e2e setup rebuilds dist/ and fails on a stale one. Never test yesterday's build.
 - **A crash instead of isError**: Wrap tool bodies in runTool(): DomainError → tool error the model can read.
 
 ---
 
 <!-- _class: lead -->
 
-**CHAPTER 07**
+**MODULE 5**
 
-# Using the MCP Inspector
+# Inspector and transports
 
-Turn an Inspector call into a CI check with its exit code.
+Turn an Inspector call into a CI check, then flip `enableJsonResponse` and compare the wire.
 
-⏱ 15 min lab (draft estimate)
+⏱ 25 min lab (draft estimate)
+
+<!--
+Covers chapters 07 + 08. Left out for time: the Host-header lab (chapter 08). Mention MCP_ALLOWED_HOSTS; the stuck slide covers its snags.
+-->
 
 ---
 
-## Run this: the Inspector UI
+## Run this (1/2): the Inspector UI
 
 ```bash
 pnpm mcp:inspect:ui      # leave it running
@@ -581,100 +423,42 @@ The Inspector listens on loopback only (127.0.0.1:6274). Its URL carries an API 
 
 ---
 
-## Run this: the Inspector as a CI check
+## Run this (2/2): a CI check, then the wire
 
 ```bash
 pnpm build
-pnpm mcp:inspect:cli --method tools/list
 pnpm mcp:inspect:cli --method tools/call \
   --tool-name get-note \
   --tool-arg id=00000000-0000-4000-8000-000000000000
 echo "exit: $?"
+# attach-mcp.ts: enableJsonResponse: true
+# restart the app: Ctrl+C, then
+pnpm build && pnpm start
+# re-send Postman 05 › initialize: what changed?
+# then revert enableJsonResponse
+pnpm lab 08   # green now; break it, see red, revert
 ```
 
+**In Postman**
+
+- **05 · MCP over HTTP (module 4)**: initialize
+- **08 · Host check (module 5)**: Foreign Host → 403
+
 <!--
-The CLI is the scriptable half: its exit code is what makes it a CI check. The web UI (previous slide) is for exploring.
+The CLI is the scriptable half of the Inspector. Exit 5 comes from the tool's own isError, which is why it is a sound CI signal.
 -->
 
 ---
 
-## Checkpoint: a tool error is exit 5
+## Checkpoint: exit 5, then two framings
 
-_Output: captured_
+_Output: captured, then expected_
 
 ```bash
 { "content": [ { "type": "text",
   "text": "NOT_FOUND: Note … not found" } ],
   "isError": true }
 exit: 5
-```
-
-**Done when**
-
-- [ ] the UI shows Connected, and whoami returns your device
-- [ ] a script that FAILS when create-note accepts `{title:'x', status:'published'}`
-- [ ] you know why this exit code is a SOUND signal
-
-<!--
-Exit 5 comes from the tool's own isError, not from the absence of a crash. That is why it is safe to rely on here.
--->
-
----
-
-## If you are stuck: chapter 07
-
-- **No such file dist/mcp-stdio.js**: Build first: pnpm build.
-- **The UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.
-- **Sharing the UI URL**: Don't: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.
-
----
-
-<!-- _class: lead -->
-
-**CHAPTER 08**
-
-# stdio → Streamable HTTP
-
-Flip `enableJsonResponse` and compare what goes over the wire.
-
-⏱ 15 min lab (draft estimate)
-
----
-
-## Run this: JSON vs SSE on the wire
-
-```bash
-# 1. Postman 05 › initialize: note the
-#    Content-Type and the Body
-# 2. src/bootstrap/attach-mcp.ts:
-#      enableJsonResponse: true
-# stop the app (Ctrl+C), then:
-pnpm build && pnpm start
-# 3. re-send initialize: what changed?
-# 4. revert, rebuild
-pnpm lab 08   # green now; break it, see red, revert
-```
-
-**In Postman**
-
-- **05 · MCP over HTTP (lite module 4)**: initialize
-- **08 · Host check (lite module 5)**: Foreign Host → 403
-
-<!--
-Revert enableJsonResponse afterwards. Ask why the e2e Host test uses node:http and not fetch.
--->
-
----
-
-## Checkpoint: same message, two framings
-
-_Output: before captured, after expected_
-
-```bash
-# enableJsonResponse: false (captured)
-content-type: text/event-stream
-event: message
-data: {"result":…}
 # enableJsonResponse: true (expected)
 content-type: application/json
 {"result":…}
@@ -683,29 +467,33 @@ content-type: application/json
 **Done when**
 
 - [ ] `pnpm lab 08`: every test passes
-- [ ] both responses captured and compared
-- [ ] you can say why fetch cannot test Host
-- [ ] MCP_ALLOWED_HOSTS explained in one sentence
+- [ ] the Inspector UI shows Connected
+- [ ] a script that FAILS when create-note accepts `{title:'x', status:'published'}`
+- [ ] both framings captured and compared
 
 ---
 
-## If you are stuck: chapter 08
+## If you are stuck: module 5
 
-- **Host test without credentials**: You get 401, not 403: device auth runs first. Send the device headers too.
-- **My fetch Host test passes 200**: fetch silently replaces Host (measured). node:http, curl and Postman send it as written.
+- **The UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.
+- **Sharing the Inspector UI URL**: Don't: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.
 - **Called by hostname: 403**: Add that name to MCP_ALLOWED_HOSTS: localhost,<hostname> (measured: 403 without, 200 with).
 
 ---
 
 <!-- _class: lead -->
 
-**CHAPTER 09**
+**MODULE 6**
 
-# MCP auth with device keys
+# Secure MCP, then the capstone
 
-Rotate a secret mid-session and watch the next call fail.
+Rotate a device secret mid-session and watch the next call fail. The capstone is homework.
 
-⏱ 15 min lab (draft estimate)
+⏱ 20 min lab (draft estimate)
+
+<!--
+Covers chapters 09 + 10. Left out for time: nothing from chapter 09; the chapter 10 capstone moves to homework.
+-->
 
 ---
 
@@ -723,7 +511,7 @@ pnpm lab 09   # green now; break it, see red, revert
 
 **In Postman**
 
-- **09 · Rotate mid-session (lite module 6)**: Rotate credentials · whoami with the OLD secret → 401 · whoami with the NEW secret
+- **09 · Rotate mid-session (module 6)**: Rotate credentials · whoami with the OLD secret → 401 · whoami with the NEW secret
 
 <!--
 Two clients, two devices: the Inspector uses the helper's device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.
@@ -758,7 +546,7 @@ The Inspector treats any 401 as an OAuth challenge. Device keys suit header-conf
 
 ---
 
-## If you are stuck: chapter 09
+## If you are stuck: module 6
 
 - **Inspector says auth_required**: That IS your 401. Check the headers, or re-run the helper for a fresh device.
 - **whoami over stdio fails**: By design: stdio trusts the local user; there is no device identity.
@@ -766,19 +554,7 @@ The Inspector treats any 401 as an OAuth challenge. Device keys suit header-conf
 
 ---
 
-<!-- _class: lead -->
-
-**CHAPTER 10**
-
-# Capstone
-
-Device-scoped notes through every layer, with evidence.
-
-⏱ 60 min lab (draft estimate)
-
----
-
-## Capstone: hand in evidence, not claims
+## Capstone (homework): evidence, not claims
 
 1. spec diff + every open question you raised
 2. plan with a verify line per task

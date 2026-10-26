@@ -9,7 +9,7 @@
 // Requires the npm packages pptxgenjs, react, react-dom, react-icons and sharp.
 // Reads the Postman collection (POSTMAN_COLLECTION, default: the starter's postman/ folder)
 // and fails if a slide names a folder or request the collection does not have.
-// MD_ONLY=1 writes only the two Markdown files.
+// MD_ONLY=1 writes only the Markdown file.
 // Optional: APPLY_THEME_JS=/path/to/apply_theme.js also writes the colours into the
 // .pptx theme, so PowerPoint's theme picker shows them.
 import { createRequire } from 'node:module';
@@ -80,20 +80,6 @@ const INSPECTOR = '6D4AE8'; // the Inspector UI panel
 //   captured      observed when running this code
 //   from the code literal values from the source (not a captured terminal)
 //   expected      what should appear; checking it IS part of the lab
-const CH = (n, title, minutes, goal) => ({ n, title, minutes, goal });
-const CHAPTERS = [
-  CH('00', 'Setup: Node, pnpm, SQLite', 15, 'Install, migrate the SQLite file, start the app, run the gate.'),
-  CH('01', 'CLI and templates', 30, 'Add an `orders` resource: generate → template → fill → verify.'),
-  CH('02', 'Users with drizzle and zod', 25, 'Add a `phone` column and watch the migration checks work for you.'),
-  CH('03', 'Auth: middleware, then Passport', 15, 'Break the "one identical 401" rule on purpose and see which test catches it.'),
-  CH('04', 'Devices and ownership', 25, 'Issue, rotate and inspect device credentials; then add `expiresAt`.'),
-  CH('05', 'MCP: envelopes and transports', 10, 'Send a raw `initialize` and read the JSON-RPC and SSE framing.'),
-  CH('06', 'Your first MCP controller', 25, 'Add a `publish-note` tool and pin it with tests.'),
-  CH('07', 'Using the MCP Inspector', 15, 'Turn an Inspector call into a CI check with its exit code.'),
-  CH('08', 'stdio → Streamable HTTP', 15, 'Flip `enableJsonResponse` and compare what goes over the wire.'),
-  CH('09', 'MCP auth with device keys', 15, 'Rotate a secret mid-session and watch the next call fail.'),
-  CH('10', 'Capstone', 60, 'Device-scoped notes through every layer, with evidence.'),
-];
 const DEMO = `eval "$(node scripts/demo-device.mjs)"`;
 
 // The MCP Inspector web UI (pnpm mcp:inspect:ui), steps as measured on 2.12.0.
@@ -121,13 +107,30 @@ const UI_FAILED = ['The UI says Failed', 'Wrong or missing device headers. The 4
 const UI_NOTES =
   'The Inspector listens on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.';
 
+// ---- the course: six modules -------------------------------------------------------
+// The same loop (spec → generate → template → fill → verify) and the same four slides per
+// module (divider, run this, checkpoint, stuck). Each module covers one or two chapters and
+// keeps ONE lab; the divider notes say what was left out, so a lecturer can offer it as a
+// stretch.
+const MOD = (n, title, minutes, goal, covers) => ({ n, title, minutes, goal, covers });
+const MODULES = [
+  MOD('1', 'Setup and the loop', 40, 'Set up and start the app, then add an `orders` resource: generate → template → fill → verify.', '00 + 01'),
+  MOD('2', 'Data: drizzle and zod', 25, 'Add a `phone` column and watch the migration checks work for you.', '02'),
+  MOD('3', 'Identity: auth and devices', 30, 'Break the "one identical 401" rule on purpose, then issue and rotate device credentials.', '03 + 04'),
+  MOD('4', 'Your first MCP server', 30, 'Read one raw JSON-RPC exchange, then add a `publish-note` tool and pin it with tests.', '05 + 06'),
+  MOD('5', 'Inspector and transports', 25, 'Turn an Inspector call into a CI check, then flip `enableJsonResponse` and compare the wire.', '07 + 08'),
+  MOD('6', 'Secure MCP, then the capstone', 20, 'Rotate a device secret mid-session and watch the next call fail. The capstone is homework.', '09 + 10'),
+];
+const cutNote = (m, cut) =>
+  `Covers chapter${m.covers.includes('+') ? 's' : ''} ${m.covers}. Left out for time: ${cut}`;
+
 const SLIDES = [
   {
     type: 'title',
     title: 'Building Apps with AI Agents',
-    subtitle: 'Lab companion · NestJS 12 · drizzle · SQLite · Passport · MCP',
+    subtitle: 'Lab companion · six modules · NestJS 12 · drizzle · SQLite · Passport · MCP',
     notes:
-      'Keep this deck on screen during lab work. Each chapter has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.',
+      'Keep this deck on screen during lab work. Each module has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.',
   },
   {
     type: 'flow',
@@ -158,7 +161,7 @@ const SLIDES = [
     title: 'Calling the API with Postman',
     rows: [
       ['FiDownload', 'Import one file', 'In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.'],
-      ['FiPlay', 'Folders follow the labs', 'Numbered by chapter, and each name says the lite module. Every request has tests: read the Test Results tab, not just the status.'],
+      ['FiPlay', 'Folders follow the labs', 'Numbered by chapter, and each name says its module. Every request has tests: read the Test Results tab, not just the status.'],
       ['FiLock', 'It stores a live secret', 'Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.'],
     ],
     notes:
@@ -167,7 +170,7 @@ const SLIDES = [
     type: 'rules',
     title: 'Lab checks: is my lab done?',
     rows: [
-      ['FiCheckSquare', 'One check per lab', '`pnpm lab 04` runs the check for lab 04, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.'],
+      ['FiCheckSquare', 'One check per lab', '`pnpm lab 01` runs the check for lab 01, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.'],
       ['FiTool', 'Build labs start red', 'Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.'],
       ['FiShield', 'Guard labs start green', 'Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.'],
     ],
@@ -178,491 +181,8 @@ const SLIDES = [
   {
     type: 'agenda',
     title: 'The track (draft lab times)',
-    notes:
-      'Times are ESTIMATES. Nobody has run these labs with an audience yet. Adjust after the first session. Chapter 10 works well as homework.',
+    notes: 'Six modules, about 170 minutes of labs plus the capstone as homework. Times are ESTIMATES: nobody has run these labs with an audience yet. Adjust after the first session.',
   },
-
-  // ---------------------------------------------------------------- ch00
-  { type: 'section', ch: '00' },
-  {
-    type: 'run', ch: '00', title: 'Run this: install, migrate, start',
-    code: [
-      'cd boilerplate/nest-ai-starter',
-      'corepack enable && pnpm install',
-      'cp .env.example .env',
-      'pnpm build && pnpm db:migrate',
-      'pnpm start          # leave it running',
-      '',
-      '# in a second terminal:',
-      'pnpm verify',
-    ],
-    postman: postman(['00', ['Health']]),
-    notes: 'While pnpm install runs, open .env.example: DATABASE_URL=file:./data/app.db is the whole database. db:migrate creates that file and applies drizzle/; the app never migrates a file database itself.',
-  },
-  {
-    type: 'checkpoint', ch: '00', title: 'Checkpoint: app up, gate green',
-    outputSource: 'captured (abridged)',
-    output: [
-      '# pnpm db:migrate',
-      'db:migrate: ledger rows: 3',
-      '# pnpm start',
-      'Nest application successfully started',
-      '# Postman: 00 › Health',
-      '{"status":"ok"}',
-      '# pnpm verify',
-      'Tests  69 passed (69)',
-      'Tests  61 passed (61)',
-    ],
-    done: [
-      'data/app.db exists, ledger rows: 3 (read the ledger, not a log line)',
-      'health answers {"status":"ok"}',
-      'both Tests lines AND both "Test Files … passed"',
-    ],
-    notes: 'Counts are from the final starter. If a learner sees fewer tests, they are on an older commit.',
-  },
-  {
-    type: 'stuck', ch: '00', title: 'If you are stuck: chapter 00',
-    rows: [
-      ['pnpm: command not found', 'Run `corepack enable`, or write `corepack pnpm` instead of `pnpm`.'],
-      ['Port 3000 is already in use', 'Something local owns it. Stop it, or set PORT=3001 in .env and use that port everywhere (Postman baseUrl too).'],
-      ['no such table: users', 'The file was never migrated: `pnpm build && pnpm db:migrate`, then start again.'],
-    ],
-  },
-  // ---------------------------------------------------------------- ch01
-  { type: 'section', ch: '01' },
-  {
-    type: 'run', ch: '01', title: 'Run this: add an orders resource',
-    code: [
-      '# 1. write specs/orders.md (copy specs/notes.md)',
-      'pnpm exec nest g resource orders \\',
-      '  --type rest --crud',
-      'pnpm resource:template \\',
-      '  --name order --plural orders',
-      'pnpm check:ai-fill      # your to-do list',
-      '# 2. your agent fills every AI-FILL marker',
-      '#    from specs/orders.md',
-      'pnpm verify',
-    ],
-    notes: 'Learners should give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.',
-  },
-  {
-    type: 'checkpoint', ch: '01', title: 'Checkpoint: markers to zero, rules pinned',
-    outputSource: 'captured, then expected',
-    output: [
-      '# captured: after the template step',
-      'files written: 11;',
-      'AI-FILL markers to complete: 16',
-      '# expected: after your agent filled them',
-      'AI-FILL markers: 0',
-      'Tests  N passed  (N > 69)',
-    ],
-    done: [
-      'check:ai-fill prints 0 markers',
-      'delete each service rule once: exactly one test goes red',
-      'verify green, counts read aloud',
-    ],
-    notes: 'The mutation step is the point: a rule nobody has tried deleting is a rule nobody has proven is tested.',
-  },
-  {
-    type: 'stuck', ch: '01', title: 'If you are stuck: chapter 01',
-    rows: [
-      ['"Run step 1 first"', 'The template script refuses before `nest g resource`, and refuses a second run. Never use --force after filling.'],
-      ['PATCH wiped my fields', 'Keep `patchSchema()`: zod `.partial()` re-applies defaults (measured on zod 4.4.3 and 4.6.7).'],
-      ['Unit green, e2e red', 'Validation, defaults and status codes live at the HTTP boundary. Only e2e sees them.'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch02
-  { type: 'section', ch: '02' },
-  {
-    type: 'run', ch: '02', title: 'Run this: add a phone column',
-    code: [
-      '# 1. specs/users.md: phone (optional, E.164)',
-      '# 2. user.schema.ts + users.table.ts',
-      'pnpm check:migrations   # FAILS: drift',
-      'pnpm db:generate        # READ the SQL',
-      'pnpm check:migrations   # clean now',
-      'pnpm verify',
-      '# stop the app (Ctrl+C), then:',
-      'pnpm build && pnpm db:migrate',
-      'pnpm start',
-    ],
-    notes: 'Make learners read the generated SQL out loud. A nullable ADD COLUMN is safe on populated tables; NOT NULL is not (chapter 04).',
-  },
-  {
-    type: 'checkpoint', ch: '02', title: 'Checkpoint: drift caught, ledger grows',
-    outputSource: 'captured messages, expected count',
-    output: [
-      '# before db:generate (captured)',
-      'check-migrations: DRIFT - tables',
-      '  changed without a migration.',
-      '# db:generate (captured format)',
-      '[✓] Your SQL migration file ➜',
-      '    drizzle/0003_….sql',
-      '# pnpm db:migrate (expected)',
-      'db:migrate: ledger rows: 4',
-    ],
-    done: [
-      'check:migrations failed BEFORE generating',
-      'you read the SQL in `drizzle/0003_*`',
-      'ledger rows: 4; phone appears in responses',
-    ],
-  },
-  {
-    type: 'stuck', ch: '02', title: 'If you are stuck: chapter 02',
-    rows: [
-      ['All tests pass, check fails', 'Correct: tests run on the MIGRATION SQL (in-memory SQLite), not your TypeScript table. Generate the migration.'],
-      ['Drift test fails', 'The zod schema and the table must declare exactly the same fields, with the same TS names.'],
-      ['The generated SQL says NOT NULL', 'SQLite refuses it on any table with rows (measured). Decide what happens to existing rows first, as drizzle/0002 does.'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch03
-  { type: 'section', ch: '03' },
-  {
-    type: 'run', ch: '03', title: 'Run this: see the 401, then break it',
-    code: [
-      "git log --oneline --grep 'course(ch03'",
-      '# send the Postman requests, then the lab:',
-      '# change the message for unknown emails',
-      'pnpm test:e2e     # which test fails?',
-      '# re-send "Me: unknown email" in Postman too',
-    ],
-    postman: postman(['03', ['Sign up (public)', 'Me: no credentials → 401', 'Me: wrong password → the same 401', 'Me: unknown email → the same 401', 'Me (Basic auth)']]),
-    notes: 'Then revert. `git show 8e46c2097` is the hand-written middleware version, worth reading next to the Passport one.',
-  },
-  {
-    type: 'checkpoint', ch: '03', title: 'Checkpoint: one 401 for every failure',
-    outputSource: 'values from the code',
-    output: [
-      'HTTP/1.1 401 Unauthorized',
-      'WWW-Authenticate: Basic',
-      '  realm="nest-ai-starter", charset="UTF-8"',
-      '{"statusCode":401,"error":"Unauthorized",',
-      ' "message":"Invalid credentials"}',
-      '# Me (Basic auth): 200 OK, no password',
-      '# after your change, e2e reports:',
-      '× every failure is the SAME 401 …',
-    ],
-    done: [
-      'you saw the test that pins the rule fail',
-      'you can say why the bodies must be identical',
-      'reverted; verify green',
-    ],
-  },
-  {
-    type: 'stuck', ch: '03', title: 'If you are stuck: chapter 03',
-    rows: [
-      ['"2 passed | 30 skipped", exit 1', 'A beforeAll threw (e.g. sign-up lost @Public()). The failure is on the Test Files line.'],
-      ['My new route answers 401', 'Secure by default: the guard is global. Add @Public() only on purpose.'],
-      ['Password with a colon fails', 'Not with our parser. passport-http truncates at the 2nd colon (measured). Do not swap it in.'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch04
-  { type: 'section', ch: '04' },
-  {
-    type: 'run', ch: '04', title: 'Run this: credentials, rotation, ownership',
-    code: [
-      '# send the Postman requests first, then the lab:',
-      '# add expiresAt: spec → schema → table',
-      '#   → migration → rule → tests',
-      'pnpm verify',
-      '# re-send "Issue credentials" = a rotation',
-    ],
-    postman: postman(['04', ['Create device', 'Issue credentials (secret shown once)', 'Activate device', 'Get device (no secret, no hash)']]),
-    notes: 'The collection keeps the issued secret in a collection variable for the MCP folders. Remind learners it is a live credential.',
-  },
-  {
-    type: 'checkpoint', ch: '04', title: 'Checkpoint: the secret appears once',
-    outputSource: 'expected (asserted by e2e)',
-    output: [
-      '# GET device',
-      '"status":"active",',
-      '"accessKeyId":"AKID…",',
-      '"secretLast4":"…"     (no secret, no hash)',
-      '# POST …/credentials (rotation)',
-      '"secret":"dsk_…"      (shown ONCE)',
-      'same accessKeyId, new secretLast4',
-    ],
-    done: [
-      'no response but /credentials ever shows a secret',
-      'an expired secret fails verifyAccessKey (unit test)',
-      'another user\'s device → 404 still holds',
-    ],
-  },
-  {
-    type: 'stuck', ch: '04', title: 'If you are stuck: chapter 04',
-    rows: [
-      ['"Cannot add a NOT NULL column"', 'Your migration hit existing rows (measured). Hand-edit: deal with those rows first, as drizzle/0002 does.'],
-      ['Deleting a user gives a 500', 'A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.'],
-      ['Another user\'s device is 404', 'By design: 404, not 403, so ids cannot be probed.'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch05
-  { type: 'section', ch: '05' },
-  {
-    type: 'run', ch: '05', title: 'Run this: a raw MCP initialize',
-    code: [],
-    postman: postman(['05', ['initialize', 'tools/list', 'tools/call whoami', 'No device headers → 401']]),
-    notes: 'Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?',
-  },
-  {
-    type: 'checkpoint', ch: '05', title: 'Checkpoint: JSON-RPC inside SSE',
-    outputSource: 'captured',
-    output: [
-      'HTTP/1.1 200 OK',
-      'content-type: text/event-stream',
-      '',
-      'event: message',
-      'data: {"result":{',
-      '  "protocolVersion":"2025-06-18", …',
-      '  "serverInfo":{"name":"nest-ai-starter",…}},',
-      ' "jsonrpc":"2.0","id":1}',
-    ],
-    done: [
-      'you matched the response id to the request',
-      'you named request / response / notification',
-      'tool error (isError) vs protocol error (error)',
-    ],
-  },
-  {
-    type: 'stuck', ch: '05', title: 'If you are stuck: chapter 05',
-    rows: [
-      ['401 Unauthorized', 'Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-send folder 04 · Devices.'],
-      ['403 Invalid Host', 'You called the app by a name not in MCP_ALLOWED_HOSTS (default: localhost and 127.0.0.1 only).'],
-      ['Plain JSON, no SSE', 'enableJsonResponse is true: the DEFAULT of @rekog/mcp-nest 2.0.8. Ours sets false.'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch06
-  { type: 'section', ch: '06' },
-  {
-    type: 'run', ch: '06', title: 'Run this: add a publish-note tool',
-    code: [
-      '// src/mcp/notes.tools.ts',
-      '@Tool({',
-      "  name: 'publish-note',",
-      "  description: 'Publish a note. A published note needs a non-empty body.',",
-      '  parameters: z.object({ id: z.string().uuid() }),',
-      '})',
-      'publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {',
-      "  return runTool(() => this.notes.update(id, { status: 'published' }));",
-      '}',
-    ],
-    notes: 'Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.',
-  },
-  {
-    type: 'checkpoint', ch: '06', title: 'Checkpoint: the rule holds over MCP',
-    outputSource: 'captured',
-    output: [
-      '# publish-note on a note with no body',
-      '{"content":[{"type":"text","text":',
-      '  "RULE_VIOLATION: A published note',
-      '   needs a non-empty body"}],',
-      ' "isError":true}',
-      '# tools/list',
-      'create-note, get-note, list-notes,',
-      'publish-note, whoami',
-    ],
-    done: [
-      'the stdio e2e tool list updated on purpose',
-      'a test: publishing an empty note → isError',
-      'the RAW stdout test still green',
-    ],
-  },
-  {
-    type: 'stuck', ch: '06', title: 'If you are stuck: chapter 06',
-    rows: [
-      ['console.log "for debugging"', 'It goes into the protocol stream. The SDK client ignores it, so only the RAW stdout test fails.'],
-      ['Old behaviour in tests', 'The e2e setup rebuilds dist/ and fails on a stale one. Never test yesterday\'s build.'],
-      ['A crash instead of isError', 'Wrap tool bodies in runTool(): DomainError → tool error the model can read.'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch07
-  { type: 'section', ch: '07' },
-  {
-    type: 'run', ch: '07', title: 'Run this: the Inspector UI',
-    code: INSPECTOR_UP,
-    ui: INSPECTOR_UI,
-    notes: UI_NOTES,
-  },
-  {
-    type: 'run', ch: '07', title: 'Run this: the Inspector as a CI check',
-    code: [
-      'pnpm build',
-      'pnpm mcp:inspect:cli --method tools/list',
-      'pnpm mcp:inspect:cli --method tools/call \\',
-      '  --tool-name get-note \\',
-      '  --tool-arg id=00000000-0000-4000-8000-000000000000',
-      'echo "exit: $?"',
-    ],
-    notes: 'The CLI is the scriptable half: its exit code is what makes it a CI check. The web UI (previous slide) is for exploring.',
-  },
-  {
-    type: 'checkpoint', ch: '07', title: 'Checkpoint: a tool error is exit 5',
-    outputSource: 'captured',
-    output: [
-      '{ "content": [ { "type": "text",',
-      '  "text": "NOT_FOUND: Note … not found" } ],',
-      '  "isError": true }',
-      'exit: 5',
-    ],
-    done: [
-      'the UI shows Connected, and whoami returns your device',
-      "a script that FAILS when create-note accepts `{title:'x', status:'published'}`",
-      'you know why this exit code is a SOUND signal',
-    ],
-    notes: 'Exit 5 comes from the tool\'s own isError, not from the absence of a crash. That is why it is safe to rely on here.',
-  },
-  {
-    type: 'stuck', ch: '07', title: 'If you are stuck: chapter 07',
-    rows: [
-      ['No such file dist/mcp-stdio.js', 'Build first: pnpm build.'],
-      UI_FAILED,
-      ['Sharing the UI URL', 'Don\'t: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch08
-  { type: 'section', ch: '08' },
-  {
-    type: 'run', ch: '08', title: 'Run this: JSON vs SSE on the wire',
-    code: [
-      '# 1. Postman 05 › initialize: note the',
-      '#    Content-Type and the Body',
-      '# 2. src/bootstrap/attach-mcp.ts:',
-      '#      enableJsonResponse: true',
-      '# stop the app (Ctrl+C), then:',
-      'pnpm build && pnpm start',
-      '# 3. re-send initialize: what changed?',
-      '# 4. revert, rebuild',
-    ],
-    postman: postman(['05', ['initialize']], ['08', ['Foreign Host → 403']]),
-    notes: 'Revert enableJsonResponse afterwards. Ask why the e2e Host test uses node:http and not fetch.',
-  },
-  {
-    type: 'checkpoint', ch: '08', title: 'Checkpoint: same message, two framings',
-    outputSource: 'before captured, after expected',
-    output: [
-      '# enableJsonResponse: false (captured)',
-      'content-type: text/event-stream',
-      'event: message',
-      'data: {"result":…}',
-      '# enableJsonResponse: true (expected)',
-      'content-type: application/json',
-      '{"result":…}',
-    ],
-    done: [
-      'both responses captured and compared',
-      'you can say why fetch cannot test Host',
-      'MCP_ALLOWED_HOSTS explained in one sentence',
-    ],
-  },
-  {
-    type: 'stuck', ch: '08', title: 'If you are stuck: chapter 08',
-    rows: [
-      ['Host test without credentials', 'You get 401, not 403: device auth runs first. Send the device headers too.'],
-      ['My fetch Host test passes 200', 'fetch silently replaces Host (measured). node:http, curl and Postman send it as written.'],
-      ['Called by hostname: 403', 'Add that name to MCP_ALLOWED_HOSTS: localhost,<hostname> (measured: 403 without, 200 with).'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch09
-  { type: 'section', ch: '09' },
-  {
-    type: 'run', ch: '09', title: 'Run this: rotate mid-session',
-    code: [
-      DEMO,
-      'npx -y @modelcontextprotocol/inspector@2.12.0 \\',
-      '  --cli http://localhost:3000/mcp \\',
-      '  --method tools/call --tool-name whoami \\',
-      '  --header "X-Access-Key-Id: $MCP_KEY_ID" \\',
-      '  --header "X-Secret-Key: $MCP_SECRET"',
-    ],
-    postman: postman(['09', ['Rotate credentials', 'whoami with the OLD secret → 401', 'whoami with the NEW secret']]),
-    notes: 'Two clients, two devices: the Inspector uses the helper\'s device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.',
-  },
-  {
-    type: 'checkpoint', ch: '09', title: 'Checkpoint: rotation bites immediately',
-    outputSource: 'captured',
-    output: [
-      '# Inspector whoami',
-      '"device": { … "status": "active" … },',
-      '"owner":  { … "email": "demo@example.com" }',
-      '# Postman 09 · Rotate mid-session',
-      'Rotate credentials           200',
-      'whoami with the OLD secret   401',
-      'whoami with the NEW secret   200',
-    ],
-    done: [
-      'the old secret failed on the NEXT call',
-      'the 7 failure modes → one 401, explained',
-      'why stdio whoami is a tool error (local trust)',
-    ],
-    notes: 'The Inspector treats any 401 as an OAuth challenge. Device keys suit header-configured machine clients; the OAuth path is @rekog/mcp-nest-auth (not built in this course).',
-  },
-  {
-    type: 'stuck', ch: '09', title: 'If you are stuck: chapter 09',
-    rows: [
-      ['Inspector says auth_required', 'That IS your 401. Check the headers, or re-run the helper for a fresh device.'],
-      ['whoami over stdio fails', 'By design: stdio trusts the local user; there is no device identity.'],
-      ['Auth seems bypassed', 'The middleware must be registered BEFORE the transport mounts (measured: after = bypassed).'],
-    ],
-  },
-
-  // ---------------------------------------------------------------- ch10 + close
-  { type: 'section', ch: '10' },
-  {
-    type: 'capstone', title: 'Capstone: hand in evidence, not claims',
-    items: [
-      'spec diff + every open question you raised',
-      'plan with a verify line per task',
-      'the migration and your edits, or why none',
-      'unit + e2e counts; owner-check mutation result',
-      'my-notes e2e: two devices of two users',
-      'pnpm verify + pnpm lab 10: every line',
-      'Inspector capture with headers (secret redacted)',
-      'WORKLOG entry, with any corrections',
-    ],
-    notes: 'Distinction: a false statement found in a comment, skill, spec or this course, measured and corrected. Rework: "tests pass" without counts, or any credential in an artefact.',
-  },
-  {
-    type: 'closing', title: 'What you built',
-    chain: ['Node + SQLite', 'REST + drizzle', 'Auth', 'Devices', 'MCP server'],
-    next: 'Next: OAuth for interactive MCP clients (@rekog/mcp-nest-auth) · Redis-backed rate limits · deploy with MCP_ALLOWED_HOSTS set',
-    notes: 'Close by asking each learner for one false statement they found in a tool, a doc or this course, and how they measured it.',
-  },
-];
-
-// ---- the LITE track: the same process in six modules ------------------------------
-// Same loop (spec → generate → template → fill → verify) and the same four-slide pattern
-// per module; chapters are merged, and each module keeps ONE lab. What was cut is in the
-// divider notes, so a lecturer can pull a full-track lab back in as a stretch.
-// Slides marked fromFull() are the full track's slides, unchanged apart from the label.
-const MOD = (n, title, minutes, goal, covers) => ({ n, title, minutes, goal, covers });
-const MODULES = [
-  MOD('1', 'Setup and the loop', 40, 'Start the stack, then add an `orders` resource: generate → template → fill → verify.', '00 + 01'),
-  MOD('2', 'Data: drizzle and zod', 25, 'Add a `phone` column and watch the migration checks work for you.', '02'),
-  MOD('3', 'Identity: auth and devices', 30, 'Break the "one identical 401" rule on purpose, then issue and rotate device credentials.', '03 + 04'),
-  MOD('4', 'Your first MCP server', 30, 'Read one raw JSON-RPC exchange, then add a `publish-note` tool and pin it with tests.', '05 + 06'),
-  MOD('5', 'Inspector and transports', 25, 'Turn an Inspector call into a CI check, then flip `enableJsonResponse` and compare the wire.', '07 + 08'),
-  MOD('6', 'Secure MCP, then the capstone', 20, 'Rotate a device secret mid-session and watch the next call fail. The capstone is homework.', '09 + 10'),
-];
-const fromFull = (ch, to, types) =>
-  SLIDES.filter((s) => s.ch === ch && types.includes(s.type)).map((s) => ({
-    ...s,
-    ch: to,
-    title: s.title.replace(`chapter ${ch}`, `module ${to}`),
-  }));
-const cutNote = (m, cut) => `Covers full-track chapters ${m.covers}. Cut for time: ${cut}`;
-
-const LITE_SLIDES = [
-  { ...SLIDES.find((s) => s.type === 'title'), subtitle: 'Lab companion, LITE track · six modules · NestJS 12 · drizzle · SQLite · Passport · MCP' },
-  ...SLIDES.filter((s) => s.type === 'flow' || s.type === 'rules'),
-  { type: 'agenda', title: 'The lite track (draft lab times)', notes: 'Six modules, about 170 minutes of labs plus the capstone as homework. Times are ESTIMATES: nobody has run these labs with an audience yet. The full track (ch00-ch10) has the labs this one cuts.' },
 
   { type: 'section', ch: '1', notes: cutNote(MODULES[0], 'the persistence and clean-wipe demos (chapter 00).') },
   {
@@ -713,7 +233,49 @@ const LITE_SLIDES = [
   },
 
   { type: 'section', ch: '2', notes: cutNote(MODULES[1], 'nothing. This is chapter 02 as it stands.') },
-  ...fromFull('02', '2', ['run', 'checkpoint', 'stuck']),
+  {
+    type: 'run', ch: '2', title: 'Run this: add a phone column',
+    code: [
+      '# 1. specs/users.md: phone (optional, E.164)',
+      '# 2. user.schema.ts + users.table.ts',
+      'pnpm check:migrations   # FAILS: drift',
+      'pnpm db:generate        # READ the SQL',
+      'pnpm check:migrations   # clean now',
+      'pnpm verify',
+      '# stop the app (Ctrl+C), then:',
+      'pnpm build && pnpm db:migrate',
+      'pnpm start',
+    ],
+    notes: 'Make learners read the generated SQL out loud. A nullable ADD COLUMN is safe on populated tables; NOT NULL is not (chapter 04).',
+  },
+  {
+    type: 'checkpoint', ch: '2', title: 'Checkpoint: drift caught, ledger grows',
+    outputSource: 'captured messages, expected count',
+    output: [
+      '# before db:generate (captured)',
+      'check-migrations: DRIFT - tables',
+      '  changed without a migration.',
+      '# db:generate (captured format)',
+      '[✓] Your SQL migration file ➜',
+      '    drizzle/0003_….sql',
+      '# pnpm db:migrate (expected)',
+      'db:migrate: ledger rows: 4',
+    ],
+    done: [
+      'check:migrations failed BEFORE generating',
+      'you read the SQL in `drizzle/0003_*`',
+      'ledger rows: 4; phone appears in responses',
+    ],
+  },
+  {
+    type: 'stuck', ch: '2', title: 'If you are stuck: module 2',
+    rows: [
+      ['All tests pass, check fails', 'Correct: tests run on the MIGRATION SQL (in-memory SQLite), not your TypeScript table. Generate the migration.'],
+      ['Drift test fails', 'The zod schema and the table must declare exactly the same fields, with the same TS names.'],
+      ['The generated SQL says NOT NULL', 'SQLite refuses it on any table with rows (measured). Decide what happens to existing rows first, as drizzle/0002 does.'],
+    ],
+  },
+
 
   { type: 'section', ch: '3', notes: cutNote(MODULES[2], 'reading the hand-written middleware commit (chapter 03) and the expiresAt lab (chapter 04). Offer expiresAt as a stretch.') },
   {
@@ -761,8 +323,27 @@ const LITE_SLIDES = [
   },
 
   { type: 'section', ch: '4', notes: cutNote(MODULES[3], 'the separate envelope-discussion lab (chapter 05): the raw initialize below covers it.') },
-  { ...SLIDES.find((s) => s.type === 'run' && s.ch === '05'), ch: '4', title: 'Run this (1/2): a raw MCP initialize' },
-  { ...SLIDES.find((s) => s.type === 'run' && s.ch === '06'), ch: '4', title: 'Run this (2/2): add a publish-note tool' },
+  {
+    type: 'run', ch: '4', title: 'Run this (1/2): a raw MCP initialize',
+    code: [],
+    postman: postman(['05', ['initialize', 'tools/list', 'tools/call whoami', 'No device headers → 401']]),
+    notes: 'Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?',
+  },
+  {
+    type: 'run', ch: '4', title: 'Run this (2/2): add a publish-note tool',
+    code: [
+      '// src/mcp/notes.tools.ts',
+      '@Tool({',
+      "  name: 'publish-note',",
+      "  description: 'Publish a note. A published note needs a non-empty body.',",
+      '  parameters: z.object({ id: z.string().uuid() }),',
+      '})',
+      'publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {',
+      "  return runTool(() => this.notes.update(id, { status: 'published' }));",
+      '}',
+    ],
+    notes: 'Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.',
+  },
   {
     type: 'checkpoint', ch: '4', title: 'Checkpoint: JSON-RPC in SSE, rule over MCP',
     outputSource: 'captured',
@@ -844,9 +425,67 @@ const LITE_SLIDES = [
   },
 
   { type: 'section', ch: '6', notes: cutNote(MODULES[5], 'nothing from chapter 09; the chapter 10 capstone moves to homework.') },
-  ...fromFull('09', '6', ['run', 'checkpoint', 'stuck']),
-  { ...SLIDES.find((s) => s.type === 'capstone'), title: 'Capstone (homework): evidence, not claims' },
-  SLIDES.find((s) => s.type === 'closing'),
+  {
+    type: 'run', ch: '6', title: 'Run this: rotate mid-session',
+    code: [
+      DEMO,
+      'npx -y @modelcontextprotocol/inspector@2.12.0 \\',
+      '  --cli http://localhost:3000/mcp \\',
+      '  --method tools/call --tool-name whoami \\',
+      '  --header "X-Access-Key-Id: $MCP_KEY_ID" \\',
+      '  --header "X-Secret-Key: $MCP_SECRET"',
+    ],
+    postman: postman(['09', ['Rotate credentials', 'whoami with the OLD secret → 401', 'whoami with the NEW secret']]),
+    notes: 'Two clients, two devices: the Inspector uses the helper\'s device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.',
+  },
+  {
+    type: 'checkpoint', ch: '6', title: 'Checkpoint: rotation bites immediately',
+    outputSource: 'captured',
+    output: [
+      '# Inspector whoami',
+      '"device": { … "status": "active" … },',
+      '"owner":  { … "email": "demo@example.com" }',
+      '# Postman 09 · Rotate mid-session',
+      'Rotate credentials           200',
+      'whoami with the OLD secret   401',
+      'whoami with the NEW secret   200',
+    ],
+    done: [
+      'the old secret failed on the NEXT call',
+      'the 7 failure modes → one 401, explained',
+      'why stdio whoami is a tool error (local trust)',
+    ],
+    notes: 'The Inspector treats any 401 as an OAuth challenge. Device keys suit header-configured machine clients; the OAuth path is @rekog/mcp-nest-auth (not built in this course).',
+  },
+  {
+    type: 'stuck', ch: '6', title: 'If you are stuck: module 6',
+    rows: [
+      ['Inspector says auth_required', 'That IS your 401. Check the headers, or re-run the helper for a fresh device.'],
+      ['whoami over stdio fails', 'By design: stdio trusts the local user; there is no device identity.'],
+      ['Auth seems bypassed', 'The middleware must be registered BEFORE the transport mounts (measured: after = bypassed).'],
+    ],
+  },
+
+  {
+    type: 'capstone', title: 'Capstone (homework): evidence, not claims',
+    items: [
+      'spec diff + every open question you raised',
+      'plan with a verify line per task',
+      'the migration and your edits, or why none',
+      'unit + e2e counts; owner-check mutation result',
+      'my-notes e2e: two devices of two users',
+      'pnpm verify + pnpm lab 10: every line',
+      'Inspector capture with headers (secret redacted)',
+      'WORKLOG entry, with any corrections',
+    ],
+    notes: 'Distinction: a false statement found in a comment, skill, spec or this course, measured and corrected. Rework: "tests pass" without counts, or any credential in an artefact.',
+  },
+  {
+    type: 'closing', title: 'What you built',
+    chain: ['Node + SQLite', 'REST + drizzle', 'Auth', 'Devices', 'MCP server'],
+    next: 'Next: OAuth for interactive MCP clients (@rekog/mcp-nest-auth) · Redis-backed rate limits · deploy with MCP_ALLOWED_HOSTS set',
+    notes: 'Close by asking each learner for one false statement they found in a tool, a doc or this course, and how they measured it.',
+  },
 ];
 
 // The lab check each unit ends with (boilerplate/nest-ai-starter/test/labs/). Added to the
@@ -869,11 +508,11 @@ function withLabChecks(slides, labsByUnit) {
   });
 }
 
+// Module 3 checks lab 03 only: lab 04 (expiresAt) is a build lab that fails until it is built,
+// and module 3 leaves it out, so `pnpm lab 03 04` could never pass there.
 const TRACKS = [
-  { file: 'lab-companion', label: 'Lab companion', unit: 'CHAPTER', units: CHAPTERS,
-    slides: withLabChecks(SLIDES, { '01': ['01'], '02': ['02'], '03': ['03'], '04': ['04'], '06': ['06'], '08': ['08'], '09': ['09'] }) },
-  { file: 'lab-companion-lite', label: 'Lab companion (lite)', unit: 'MODULE', units: MODULES,
-    slides: withLabChecks(LITE_SLIDES, { '1': ['01'], '2': ['02'], '3': ['03', '04'], '4': ['06'], '5': ['08'], '6': ['09'] }) },
+  { file: 'lab-companion', label: 'Lab companion', unit: 'MODULE', units: MODULES,
+    slides: withLabChecks(SLIDES, { '1': ['01'], '2': ['02'], '3': ['03'], '4': ['06'], '5': ['08'], '6': ['09'] }) },
 ];
 
 // ---- icons -----------------------------------------------------------------------

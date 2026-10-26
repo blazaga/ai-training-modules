@@ -8,7 +8,7 @@ import {
 } from './lab-harness.js';
 
 /**
- * Lab 04 (lite module 3): credentials that expire.
+ * Lab 04 (module 3, stretch): credentials that expire.
  *
  * The contract:
  *   POST /api/v1/devices/:id/credentials  accepts an optional JSON body { "expiresAt": "<ISO datetime>" }

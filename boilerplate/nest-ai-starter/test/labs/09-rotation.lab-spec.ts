@@ -9,7 +9,7 @@ import {
 } from './lab-harness.js';
 
 /**
- * Lab 09 (lite module 6): MCP auth with device keys, and what rotation does to a live client.
+ * Lab 09 (module 6): MCP auth with device keys, and what rotation does to a live client.
  *
  * This check passes on the starter. It pins the behaviour the lab demonstrates: a rotated
  * secret fails on the very next call, and every device that is not ACTIVE is refused.

@@ -1,7 +1,7 @@
 import { basic, type LabApp, signUp, startApp } from './lab-harness.js';
 
 /**
- * Lab 03 (lite module 3): the rule "every authentication failure is the same 401".
+ * Lab 03 (module 3): the rule "every authentication failure is the same 401".
  *
  * This check passes on the starter. The lab is to break the rule on purpose (give unknown
  * emails a different message), watch this check AND `pnpm test:e2e` fail, then put it back

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { type LabApp, signUp, startApp } from './lab-harness.js';
 
 /**
- * Lab 01 (lite module 1): an `orders` resource built the house way:
+ * Lab 01 (module 1): an `orders` resource built the house way:
  * spec → nest g resource → template → fill the AI-FILL markers → verify.
  *
  * The contract (write it into specs/orders.md first):

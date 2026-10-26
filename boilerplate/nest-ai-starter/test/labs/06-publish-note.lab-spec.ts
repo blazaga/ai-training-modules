@@ -10,7 +10,7 @@ import {
 } from './lab-harness.js';
 
 /**
- * Lab 06 (lite module 4): an MCP tool `publish-note`.
+ * Lab 06 (module 4): an MCP tool `publish-note`.
  *
  * The contract:
  *   name        publish-note

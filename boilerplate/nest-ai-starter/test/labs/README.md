@@ -23,16 +23,16 @@ There are two kinds of check:
 - **Guard labs** pass on the starter. The lab is to break the rule on purpose, watch the
   check fail, then put it back and watch it pass again.
 
-| check             | lab                      | kind  | full chapter | lite module  |
-| ----------------- | ------------------------ | ----- | ------------ | ------------ |
-| `01-orders`       | an `orders` resource     | build | 01           | 1            |
-| `02-phone`        | `phone` on users         | build | 02           | 2            |
-| `03-auth`         | one identical 401        | guard | 03           | 3            |
-| `04-expires-at`   | credentials that expire  | build | 04           | 3            |
-| `06-publish-note` | the `publish-note` tool  | build | 06           | 4            |
-| `08-transport`    | Streamable HTTP settings | guard | 08           | 5            |
-| `09-rotation`     | device auth and rotation | guard | 09           | 6            |
-| `10-capstone`     | device-scoped notes      | build | 10           | 6 (homework) |
+| check             | lab                      | kind  | module       | chapter |
+| ----------------- | ------------------------ | ----- | ------------ | ------- |
+| `01-orders`       | an `orders` resource     | build | 1            | 01      |
+| `02-phone`        | `phone` on users         | build | 2            | 02      |
+| `03-auth`         | one identical 401        | guard | 3            | 03      |
+| `04-expires-at`   | credentials that expire  | build | 3 (stretch)  | 04      |
+| `06-publish-note` | the `publish-note` tool  | build | 4            | 06      |
+| `08-transport`    | Streamable HTTP settings | guard | 5            | 08      |
+| `09-rotation`     | device auth and rotation | guard | 6            | 09      |
+| `10-capstone`     | device-scoped notes      | build | 6 (homework) | 10      |
 
 Chapters 05 and 07 have no check: their labs read the wire and script the Inspector, and
 change no code.

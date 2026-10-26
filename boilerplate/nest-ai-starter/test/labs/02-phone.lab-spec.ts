@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { basic, type LabApp, startApp } from './lab-harness.js';
 
 /**
- * Lab 02 (lite module 2): add `phone` to users, through schema, table and migration.
+ * Lab 02 (module 2): add `phone` to users, through schema, table and migration.
  *
  * The contract:
  *   phone  optional, E.164: a "+", then 2-15 digits, the first not 0 (e.g. +14155550123)
