@@ -36,3 +36,7 @@ With Node and the packages `pptxgenjs react react-dom react-icons sharp` install
 node build-lab-deck.mjs .     # writes both decks: lab-companion{,-lite}.{pptx,md}
 MD_ONLY=1 node build-lab-deck.mjs .   # only the two Markdown files
 ```
+
+Set `APPLY_THEME_JS` to the path of the pptx skill's `scripts/apply_theme.js` to write the
+deck's theme (its colours and the name "Lab Companion"). Without it the decks keep the
+library's default Office theme and are stored uncompressed, about twice the size.
