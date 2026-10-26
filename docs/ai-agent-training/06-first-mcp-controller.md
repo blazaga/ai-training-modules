@@ -87,6 +87,9 @@ e2e `Tests 54 passed`, including stdio: identity, three tools, schema `required:
 
 ## Labs
 
+Lab 1 is checked: `dev pnpm lab 06`. The contract (parameters, and the tool-error text
+for each failure) is in `boilerplate/nest-ai-starter/test/labs/README.md`.
+
 1. Add a `publish-note` tool. Which rule from chapter 01 must it respect, and where is it
    enforced?
 2. Add a tool whose description is vague, and one whose description states the rules. Ask

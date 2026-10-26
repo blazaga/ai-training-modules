@@ -82,6 +82,9 @@ the Host check.
 
 ## Labs
 
+Labs 1 and 2 are checked the other way round: `dev pnpm lab 08` passes on the starter,
+fails while either setting is flipped, and passes again once you revert and rebuild.
+
 1. Set `enableJsonResponse: true` and capture the reply. What changed on the wire?
 2. Turn on `statefulMode` and capture the `Mcp-Session-Id` header. What must the client
    now send back?

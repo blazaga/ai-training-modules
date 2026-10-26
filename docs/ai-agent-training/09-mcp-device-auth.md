@@ -81,6 +81,10 @@ Unit `Tests 67 passed`, e2e `Tests 61 passed`.
 
 ## Labs
 
+Lab 3 is checked: `dev pnpm lab 09` pins what rotation does to a connected client (the
+old secret fails on the very next call). It passes on the starter; to see it fail, let a
+non-active device through `verifyAccessKey`.
+
 1. Scope `list-notes` to the calling device's owner. What changes in `NotesService`
    (compare chapter 04's ownership)?
 2. Add rate limiting per access key id. Where does it go: middleware or tool?

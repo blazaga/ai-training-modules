@@ -6,14 +6,14 @@ import { __Names__Service } from './__names__.service.js';
 describe('__Names__Service', () => {
   let service: __Names__Service;
 
-  // AI-FILL(valid-input): a minimal valid create payload for a __name__.
+  // AI-FILL(valid-input): a minimal valid create payload for one __name__.
   const valid = {} as never;
 
   beforeEach(() => {
     service = new __Names__Service(new InMemory__Names__Repository());
   });
 
-  it('creates and reads back a __name__', async () => {
+  it('creates and reads back one __name__', async () => {
     const created = await service.create(valid);
     await expect(service.findOne(created.id)).resolves.toEqual(created);
   });
@@ -24,7 +24,7 @@ describe('__Names__Service', () => {
     ).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it('removes a __name__', async () => {
+  it('removes one __name__', async () => {
     const created = await service.create(valid);
     await service.remove(created.id);
     await expect(service.findOne(created.id)).rejects.toBeInstanceOf(

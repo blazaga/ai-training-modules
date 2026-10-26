@@ -1,0 +1,617 @@
+diff --git a/specs/orders.md b/specs/orders.md
+new file mode 100644
+index 0000000..69a744a
+--- /dev/null
++++ b/specs/orders.md
+@@ -0,0 +1,45 @@
++# Resource spec: orders
++
++The input an agent fills the AI-FILL markers from (lab 01). The contract it implements is
++in `test/labs/README.md`; `pnpm lab 01` checks it.
++
++- **singular / plural:** `order` / `orders`
++- **route:** `/api/v1/orders`
++- **storage:** default (in-memory repository)
++
++## Fields
++
++| field      | type    | constraints           | default | client-settable |
++| ---------- | ------- | --------------------- | ------- | --------------- |
++| `item`     | string  | 1–200 chars, required | —       | yes             |
++| `quantity` | integer | whole number, 1–100   | `1`     | yes             |
++| `status`   | enum    | `open` \| `fulfilled` | `open`  | yes             |
++
++`item` is not trimmed: the contract only bounds its length.
++
++## Rules
++
++Rules that only need the **payload** go in the schema. Rules that need **stored state**
++go in the service.
++
++| #   | rule                                                                                | where                        | error → HTTP               |
++| --- | ----------------------------------------------------------------------------------- | ---------------------------- | -------------------------- |
++| O1  | `quantity` is a whole number from 1 to 100 (a string such as `"2"` is not a number) | schema (payload only)        | validation → 400           |
++| O2  | once an order is `fulfilled` (stored status), a PATCH cannot change its `quantity`  | service (needs stored state) | `RuleViolationError` → 422 |
++
++O2 compares against the **stored** status: an `open` order may change its quantity and
++become `fulfilled` in the same PATCH. A PATCH on a fulfilled order that sends the
++**same** quantity it already has is not a change and is allowed.
++
++## Open questions
++
++Not answered by the contract, so **no rule was invented** for them:
++
++- Can a `fulfilled` order go back to `open`? (Today: yes, nothing forbids it. If it can,
++  O2 is bypassable by reopening, changing the quantity and fulfilling again.)
++- Can a `fulfilled` order change its `item`, or be deleted?
++
++## Out of scope
++
++Ownership (orders are not scoped to a user; any authenticated caller sees all of them),
++pricing, persistence beyond memory.
+diff --git a/src/app.module.ts b/src/app.module.ts
+index 112f8cd..8cec961 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -11,6 +11,7 @@ import { NotesModule } from './notes/notes.module.js';
+ import { UsersModule } from './users/users.module.js';
+ import { AuthModule } from './auth/auth.module.js';
+ import { DevicesModule } from './devices/devices.module.js';
++import { OrdersModule } from './orders/orders.module.js';
+ 
+ @Module({
+   imports: [
+@@ -23,6 +24,7 @@ import { DevicesModule } from './devices/devices.module.js';
+     UsersModule,
+     AuthModule,
+     DevicesModule,
++    OrdersModule,
+   ],
+   providers: [
+     // Every @Body/@Query/@Param typed with a createZodDto class is validated.
+diff --git a/src/orders/dto/create-order.dto.ts b/src/orders/dto/create-order.dto.ts
+new file mode 100644
+index 0000000..18bc5e6
+--- /dev/null
++++ b/src/orders/dto/create-order.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { CreateOrderSchema } from '../order.schema.js';
++
++export class CreateOrderDto extends createZodDto(CreateOrderSchema) {}
+diff --git a/src/orders/dto/update-order.dto.ts b/src/orders/dto/update-order.dto.ts
+new file mode 100644
+index 0000000..1c924a1
+--- /dev/null
++++ b/src/orders/dto/update-order.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { UpdateOrderSchema } from '../order.schema.js';
++
++export class UpdateOrderDto extends createZodDto(UpdateOrderSchema) {}
+diff --git a/src/orders/entities/order.entity.ts b/src/orders/entities/order.entity.ts
+new file mode 100644
+index 0000000..55bf629
+--- /dev/null
++++ b/src/orders/entities/order.entity.ts
+@@ -0,0 +1,8 @@
++import type { z } from 'zod';
++import type { OrderResponseSchema, OrderSchema } from '../order.schema.js';
++
++/** Derived from the schemas: never hand-write fields here. */
++export type Order = z.infer<typeof OrderSchema>;
++
++/** A Order without its private fields: the only shape that leaves the API. */
++export type OrderResponse = z.infer<typeof OrderResponseSchema>;
+diff --git a/src/orders/order.schema.ts b/src/orders/order.schema.ts
+new file mode 100644
+index 0000000..aeae09c
+--- /dev/null
++++ b/src/orders/order.schema.ts
+@@ -0,0 +1,54 @@
++import { z } from 'zod';
++import { patchSchema } from '../common/schemas/patch-schema.js';
++
++/**
++ * Single source of truth for a Order AS STORED: validation, TypeScript types
++ * and the OpenAPI schema all derive from these definitions. Change fields HERE only.
++ */
++export const OrderSchema = z.object({
++  id: z.string().uuid(),
++  item: z.string().min(1).max(200),
++  // Spec O1: a whole number 1-100 (payload-only, so it lives here → 400). z.number()
++  // also refuses a numeric string such as "2".
++  quantity: z.number().int().min(1).max(100).default(1),
++  status: z.enum(['open', 'fulfilled']).default('open'),
++  createdAt: z.string().datetime(),
++  updatedAt: z.string().datetime(),
++});
++
++/**
++ * Stored but never RETURNED and never ACCEPTED from a client (a password or
++ * secret hash). Responses are parsed through OrderResponseSchema, which
++ * strips these. A test checks that no response carries them.
++ */
++const PRIVATE = {} as const;
++
++/**
++ * Returned to clients but never ACCEPTED from them: the server sets these, usually
++ * through actions (e.g. `status` only changes via POST /:id/activate).
++ */
++const SERVER_OWNED = {} as const;
++
++/** What every endpoint returns. */
++export const OrderResponseSchema = OrderSchema.omit(PRIVATE);
++
++/**
++ * Client-settable fields, UNREFINED. Zod 4 throws on .omit()/.partial() of a
++ * refined object, so derive from this and attach .refine() last.
++ */
++const OrderFields = OrderSchema.omit({
++  id: true,
++  createdAt: true,
++  updatedAt: true,
++  ...PRIVATE,
++  ...SERVER_OWNED,
++});
++
++/** POST body. */
++export const CreateOrderSchema = OrderFields;
++
++/**
++ * PATCH body: any subset of the create fields, never empty, and WITHOUT defaults
++ * (see patchSchema: .partial() would overwrite stored values with defaults).
++ */
++export const UpdateOrderSchema = patchSchema(OrderFields);
+diff --git a/src/orders/orders.controller.ts b/src/orders/orders.controller.ts
+new file mode 100644
+index 0000000..83bd7d7
+--- /dev/null
++++ b/src/orders/orders.controller.ts
+@@ -0,0 +1,68 @@
++import {
++  Body,
++  Controller,
++  Delete,
++  Get,
++  HttpCode,
++  HttpStatus,
++  Param,
++  ParseUUIDPipe,
++  Patch,
++  Post,
++  Query,
++} from '@nestjs/common';
++import { ApiTags } from '@nestjs/swagger';
++import type { Page } from '../common/persistence/repository.js';
++import { PageQueryDto } from '../common/schemas/page-query.schema.js';
++import { OrderResponseSchema } from './order.schema.js';
++import { OrdersService } from './orders.service.js';
++import { CreateOrderDto } from './dto/create-order.dto.js';
++import { UpdateOrderDto } from './dto/update-order.dto.js';
++import type { Order, OrderResponse } from './entities/order.entity.js';
++
++/** Strip private fields. Every value this controller returns passes through here. */
++const toResponse = (entity: Order): OrderResponse =>
++  OrderResponseSchema.parse(entity);
++
++/**
++ * HTTP only: parse, delegate, return. No business logic here (it goes in the
++ * service) and no try/catch (DomainExceptionFilter maps errors).
++ * Routes: /api/v1/orders
++ */
++@ApiTags('orders')
++@Controller('orders')
++export class OrdersController {
++  constructor(private readonly service: OrdersService) {}
++
++  @Post()
++  async create(@Body() body: CreateOrderDto): Promise<OrderResponse> {
++    return toResponse(await this.service.create(body));
++  }
++
++  @Get()
++  async findPage(@Query() query: PageQueryDto): Promise<Page<OrderResponse>> {
++    const page = await this.service.findPage(query.limit, query.offset);
++    return { ...page, items: page.items.map(toResponse) };
++  }
++
++  @Get(':id')
++  async findOne(
++    @Param('id', ParseUUIDPipe) id: string,
++  ): Promise<OrderResponse> {
++    return toResponse(await this.service.findOne(id));
++  }
++
++  @Patch(':id')
++  async update(
++    @Param('id', ParseUUIDPipe) id: string,
++    @Body() body: UpdateOrderDto,
++  ): Promise<OrderResponse> {
++    return toResponse(await this.service.update(id, body));
++  }
++
++  @Delete(':id')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
++    return this.service.remove(id);
++  }
++}
+diff --git a/src/orders/orders.memory-repository.ts b/src/orders/orders.memory-repository.ts
+new file mode 100644
+index 0000000..6cff29e
+--- /dev/null
++++ b/src/orders/orders.memory-repository.ts
+@@ -0,0 +1,8 @@
++import { InMemoryRepository } from '../common/persistence/repository.js';
++import type { OrdersRepository } from './orders.repository.js';
++import type { Order } from './entities/order.entity.js';
++
++/** In-memory storage for orders: used by the module and by unit tests. */
++export class InMemoryOrdersRepository
++  extends InMemoryRepository<Order>
++  implements OrdersRepository {}
+diff --git a/src/orders/orders.module.ts b/src/orders/orders.module.ts
+new file mode 100644
+index 0000000..4173f9a
+--- /dev/null
++++ b/src/orders/orders.module.ts
+@@ -0,0 +1,16 @@
++import { Module } from '@nestjs/common';
++import { OrdersController } from './orders.controller.js';
++import { InMemoryOrdersRepository } from './orders.memory-repository.js';
++import { ORDERS_REPOSITORY } from './orders.repository.js';
++import { OrdersService } from './orders.service.js';
++
++@Module({
++  controllers: [OrdersController],
++  providers: [
++    OrdersService,
++    // Swap the storage here only; the service and its tests do not change.
++    { provide: ORDERS_REPOSITORY, useClass: InMemoryOrdersRepository },
++  ],
++  exports: [OrdersService],
++})
++export class OrdersModule {}
+diff --git a/src/orders/orders.repository.ts b/src/orders/orders.repository.ts
+new file mode 100644
+index 0000000..c182f8e
+--- /dev/null
++++ b/src/orders/orders.repository.ts
+@@ -0,0 +1,8 @@
++import type { Repository } from '../common/persistence/repository.js';
++import type { Order } from './entities/order.entity.js';
++
++/** Injection token: services depend on the port, never on a storage class. */
++export const ORDERS_REPOSITORY = Symbol('ORDERS_REPOSITORY');
++
++/** The generic CRUD port plus the lookups this resource needs. */
++export interface OrdersRepository extends Repository<Order> {}
+diff --git a/src/orders/orders.service.spec.ts b/src/orders/orders.service.spec.ts
+new file mode 100644
+index 0000000..9a15073
+--- /dev/null
++++ b/src/orders/orders.service.spec.ts
+@@ -0,0 +1,70 @@
++import {
++  NotFoundError,
++  RuleViolationError,
++} from '../common/errors/domain-error.js';
++import { InMemoryOrdersRepository } from './orders.memory-repository.js';
++import { OrdersService } from './orders.service.js';
++
++/** Unit tests: plain constructor injection, no Nest container needed. */
++describe('OrdersService', () => {
++  let service: OrdersService;
++
++  // Unit tests get already-parsed input, so the defaults are spelled out.
++  const valid = { item: 'Pencil', quantity: 2, status: 'open' as const };
++
++  beforeEach(() => {
++    service = new OrdersService(new InMemoryOrdersRepository());
++  });
++
++  it('creates and reads back a order', async () => {
++    const created = await service.create(valid);
++    await expect(service.findOne(created.id)).resolves.toEqual(created);
++  });
++
++  it('throws NotFoundError for an unknown id', async () => {
++    await expect(
++      service.findOne('00000000-0000-4000-8000-000000000000'),
++    ).rejects.toBeInstanceOf(NotFoundError);
++  });
++
++  it('removes a order', async () => {
++    const created = await service.create(valid);
++    await service.remove(created.id);
++    await expect(service.findOne(created.id)).rejects.toBeInstanceOf(
++      NotFoundError,
++    );
++  });
++
++  describe('O2: a fulfilled order cannot change its quantity', () => {
++    it('refuses a quantity change on a fulfilled order, and stores nothing', async () => {
++      const order = await service.create({ ...valid, status: 'fulfilled' });
++      await expect(
++        service.update(order.id, { quantity: 9 }),
++      ).rejects.toBeInstanceOf(RuleViolationError);
++      await expect(service.findOne(order.id)).resolves.toMatchObject({
++        quantity: 2,
++      });
++    });
++
++    it('allows a quantity change on an open order', async () => {
++      const order = await service.create(valid);
++      await expect(
++        service.update(order.id, { quantity: 9 }),
++      ).resolves.toMatchObject({ quantity: 9, status: 'open' });
++    });
++
++    it('allows changing the quantity while fulfilling an open order', async () => {
++      const order = await service.create(valid);
++      await expect(
++        service.update(order.id, { quantity: 9, status: 'fulfilled' }),
++      ).resolves.toMatchObject({ quantity: 9, status: 'fulfilled' });
++    });
++
++    it('allows a fulfilled order a patch that keeps the same quantity', async () => {
++      const order = await service.create({ ...valid, status: 'fulfilled' });
++      await expect(
++        service.update(order.id, { quantity: 2, item: 'Pen' }),
++      ).resolves.toMatchObject({ quantity: 2, item: 'Pen' });
++    });
++  });
++});
+diff --git a/src/orders/orders.service.ts b/src/orders/orders.service.ts
+new file mode 100644
+index 0000000..c9e9543
+--- /dev/null
++++ b/src/orders/orders.service.ts
+@@ -0,0 +1,75 @@
++import { Inject, Injectable } from '@nestjs/common';
++import {
++  NotFoundError,
++  RuleViolationError,
++} from '../common/errors/domain-error.js';
++import type { Entity, Page } from '../common/persistence/repository.js';
++import {
++  ORDERS_REPOSITORY,
++  type OrdersRepository,
++} from './orders.repository.js';
++import type { CreateOrderDto } from './dto/create-order.dto.js';
++import type { UpdateOrderDto } from './dto/update-order.dto.js';
++import type { Order } from './entities/order.entity.js';
++
++/**
++ * Business logic for orders. Shape rules (types, lengths, enums) live in the
++ * schema. Only rules that need state or more than one field belong here, and
++ * they fail by throwing a DomainError, never by returning a flag.
++ */
++@Injectable()
++export class OrdersService {
++  constructor(
++    @Inject(ORDERS_REPOSITORY) private readonly repo: OrdersRepository,
++  ) {}
++
++  async create(input: CreateOrderDto): Promise<Order> {
++    // No create-time rules: O1 is payload-only and lives in the schema.
++    return this.repo.create(await this.toStored(input));
++  }
++
++  /** The create payload in its STORED shape: write-only inputs become private fields. */
++  private toStored(
++    input: CreateOrderDto,
++  ): Promise<Omit<Order, keyof Entity>> | Omit<Order, keyof Entity> {
++    // No write-only inputs.
++    return input;
++  }
++
++  findPage(limit: number, offset: number): Promise<Page<Order>> {
++    return this.repo.findPage(limit, offset);
++  }
++
++  async findOne(id: string): Promise<Order> {
++    const found = await this.repo.findById(id);
++    if (!found) throw new NotFoundError('Order', id);
++    return found;
++  }
++
++  async update(id: string, patch: UpdateOrderDto): Promise<Order> {
++    const current = await this.findOne(id);
++    // Spec O2: once fulfilled (STORED status), the quantity is frozen. Sending the
++    // same quantity is not a change; an open order may change it while fulfilling.
++    if (
++      current.status === 'fulfilled' &&
++      patch.quantity !== undefined &&
++      patch.quantity !== current.quantity
++    ) {
++      throw new RuleViolationError(
++        'A fulfilled order cannot change its quantity',
++        { field: 'quantity' },
++      );
++    }
++    const updated = await this.repo.update(id, patch);
++    if (!updated) throw new NotFoundError('Order', id);
++    return updated;
++  }
++
++  async remove(id: string): Promise<void> {
++    const current = await this.findOne(id);
++    // No remove-time rules.
++    void current;
++    const deleted = await this.repo.delete(id);
++    if (!deleted) throw new NotFoundError('Order', id);
++  }
++}
+diff --git a/test/orders.e2e-spec.ts b/test/orders.e2e-spec.ts
+new file mode 100644
+index 0000000..9a84047
+--- /dev/null
++++ b/test/orders.e2e-spec.ts
+@@ -0,0 +1,165 @@
++import { INestApplication } from '@nestjs/common';
++import { Test } from '@nestjs/testing';
++import request from 'supertest';
++import type { App } from 'supertest/types.js';
++import { AppModule } from '../src/app.module.js';
++import { configureApp } from '../src/bootstrap/configure-app.js';
++import { OrderResponseSchema } from '../src/orders/order.schema.js';
++
++/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
++describe('orders (e2e)', () => {
++  let app: INestApplication<App>;
++  const base = '/api/v1/orders';
++  const missing = '00000000-0000-4000-8000-000000000000';
++
++  // No field is unique, so a constant shape is fine; quantity and status default.
++  const valid = () => ({ item: 'Pencil' });
++
++  /** Headers that authenticate a request (set by e2e-setup). */
++  let authHeaders: Record<string, string> = {};
++
++  /** Every request in this file is authenticated unless it uses `request` directly. */
++  const http = {
++    get: (url: string) =>
++      request(app.getHttpServer()).get(url).set(authHeaders),
++    post: (url: string) =>
++      request(app.getHttpServer()).post(url).set(authHeaders),
++    patch: (url: string) =>
++      request(app.getHttpServer()).patch(url).set(authHeaders),
++    delete: (url: string) =>
++      request(app.getHttpServer()).delete(url).set(authHeaders),
++  };
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++    app = moduleRef.createNestApplication();
++    configureApp(app);
++    await app.init();
++    // Routes are authenticated by default: sign up (public), then use Basic auth.
++    const owner = {
++      email: 'e2e-orders@example.com',
++      name: 'E2E Orders',
++      password: 'e2e orders passphrase',
++    };
++    await request(app.getHttpServer())
++      .post('/api/v1/users')
++      .send(owner)
++      .expect(201);
++    authHeaders = {
++      Authorization: `Basic ${Buffer.from(`${owner.email}:${owner.password}`).toString('base64')}`,
++    };
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  it('rejects requests without credentials (401)', () =>
++    request(app.getHttpServer()).get(base).expect(401));
++
++  it('POST creates (201) and GET reads it back (200)', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http
++      .get(`${base}/${created.body.id}`)
++      .expect(200)
++      .expect((res) => expect(res.body).toEqual(created.body));
++  });
++
++  it('responses carry only public fields (no private field ever leaves)', async () => {
++    const publicKeys = new Set(Object.keys(OrderResponseSchema.shape));
++    const leaked = (body: object) =>
++      Object.keys(body).filter((key) => !publicKeys.has(key));
++    const created = await http.post(base).send(valid()).expect(201);
++    expect(leaked(created.body)).toEqual([]);
++    const list = await http.get(base).expect(200);
++    expect(list.body.items.length).toBeGreaterThan(0);
++    for (const item of list.body.items) expect(leaked(item)).toEqual([]);
++  });
++
++  it('POST stores the PARSED body: unknown keys are stripped', async () => {
++    // Guards the validation pipe's contract over HTTP. A pipe that validated but
++    // passed the raw input through would store this key; unit tests cannot see it.
++    const created = await http
++      .post(base)
++      .send({ ...valid(), notAField: 'x' })
++      .expect(201);
++    expect(created.body).not.toHaveProperty('notAField');
++  });
++
++  it('POST rejects an invalid body (400)', () =>
++    http.post(base).send({ unexpected: 'shape' }).expect(400));
++
++  it('GET unknown id is 404 with the DomainError body', () =>
++    http
++      .get(`${base}/${missing}`)
++      .expect(404)
++      .expect((res) => expect(res.body.code).toBe('NOT_FOUND')));
++
++  it('GET a non-uuid id is 400', () =>
++    http.get(`${base}/not-a-uuid`).expect(400));
++
++  it('PATCH with an empty body is 400', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http.patch(`${base}/${created.body.id}`).send({}).expect(400);
++  });
++
++  it('DELETE is 204, then GET is 404', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http.delete(`${base}/${created.body.id}`).expect(204);
++    await http.get(`${base}/${created.body.id}`).expect(404);
++  });
++
++  it('POST applies the defaults: quantity 1, status open', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    expect(created.body).toMatchObject({ quantity: 1, status: 'open' });
++  });
++
++  it.each([0, 101, 1.5, '2'])('O1: quantity %j is 400', async (quantity) => {
++    await http
++      .post(base)
++      .send({ ...valid(), quantity })
++      .expect(400);
++  });
++
++  it('O1: quantity 100 is accepted', () =>
++    http
++      .post(base)
++      .send({ ...valid(), quantity: 100 })
++      .expect(201));
++
++  it('PATCH {quantity} on an open order keeps item and status', async () => {
++    const created = await http
++      .post(base)
++      .send({ ...valid(), quantity: 2 })
++      .expect(201);
++    await http
++      .patch(`${base}/${created.body.id}`)
++      .send({ quantity: 5 })
++      .expect(200)
++      .expect((res) =>
++        expect(res.body).toMatchObject({
++          item: 'Pencil',
++          quantity: 5,
++          status: 'open',
++        }),
++      );
++  });
++
++  it('O2: changing the quantity of a fulfilled order is 422 RULE_VIOLATION', async () => {
++    const created = await http
++      .post(base)
++      .send({ ...valid(), quantity: 2, status: 'fulfilled' })
++      .expect(201);
++    await http
++      .patch(`${base}/${created.body.id}`)
++      .send({ quantity: 9 })
++      .expect(422)
++      .expect((res) => expect(res.body.code).toBe('RULE_VIOLATION'));
++    await http
++      .get(`${base}/${created.body.id}`)
++      .expect(200)
++      .expect((res) => expect(res.body.quantity).toBe(2));
++  });
++});

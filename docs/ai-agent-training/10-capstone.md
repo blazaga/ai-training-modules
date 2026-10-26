@@ -11,16 +11,20 @@ user's note is 404 over REST and a `NOT_FOUND` tool error over MCP.
 
 ## Steps and required evidence
 
-| #   | step                                                                             | evidence                                                                                                                |
-| --- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 1   | Update `specs/notes.md` (skill `resource-spec`): owner field, rules, gaps found  | the spec diff and every open question you raised                                                                        |
-| 2   | Plan (skill `plan-feature`): tasks, each with a verify line                      | `plans/<date>-notes-ownership.md`                                                                                       |
-| 3   | Schema, table, migration. Read the generated SQL before applying it (chapter 04) | the migration, and what you hand-edited and why                                                                         |
-| 4   | Service + controller ownership (chapter 04 pattern)                              | unit + e2e counts; the owner-check mutation result                                                                      |
-| 5   | MCP tool `my-notes` using `McpContext` (chapter 09)                              | the e2e test with two devices of two users                                                                              |
-| 6   | `pnpm verify`                                                                    | all output lines: tsc, oxlint, prettier, check-ai-fill, check-migrations, both `Tests` lines **and** `Test Files` lines |
-| 7   | Inspector CLI capture with headers (secret redacted)                             | the capture                                                                                                             |
-| 8   | WORKLOG entry (skill `worklog-handoff`) with any corrections you made            | the entry                                                                                                               |
+| #   | step                                                                                              | evidence                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 1   | Update `specs/notes.md` (skill `resource-spec`): owner field, rules, gaps found                   | the spec diff and every open question you raised                                                                        |
+| 2   | Plan (skill `plan-feature`): tasks, each with a verify line                                       | `plans/<date>-notes-ownership.md`                                                                                       |
+| 3   | Schema; if the notes storage has a table, also table and migration, and read the SQL (chapter 04) | the migration and what you hand-edited, or why none was needed                                                          |
+| 4   | Service + controller ownership (chapter 04 pattern)                                               | unit + e2e counts; the owner-check mutation result                                                                      |
+| 5   | MCP tool `my-notes` using `McpContext` (chapter 09)                                               | the e2e test with two devices of two users                                                                              |
+| 6   | `pnpm verify`                                                                                     | all output lines: tsc, oxlint, prettier, check-ai-fill, check-migrations, both `Tests` lines **and** `Test Files` lines |
+| 7   | Inspector CLI capture with headers (secret redacted)                                              | the capture                                                                                                             |
+| 8   | WORKLOG entry (skill `worklog-handoff`) with any corrections you made                             | the entry                                                                                                               |
+
+The behaviour is checked: `dev pnpm lab 10` (contract in
+`boilerplate/nest-ai-starter/test/labs/README.md`). A green check is one row of evidence,
+not the grade.
 
 ## Grading
 

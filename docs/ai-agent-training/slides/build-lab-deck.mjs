@@ -138,7 +138,18 @@ const SLIDES = [
     ],
     notes:
       'The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP client, which is the point of those chapters.',
+  },  {
+    type: 'rules',
+    title: 'Lab checks: is my lab done?',
+    rows: [
+      ['FiCheckSquare', 'One check per lab', '`dev pnpm lab 04` runs the check for lab 04, `dev pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.'],
+      ['FiTool', 'Build labs start red', 'Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.'],
+      ['FiShield', 'Guard labs start green', 'Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.'],
+    ],
+    notes:
+      'The checks drive the app over HTTP and MCP and never import learner code, so they compile before the lab is done. The contracts are in test/labs/README.md in the starter. Reference solutions for facilitators are in docs/ai-agent-training/solutions/.',
   },
+
   {
     type: 'agenda',
     title: 'The track (draft lab times)',
@@ -576,10 +587,10 @@ const SLIDES = [
     items: [
       'spec diff + every open question you raised',
       'plan with a verify line per task',
-      'the migration SQL, and what you hand-edited',
+      'the migration and your edits, or why none',
       'unit + e2e counts; owner-check mutation result',
       'my-notes e2e: two devices of two users',
-      'pnpm verify: every line, incl. Test Files',
+      'pnpm verify + pnpm lab 10: every line',
       'Inspector capture with headers (secret redacted)',
       'WORKLOG entry, with any corrections',
     ],
@@ -798,9 +809,31 @@ const LITE_SLIDES = [
   SLIDES.find((s) => s.type === 'closing'),
 ];
 
+// The lab check each unit ends with (boilerplate/nest-ai-starter/test/labs/). Added to the
+// unit's LAST run slide as a command, and to its checkpoint as the first done-when item.
+const GUARD_LABS = new Set(['03', '08', '09']);
+function withLabChecks(slides, labsByUnit) {
+  const lastRun = new Map();
+  slides.forEach((s, i) => s.type === 'run' && labsByUnit[s.ch] && lastRun.set(s.ch, i));
+  return slides.map((s, i) => {
+    const labs = labsByUnit[s.ch];
+    if (!labs) return s;
+    const cmd = `dev pnpm lab ${labs.join(' ')}`;
+    const guard = labs.every((l) => GUARD_LABS.has(l));
+    if (s.type === 'run' && lastRun.get(s.ch) === i) {
+      const comment = guard ? '# green now; break it, see red, revert' : '# the lab check: all green?';
+      return { ...s, code: [...s.code, `${cmd}   ${comment}`] };
+    }
+    if (s.type === 'checkpoint') return { ...s, done: [`\`${cmd}\`: every test passes`, ...s.done] };
+    return s;
+  });
+}
+
 const TRACKS = [
-  { file: 'lab-companion', label: 'Lab companion', unit: 'CHAPTER', units: CHAPTERS, slides: SLIDES },
-  { file: 'lab-companion-lite', label: 'Lab companion (lite)', unit: 'MODULE', units: MODULES, slides: LITE_SLIDES },
+  { file: 'lab-companion', label: 'Lab companion', unit: 'CHAPTER', units: CHAPTERS,
+    slides: withLabChecks(SLIDES, { '01': ['01'], '02': ['02'], '03': ['03'], '04': ['04'], '06': ['06'], '08': ['08'], '09': ['09'] }) },
+  { file: 'lab-companion-lite', label: 'Lab companion (lite)', unit: 'MODULE', units: MODULES,
+    slides: withLabChecks(LITE_SLIDES, { '1': ['01'], '2': ['02'], '3': ['03', '04'], '4': ['06'], '5': ['08'], '6': ['09'] }) },
 ];
 
 // ---- icons -----------------------------------------------------------------------
@@ -859,6 +892,9 @@ async function buildPptx(file, track) {
     FiCheckCircle: await icon('FiCheckCircle'),
     FiLock: await icon('FiLock'),
     FiDownload: await icon('FiDownload'),
+    FiCheckSquare: await icon('FiCheckSquare'),
+    FiTool: await icon('FiTool'),
+    FiShield: await icon('FiShield'),
     FiPlay: await icon('FiPlay'),
     pm: await icon('FiSend', COL.paper),
     arrow: await icon('FiArrowRight', COL.muted),
@@ -941,7 +977,7 @@ async function buildPptx(file, track) {
       terminal(slide, 0.5, 1.2, 5.5, 3.85, s.output, { fontSize: 12, label: `output: ${s.outputSource}` });
       slide.addText('Done when', { x: 6.4, y: 1.2, w: 3.1, h: 0.45, fontSize: 20, bold: true, color: COL.text, margin: 0, isTextBox: true });
       s.done.forEach((d, i) => {
-        const y = 1.8 + i * 1.05;
+        const y = 1.8 + i * (s.done.length > 3 ? 0.8 : 1.05);
         badge(slide, 6.4, y, 0.42, COL.mint, icons.check);
         slide.addText(md2runs(d), { x: 6.95, y: y - 0.04, w: 2.55, h: 0.95, fontSize: 14, color: COL.text, valign: 'top', margin: 0, isTextBox: true });
       });

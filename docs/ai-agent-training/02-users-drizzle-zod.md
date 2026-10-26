@@ -82,6 +82,9 @@ migrations`.
 
 ## Labs
 
+Lab 1 is checked: `dev pnpm lab 02`. The contract (E.164, `null` when absent, the
+migration) is in `boilerplate/nest-ai-starter/test/labs/README.md`.
+
 1. Add `phone` (optional, E.164) to users: schema, table, migration. Watch
    `check:migrations` fail before `db:generate` and pass after.
 2. Add a `findByEmail` unit test for case differences. Which layer lower-cases?

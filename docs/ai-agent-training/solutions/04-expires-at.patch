@@ -1,0 +1,604 @@
+diff --git a/drizzle/0003_amazing_cyclops.sql b/drizzle/0003_amazing_cyclops.sql
+new file mode 100644
+index 0000000..a0aaad3
+--- /dev/null
++++ b/drizzle/0003_amazing_cyclops.sql
+@@ -0,0 +1 @@
++ALTER TABLE "devices" ADD COLUMN "expires_at" timestamp with time zone;
+\ No newline at end of file
+diff --git a/drizzle/meta/0003_snapshot.json b/drizzle/meta/0003_snapshot.json
+new file mode 100644
+index 0000000..787dec8
+--- /dev/null
++++ b/drizzle/meta/0003_snapshot.json
+@@ -0,0 +1,210 @@
++{
++  "id": "57940a1c-db53-49b5-b9b8-742796dc9be6",
++  "prevId": "6de5eb0b-8826-427f-8a05-ada061b14c8f",
++  "version": "7",
++  "dialect": "postgresql",
++  "tables": {
++    "public.users": {
++      "name": "users",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "email": {
++          "name": "email",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'active'"
++        },
++        "password_hash": {
++          "name": "password_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "users_email_unique": {
++          "name": "users_email_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "email"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "public.devices": {
++      "name": "devices",
++      "schema": "",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "owner_user_id": {
++          "name": "owner_user_id",
++          "type": "uuid",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "description": {
++          "name": "description",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "''"
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'draft'"
++        },
++        "access_key_id": {
++          "name": "access_key_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "secret_hash": {
++          "name": "secret_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "secret_last4": {
++          "name": "secret_last4",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "secret_rotated_at": {
++          "name": "secret_rotated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "expires_at": {
++          "name": "expires_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "last_used_at": {
++          "name": "last_used_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "archived_at": {
++          "name": "archived_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "devices_owner_user_id_users_id_fk": {
++          "name": "devices_owner_user_id_users_id_fk",
++          "tableFrom": "devices",
++          "tableTo": "users",
++          "columnsFrom": [
++            "owner_user_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "restrict",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "devices_access_key_id_unique": {
++          "name": "devices_access_key_id_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "access_key_id"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    }
++  },
++  "enums": {},
++  "schemas": {},
++  "sequences": {},
++  "roles": {},
++  "policies": {},
++  "views": {},
++  "_meta": {
++    "columns": {},
++    "schemas": {},
++    "tables": {}
++  }
++}
+\ No newline at end of file
+diff --git a/drizzle/meta/_journal.json b/drizzle/meta/_journal.json
+index 0a467b2..ac03ec3 100644
+--- a/drizzle/meta/_journal.json
++++ b/drizzle/meta/_journal.json
+@@ -22,6 +22,13 @@
+       "when": 1792932234157,
+       "tag": "0002_light_human_fly",
+       "breakpoints": true
++    },
++    {
++      "idx": 3,
++      "version": "7",
++      "when": 1792976188731,
++      "tag": "0003_amazing_cyclops",
++      "breakpoints": true
+     }
+   ]
+-}
++}
+\ No newline at end of file
+diff --git a/specs/devices.md b/specs/devices.md
+index 1f7e5ae..1aee04d 100644
+--- a/specs/devices.md
++++ b/specs/devices.md
+@@ -18,6 +18,7 @@
+ | `secretHash`      | string \| null   | sha256 hex of the secret           | `null`  | server, **private**  |
+ | `secretLast4`     | string \| null   | last 4 chars of the secret         | `null`  | server               |
+ | `secretRotatedAt` | datetime \| null | —                                  | `null`  | server               |
++| `expiresAt`       | datetime \| null | in the future when issued          | `null`  | client, via credentials only |
+ | `lastUsedAt`      | datetime \| null | —                                  | `null`  | server (ch09)        |
+ | `archivedAt`      | datetime \| null | —                                  | `null`  | server (archive)     |
+ 
+@@ -31,6 +32,12 @@ secretLast4 }`. The plain secret is never stored, logged or returned again.
+ - **Stored as `sha256(secret)`.** A fast hash is fine for a 256-bit random secret
+   (brute force is infeasible), unlike passwords, which need scrypt. It is compared with
+   `timingSafeEqual`.
++- **Expiry (lab 04):** `POST /devices/:id/credentials` takes an optional body
++  `{ expiresAt: <ISO datetime with Z or offset> }`. It must be in the future (else 400); no
++  body or `{}` means the secret never expires. `expiresAt` belongs to the secret, so every
++  issue sets it: re-issuing without it **clears** it to `null`. The response and
++  `GET /devices/:id` show `expiresAt`. From the `expiresAt` instant on (inclusive) the
++  secret is refused by `verifyAccessKey`, with the same failure as a wrong secret.
+ - **Rotation** = calling the same endpoint again: a new secret, the same `accessKeyId`. The
+   old secret stops working **immediately**, because its hash is replaced and nothing is
+   cached.
+@@ -39,12 +46,14 @@ secretLast4 }`. The plain secret is never stored, logged or returned again.
+ 
+ | #   | rule                                                                                                                                 | where                     | error → HTTP               |
+ | --- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | -------------------------- |
+-| R1  | `status`, `accessKeyId`, `secretLast4` and the timestamps are never accepted from a client                                           | schema (server-owned)     | unknown keys stripped      |
++| R1  | `status`, `accessKeyId`, `secretLast4` and the timestamps are never accepted from a client (sole exception: `expiresAt`, only on `/credentials`, R7)                                           | schema (server-owned)     | unknown keys stripped      |
+ | R2  | credentials cannot be issued for an `archived` device                                                                                | service                   | `RuleViolationError` → 422 |
+ | R3  | activation requires issued credentials and a non-archived device                                                                     | service                   | `RuleViolationError` → 422 |
+ | R4  | `DELETE` only removes a `draft` device (never activated; nothing returns a device to draft). Active devices must be archived instead | service                   | `RuleViolationError` → 422 |
+ | R5  | archiving sets `status = archived` and `archivedAt`; an archived device cannot be edited                                             | service                   | `RuleViolationError` → 422 |
+ | R6  | `secretHash` never appears in any response                                                                                           | response schema (private) | —                          |
++| R7  | `expiresAt`, when given, must be in the future (payload + clock only, no stored state)                                               | schema (`IssueCredentialsSchema`) | 400                |
++| R8  | a secret is refused from its `expiresAt` on (`Date.now() >= expiresAt`); `null` never expires                                       | service (`verifyAccessKey`) | `undefined` → 401 on /mcp |
+ 
+ ## Extra endpoints (beyond the template's CRUD)
+ 
+diff --git a/src/devices/device.schema.ts b/src/devices/device.schema.ts
+index 98cde60..1c7a868 100644
+--- a/src/devices/device.schema.ts
++++ b/src/devices/device.schema.ts
+@@ -19,6 +19,8 @@ export const DeviceSchema = z.object({
+   secretHash: z.string().nullable(),
+   secretLast4: z.string().nullable(),
+   secretRotatedAt: z.string().datetime().nullable(),
++  /** Lab 04: when the current secret stops working; null = never. Set only by POST /:id/credentials. */
++  expiresAt: z.string().datetime().nullable(),
+   lastUsedAt: z.string().datetime().nullable(),
+   archivedAt: z.string().datetime().nullable(),
+   createdAt: z.string().datetime(),
+@@ -44,6 +46,7 @@ const SERVER_OWNED = {
+   accessKeyId: true,
+   secretLast4: true,
+   secretRotatedAt: true,
++  expiresAt: true,
+   lastUsedAt: true,
+   archivedAt: true,
+ } as const;
+@@ -71,3 +74,20 @@ export const CreateDeviceSchema = DeviceFields;
+  * (see patchSchema: .partial() would overwrite stored values with defaults).
+  */
+ export const UpdateDeviceSchema = patchSchema(DeviceFields);
++
++/**
++ * Lab 04: POST /:id/credentials body. Optional: no body or `{}` issues a secret that
++ * never expires (and clears a previous expiry). A past `expiresAt` is a payload-only
++ * rule (it needs the clock, not stored state), so it is a 400 here, not a 422.
++ * `.default({})` turns a missing body (Express leaves it undefined) into `{}`.
++ */
++export const IssueCredentialsSchema = z
++  .object({
++    expiresAt: z.iso
++      .datetime({ offset: true })
++      .refine((value) => Date.parse(value) > Date.now(), {
++        message: 'expiresAt must be in the future',
++      })
++      .optional(),
++  })
++  .default({});
+diff --git a/src/devices/devices.controller.ts b/src/devices/devices.controller.ts
+index b1b5c80..d93352a 100644
+--- a/src/devices/devices.controller.ts
++++ b/src/devices/devices.controller.ts
+@@ -18,6 +18,7 @@ import { PageQueryDto } from '../common/schemas/page-query.schema.js';
+ import { DeviceResponseSchema } from './device.schema.js';
+ import { DevicesService } from './devices.service.js';
+ import { CreateDeviceDto } from './dto/create-device.dto.js';
++import { IssueCredentialsDto } from './dto/issue-credentials.dto.js';
+ import { UpdateDeviceDto } from './dto/update-device.dto.js';
+ import type { UserResponse } from '../users/entities/user.entity.js';
+ import type { Device, DeviceResponse } from './entities/device.entity.js';
+@@ -88,14 +89,20 @@ export class DevicesController {
+   /**
+    * Issue or rotate credentials. The ONLY response that ever contains the
+    * plain `secret`: store it now, it cannot be shown again (spec).
++   * Optional body `{ expiresAt }` (lab 04); no body = a secret that never expires.
+    */
+   @Post(':id/credentials')
+   @HttpCode(HttpStatus.OK)
+   async issueCredentials(
+     @CurrentUser() user: UserResponse,
+     @Param('id', ParseUUIDPipe) id: string,
++    @Body() body: IssueCredentialsDto,
+   ): Promise<DeviceResponse & { secret: string }> {
+-    const issued = await this.service.issueCredentials(user.id, id);
++    const issued = await this.service.issueCredentials(
++      user.id,
++      id,
++      body.expiresAt ?? null,
++    );
+     return { ...toResponse(issued.device), secret: issued.secret };
+   }
+ 
+diff --git a/src/devices/devices.service.spec.ts b/src/devices/devices.service.spec.ts
+index 410fbb1..dfdede8 100644
+--- a/src/devices/devices.service.spec.ts
++++ b/src/devices/devices.service.spec.ts
+@@ -147,6 +147,74 @@ describe('DevicesService', () => {
+       ).resolves.toBeUndefined();
+     });
+ 
++    describe('expiresAt (lab 04)', () => {
++      afterEach(() => {
++        vi.useRealTimers();
++      });
++
++      /** An active device whose secret expires at `expiresAt`. */
++      const activeWithExpiry = async (expiresAt: string | null) => {
++        const { id } = await service.create(owner, valid);
++        const creds = await service.issueCredentials(owner, id, expiresAt);
++        await service.activate(owner, id);
++        return creds;
++      };
++
++      it('stores expiresAt with the secret; re-issuing without it clears it', async () => {
++        const at = new Date(Date.now() + 60 * 60 * 1000).toISOString();
++        const { device } = await activeWithExpiry(at);
++        expect(device.expiresAt).toBe(at);
++        const reissued = await service.issueCredentials(owner, device.id);
++        expect(reissued.device.expiresAt).toBeNull();
++      });
++
++      it('works before expiresAt, and is refused AT expiresAt (inclusive) and after', async () => {
++        vi.useFakeTimers({ toFake: ['Date'] });
++        const start = new Date('2030-01-01T00:00:00.000Z');
++        vi.setSystemTime(start);
++        const at = new Date(start.getTime() + 60_000);
++        const { accessKeyId, secret } = await activeWithExpiry(
++          at.toISOString(),
++        );
++
++        vi.setSystemTime(at.getTime() - 1); // 1 ms before: still valid
++        await expect(
++          service.verifyAccessKey(accessKeyId, secret),
++        ).resolves.toBeDefined();
++        vi.setSystemTime(at); // exactly at expiresAt: expired
++        await expect(
++          service.verifyAccessKey(accessKeyId, secret),
++        ).resolves.toBeUndefined();
++        vi.setSystemTime(at.getTime() + 60 * 60 * 1000);
++        await expect(
++          service.verifyAccessKey(accessKeyId, secret),
++        ).resolves.toBeUndefined();
++      });
++
++      it('a null expiresAt never expires', async () => {
++        const { accessKeyId, secret } = await activeWithExpiry(null);
++        vi.useFakeTimers({ toFake: ['Date'] });
++        vi.setSystemTime(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000);
++        await expect(
++          service.verifyAccessKey(accessKeyId, secret),
++        ).resolves.toBeDefined();
++      });
++
++      it('re-issuing without expiresAt revives an expired device', async () => {
++        vi.useFakeTimers({ toFake: ['Date'] });
++        vi.setSystemTime(new Date('2030-01-01T00:00:00.000Z'));
++        const first = await activeWithExpiry('2030-01-01T00:01:00.000Z');
++        vi.setSystemTime(new Date('2030-01-01T00:02:00.000Z'));
++        await expect(
++          service.verifyAccessKey(first.accessKeyId, first.secret),
++        ).resolves.toBeUndefined();
++        const second = await service.issueCredentials(owner, first.device.id);
++        await expect(
++          service.verifyAccessKey(second.accessKeyId, second.secret),
++        ).resolves.toBeDefined();
++      });
++    });
++
+     it('R2: no credentials for an archived device', async () => {
+       const { id } = await service.create(owner, valid);
+       await service.archive(owner, id);
+diff --git a/src/devices/devices.service.ts b/src/devices/devices.service.ts
+index 7e831e8..b83a2df 100644
+--- a/src/devices/devices.service.ts
++++ b/src/devices/devices.service.ts
+@@ -18,6 +18,14 @@ import type { CreateDeviceDto } from './dto/create-device.dto.js';
+ import type { UpdateDeviceDto } from './dto/update-device.dto.js';
+ import type { Device } from './entities/device.entity.js';
+ 
++/**
++ * Lab 04: a secret is expired FROM its `expiresAt` instant on (inclusive), so
++ * at exactly `expiresAt` it is already refused. Compared in TypeScript against
++ * `Date.now()`, not SQL `now()`, so one clock decides (and tests can fake it).
++ */
++export const isExpired = (device: Pick<Device, 'expiresAt'>): boolean =>
++  device.expiresAt !== null && Date.parse(device.expiresAt) <= Date.now();
++
+ /**
+  * Business logic for devices. Shape rules (types, lengths, enums) live in the
+  * schema. Only rules that need state or more than one field belong here, and
+@@ -49,6 +57,7 @@ export class DevicesService {
+       secretHash: null,
+       secretLast4: null,
+       secretRotatedAt: null,
++      expiresAt: null,
+       lastUsedAt: null,
+       archivedAt: null,
+     };
+@@ -109,10 +118,15 @@ export class DevicesService {
+    * Issue (first call) or rotate (later calls) the device's secret. Returns the
+    * plain secret ONCE; only its hash is stored. Rotation keeps the access key
+    * id and invalidates the old secret immediately: nothing caches it (spec).
++   *
++   * Lab 04: `expiresAt` belongs to the secret being issued, so every issue sets
++   * it; omitting it stores null and clears a previous expiry. "Must be in the
++   * future" is checked by IssueCredentialsSchema (400) before this runs.
+    */
+   async issueCredentials(
+     ownerId: string,
+     id: string,
++    expiresAt: string | null = null,
+   ): Promise<{ device: Device; accessKeyId: string; secret: string }> {
+     const current = await this.findOne(ownerId, id);
+     if (current.status === 'archived') {
+@@ -127,6 +141,7 @@ export class DevicesService {
+       secretHash: hashSecret(secret),
+       secretLast4: secret.slice(-4),
+       secretRotatedAt: new Date().toISOString(),
++      expiresAt,
+     });
+     if (!device) throw new NotFoundError('Device', id);
+     return { device, accessKeyId, secret };
+@@ -171,7 +186,9 @@ export class DevicesService {
+   ): Promise<Device | undefined> {
+     const device = await this.repo.findByAccessKeyId(accessKeyId);
+     const ok = secretMatches(secret, device?.secretHash ?? this.decoyHash);
+-    if (!device || !ok || device.status !== 'active') return undefined;
++    if (!device || !ok || device.status !== 'active' || isExpired(device)) {
++      return undefined;
++    }
+     return (
+       (await this.repo.update(device.id, {
+         lastUsedAt: new Date().toISOString(),
+diff --git a/src/devices/devices.table.ts b/src/devices/devices.table.ts
+index 7041fd1..a20c76d 100644
+--- a/src/devices/devices.table.ts
++++ b/src/devices/devices.table.ts
+@@ -21,6 +21,7 @@ export const devices = pgTable('devices', {
+   secretHash: text('secret_hash'),
+   secretLast4: text('secret_last4'),
+   secretRotatedAt: timestamp('secret_rotated_at', { withTimezone: true }),
++  expiresAt: timestamp('expires_at', { withTimezone: true }),
+   lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+   archivedAt: timestamp('archived_at', { withTimezone: true }),
+   createdAt: timestamp('created_at', { withTimezone: true })
+diff --git a/src/devices/dto/issue-credentials.dto.ts b/src/devices/dto/issue-credentials.dto.ts
+new file mode 100644
+index 0000000..7e3a67a
+--- /dev/null
++++ b/src/devices/dto/issue-credentials.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { IssueCredentialsSchema } from '../device.schema.js';
++
++export class IssueCredentialsDto extends createZodDto(IssueCredentialsSchema) {}
+diff --git a/test/devices.e2e-spec.ts b/test/devices.e2e-spec.ts
+index 3955b5b..d9c51ee 100644
+--- a/test/devices.e2e-spec.ts
++++ b/test/devices.e2e-spec.ts
+@@ -181,6 +181,74 @@ describe('devices (e2e)', () => {
+     expect(JSON.stringify(fetched.body)).not.toContain(issued.body.secret);
+   });
+ 
++  describe('credentials expiresAt (lab 04)', () => {
++    const inOneHour = () => new Date(Date.now() + 60 * 60 * 1000);
++    const newDevice = async () =>
++      (await http.post(base).send(valid()).expect(201)).body.id as string;
++
++    it('no body at all still issues, with expiresAt null', async () => {
++      const id = await newDevice();
++      const issued = await http.post(`${base}/${id}/credentials`).expect(200);
++      expect(issued.body.secret).toMatch(/^dsk_/);
++      expect(issued.body.expiresAt).toBeNull();
++    });
++
++    it('a future expiresAt (Z or offset) is returned, shown by GET, and cleared by re-issuing without it', async () => {
++      const id = await newDevice();
++      const at = inOneHour();
++      // The same instant written with a +08:00 offset: accepted, stored as the instant.
++      const withOffset = new Date(at.getTime() + 8 * 60 * 60 * 1000)
++        .toISOString()
++        .replace('Z', '+08:00');
++      const issued = await http
++        .post(`${base}/${id}/credentials`)
++        .send({ expiresAt: withOffset })
++        .expect(200);
++      expect(Date.parse(issued.body.expiresAt)).toBe(at.getTime());
++      const fetched = await http.get(`${base}/${id}`).expect(200);
++      expect(Date.parse(fetched.body.expiresAt)).toBe(at.getTime());
++      expect(
++        DeviceResponseSchema.strict().safeParse(fetched.body).success,
++      ).toBe(true);
++      await http.post(`${base}/${id}/credentials`).send({}).expect(200);
++      const cleared = await http.get(`${base}/${id}`).expect(200);
++      expect(cleared.body.expiresAt).toBeNull();
++    });
++
++    it.each([
++      ['in the past', new Date(Date.now() - 60_000).toISOString()],
++      ['not a datetime', 'tomorrow'],
++      ['a number', 42],
++      ['without a timezone', '2999-01-01T00:00:00'],
++      ['null', null],
++    ])('expiresAt %s is 400 with the issue path', async (_label, expiresAt) => {
++      const id = await newDevice();
++      const res = await http
++        .post(`${base}/${id}/credentials`)
++        .send({ expiresAt })
++        .expect(400);
++      expect(res.body.issues).toEqual(
++        expect.arrayContaining([
++          expect.objectContaining({ path: 'expiresAt' }),
++        ]),
++      );
++    });
++
++    it('R1: expiresAt is not accepted on create or PATCH (stripped)', async () => {
++      const at = inOneHour().toISOString();
++      const created = await http
++        .post(base)
++        .send({ ...valid(), expiresAt: at })
++        .expect(201);
++      expect(created.body.expiresAt).toBeNull();
++      const patched = await http
++        .patch(`${base}/${created.body.id}`)
++        .send({ name: 'renamed', expiresAt: at })
++        .expect(200);
++      expect(patched.body.expiresAt).toBeNull();
++    });
++  });
++
+   it('R3: activate before credentials is 422', async () => {
+     const { body: device } = await http.post(base).send(valid()).expect(201);
+     await http

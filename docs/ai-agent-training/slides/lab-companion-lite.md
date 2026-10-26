@@ -56,6 +56,18 @@ The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP c
 
 ---
 
+## Lab checks: is my lab done?
+
+- **One check per lab**: `dev pnpm lab 04` runs the check for lab 04, `dev pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
+- **Build labs start red**: Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.
+- **Guard labs start green**: Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.
+
+<!--
+The checks drive the app over HTTP and MCP and never import learner code, so they compile before the lab is done. The contracts are in test/labs/README.md in the starter. Reference solutions for facilitators are in docs/ai-agent-training/solutions/.
+-->
+
+---
+
 ## The lite track (draft lab times)
 
 | mod | module                        | lab |
@@ -102,6 +114,7 @@ dev pnpm resource:template --name order --plural orders
 dev pnpm check:ai-fill         # your agent's to-do list
 # your agent fills every AI-FILL marker, then:
 dev pnpm verify
+dev pnpm lab 01   # the lab check: all green?
 ```
 
 <!--
@@ -130,6 +143,7 @@ AI-FILL markers: 0
 
 **Done when**
 
+- [ ] `dev pnpm lab 01`: every test passes
 - [ ] app healthy, migrate exited 0, both gates green
 - [ ] check:ai-fill prints 0 markers
 - [ ] delete one service rule: exactly one test goes red
@@ -171,6 +185,7 @@ dev pnpm check:migrations   # clean now
 dev pnpm verify
 docker compose up -d --build
 docker compose logs migrate
+dev pnpm lab 02   # the lab check: all green?
 ```
 
 <!--
@@ -196,6 +211,7 @@ db:migrate: ledger rows: 4
 
 **Done when**
 
+- [ ] `dev pnpm lab 02`: every test passes
 - [ ] check:migrations failed BEFORE generating
 - [ ] you read the SQL in `drizzle/0003_*`
 - [ ] ledger rows: 4; phone appears in responses
@@ -234,6 +250,7 @@ Covers full-track chapters 03 + 04. Cut for time: reading the hand-written middl
 dev pnpm test:e2e   # which test fails?
 # re-send 03 in Postman, then revert
 # then send folder 04
+dev pnpm lab 03 04   # the lab check: all green?
 ```
 
 **In Postman**
@@ -265,6 +282,7 @@ WWW-Authenticate: Basic
 
 **Done when**
 
+- [ ] `dev pnpm lab 03 04`: every test passes
 - [ ] you saw the test that pins the 401 rule fail, then reverted
 - [ ] no response but /credentials ever shows a secret
 - [ ] another user's device → 404, not 403
@@ -319,6 +337,7 @@ Open the Body tab of initialize: one SSE event, `event: message` then `data: {..
 publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {
   return runTool(() => this.notes.update(id, { status: 'published' }));
 }
+dev pnpm lab 06   # the lab check: all green?
 ```
 
 <!--
@@ -345,6 +364,7 @@ data: {"result":{"protocolVersion":…},
 
 **Done when**
 
+- [ ] `dev pnpm lab 06`: every test passes
 - [ ] you matched the response id to the request
 - [ ] the stdio e2e tool list updated on purpose
 - [ ] tool error (isError) vs protocol error (error)
@@ -387,6 +407,7 @@ echo "exit: $?"
 docker compose up -d --build app
 # re-send Postman 05 › initialize: what changed?
 # then revert enableJsonResponse
+dev pnpm lab 08   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -416,6 +437,7 @@ content-type: application/json
 
 **Done when**
 
+- [ ] `dev pnpm lab 08`: every test passes
 - [ ] a script that FAILS when create-note accepts `{title:'x', status:'published'}`
 - [ ] both framings captured and compared
 - [ ] MCP_ALLOWED_HOSTS explained in one sentence
@@ -456,6 +478,7 @@ dev npx -y @modelcontextprotocol/inspector@2.12.0 \
   --method tools/call --tool-name whoami \
   --header "X-Access-Key-Id: $MCP_KEY_ID" \
   --header "X-Secret-Key: $MCP_SECRET"
+dev pnpm lab 09   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -484,6 +507,7 @@ whoami with the NEW secret   200
 
 **Done when**
 
+- [ ] `dev pnpm lab 09`: every test passes
 - [ ] the old secret failed on the NEXT call
 - [ ] the 7 failure modes → one 401, explained
 - [ ] why stdio whoami is a tool error (local trust)
@@ -506,10 +530,10 @@ The Inspector treats any 401 as an OAuth challenge. Device keys suit header-conf
 
 1. spec diff + every open question you raised
 2. plan with a verify line per task
-3. the migration SQL, and what you hand-edited
+3. the migration and your edits, or why none
 4. unit + e2e counts; owner-check mutation result
 5. my-notes e2e: two devices of two users
-6. pnpm verify: every line, incl. Test Files
+6. pnpm verify + pnpm lab 10: every line
 7. Inspector capture with headers (secret redacted)
 8. WORKLOG entry, with any corrections
 

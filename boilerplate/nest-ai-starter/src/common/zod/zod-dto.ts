@@ -25,6 +25,26 @@ export function isZodDto(value: unknown): value is ZodDto<z.ZodType> {
 /** JSON Schema property → the shape @nestjs/swagger's model explorer reads. */
 type SwaggerProperty = Record<string, unknown> & { required: boolean };
 
+/**
+ * zod renders `.nullable()` as `anyOf: [{ type: 'string', ... }, { type: 'null' }]`
+ * with NO top-level `type`. @nestjs/swagger reads a missing `type` as a class
+ * reference and throws "A circular dependency has been detected (property key: …)"
+ * while building the document, which fails every e2e suite (measured,
+ * @nestjs/swagger 12.0.4, on users.phone). Collapse it to the OpenAPI 3.0 form:
+ * the non-null branch plus `nullable: true`.
+ */
+function collapseNullable(
+  prop: Record<string, unknown>,
+): Record<string, unknown> {
+  const anyOf = prop.anyOf as Record<string, unknown>[] | undefined;
+  if (prop.type !== undefined || !Array.isArray(anyOf)) return prop;
+  const nonNull = anyOf.filter((branch) => branch.type !== 'null');
+  if (nonNull.length !== 1 || nonNull.length === anyOf.length) return prop;
+  const rest = { ...prop };
+  delete rest.anyOf;
+  return { ...rest, ...nonNull[0], nullable: true };
+}
+
 /** `class CreateNoteDto extends createZodDto(CreateNoteSchema) {}` */
 export function createZodDto<S extends z.ZodType>(schema: S): ZodDto<S> {
   class Dto {
@@ -46,7 +66,7 @@ export function createZodDto<S extends z.ZodType>(schema: S): ZodDto<S> {
       return Object.fromEntries(
         Object.entries(json.properties ?? {}).map(([key, prop]) => [
           key,
-          { ...prop, required: required.has(key) },
+          { ...collapseNullable(prop), required: required.has(key) },
         ]),
       );
     }

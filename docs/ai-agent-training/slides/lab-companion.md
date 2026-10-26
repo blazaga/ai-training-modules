@@ -56,6 +56,18 @@ The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP c
 
 ---
 
+## Lab checks: is my lab done?
+
+- **One check per lab**: `dev pnpm lab 04` runs the check for lab 04, `dev pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
+- **Build labs start red**: Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.
+- **Guard labs start green**: Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.
+
+<!--
+The checks drive the app over HTTP and MCP and never import learner code, so they compile before the lab is done. The contracts are in test/labs/README.md in the starter. Reference solutions for facilitators are in docs/ai-agent-training/solutions/.
+-->
+
+---
+
 ## The track (draft lab times)
 
 | ch  | chapter                         | lab |
@@ -173,6 +185,7 @@ dev pnpm check:ai-fill      # your to-do list
 # 2. your agent fills every AI-FILL marker
 #    from specs/orders.md
 dev pnpm verify
+dev pnpm lab 01   # the lab check: all green?
 ```
 
 <!--
@@ -196,6 +209,7 @@ Tests  N passed  (N > 67)
 
 **Done when**
 
+- [ ] `dev pnpm lab 01`: every test passes
 - [ ] check:ai-fill prints 0 markers
 - [ ] delete each service rule once: exactly one test goes red
 - [ ] verify green, counts read aloud
@@ -237,6 +251,7 @@ dev pnpm check:migrations   # clean now
 dev pnpm verify
 docker compose up -d --build
 docker compose logs migrate
+dev pnpm lab 02   # the lab check: all green?
 ```
 
 <!--
@@ -262,6 +277,7 @@ db:migrate: ledger rows: 4
 
 **Done when**
 
+- [ ] `dev pnpm lab 02`: every test passes
 - [ ] check:migrations failed BEFORE generating
 - [ ] you read the SQL in `drizzle/0003_*`
 - [ ] ledger rows: 4; phone appears in responses
@@ -296,6 +312,7 @@ git log --oneline --grep 'course(ch03'
 # change the message for unknown emails
 dev pnpm test:e2e     # which test fails?
 # re-send "Me: unknown email" in Postman too
+dev pnpm lab 03   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -325,6 +342,7 @@ WWW-Authenticate: Basic
 
 **Done when**
 
+- [ ] `dev pnpm lab 03`: every test passes
 - [ ] you saw the test that pins the rule fail
 - [ ] you can say why the bodies must be identical
 - [ ] reverted; verify green
@@ -359,6 +377,7 @@ Issue, rotate and inspect device credentials; then add `expiresAt`.
 #   → migration → rule → tests
 dev pnpm verify
 # re-send "Issue credentials" = a rotation
+dev pnpm lab 04   # the lab check: all green?
 ```
 
 **In Postman**
@@ -387,6 +406,7 @@ same accessKeyId, new secretLast4
 
 **Done when**
 
+- [ ] `dev pnpm lab 04`: every test passes
 - [ ] no response but /credentials ever shows a secret
 - [ ] an expired secret fails verifyAccessKey (unit test)
 - [ ] another user's device → 404 still holds
@@ -480,6 +500,7 @@ Add a `publish-note` tool and pin it with tests.
 publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {
   return runTool(() => this.notes.update(id, { status: 'published' }));
 }
+dev pnpm lab 06   # the lab check: all green?
 ```
 
 <!--
@@ -505,6 +526,7 @@ publish-note, whoami
 
 **Done when**
 
+- [ ] `dev pnpm lab 06`: every test passes
 - [ ] the stdio e2e tool list updated on purpose
 - [ ] a test: publishing an empty note → isError
 - [ ] the RAW stdout test still green
@@ -600,6 +622,7 @@ Flip `enableJsonResponse` and compare what goes over the wire.
 docker compose up -d --build app
 # 3. re-send initialize: what changed?
 # 4. revert, rebuild
+dev pnpm lab 08   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -629,6 +652,7 @@ content-type: application/json
 
 **Done when**
 
+- [ ] `dev pnpm lab 08`: every test passes
 - [ ] both responses captured and compared
 - [ ] you can say why fetch cannot test Host
 - [ ] MCP_ALLOWED_HOSTS explained in one sentence
@@ -665,6 +689,7 @@ dev npx -y @modelcontextprotocol/inspector@2.12.0 \
   --method tools/call --tool-name whoami \
   --header "X-Access-Key-Id: $MCP_KEY_ID" \
   --header "X-Secret-Key: $MCP_SECRET"
+dev pnpm lab 09   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -693,6 +718,7 @@ whoami with the NEW secret   200
 
 **Done when**
 
+- [ ] `dev pnpm lab 09`: every test passes
 - [ ] the old secret failed on the NEXT call
 - [ ] the 7 failure modes → one 401, explained
 - [ ] why stdio whoami is a tool error (local trust)
@@ -727,10 +753,10 @@ Device-scoped notes through every layer, with evidence.
 
 1. spec diff + every open question you raised
 2. plan with a verify line per task
-3. the migration SQL, and what you hand-edited
+3. the migration and your edits, or why none
 4. unit + e2e counts; owner-check mutation result
 5. my-notes e2e: two devices of two users
-6. pnpm verify: every line, incl. Test Files
+6. pnpm verify + pnpm lab 10: every line
 7. Inspector capture with headers (secret redacted)
 8. WORKLOG entry, with any corrections
 

@@ -71,6 +71,10 @@ Unit `Tests 66 passed`, e2e `Tests 47 passed`. Removing the owner check fails 1 
 
 ## Labs
 
+Lab 1 is checked: `dev pnpm lab 04`. The contract (the optional body, 400 for a past
+date, `null` when not given, the 401 after expiry) is in
+`boilerplate/nest-ai-starter/test/labs/README.md`.
+
 1. Add `expiresAt` to credentials, so an expired secret fails `verifyAccessKey`. Where does
    the rule live?
 2. Write the migration for a NOT NULL column with a sensible default instead of a delete.
