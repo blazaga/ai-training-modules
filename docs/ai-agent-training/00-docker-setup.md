@@ -84,7 +84,7 @@ Calling the app's MCP endpoint by **service name** needs that name in
 both sides: without `app`, a call from another container with valid credentials got
 **403** `Invalid Host`; with it, 200.
 
-## Postman instead of curl
+## Calling the API with Postman
 
 Every REST and MCP call in the labs is also in a Postman collection:
 `boilerplate/nest-ai-starter/postman/nest-ai-starter.postman_collection.json`. Import it,
@@ -93,9 +93,7 @@ keep `baseUrl` at `http://localhost:3000`, and run the folders in order the firs
 tests: read the Test Results tab, not only the status code. The chapters show curl too; the
 two are interchangeable.
 
-Measured with newman against this stack: 24 requests and 28 assertions, 0 failures on a fresh
-database. A re-run (sign-up answers 409) also passes, and a wrong password makes 17
-assertions fail, so the tests do fail when they should. The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP client, which is the point of those chapters.
+The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP client, which is the point of those chapters.
 
 ## Lab helper: a demo device in one command
 

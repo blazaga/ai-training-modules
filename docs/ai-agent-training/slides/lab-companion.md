@@ -44,14 +44,14 @@ PowerShell has no alias for multi-word commands: function dev { docker compose r
 
 ---
 
-## Postman instead of curl
+## Calling the API with Postman
 
 - **Import one file**: In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.
 - **Folders follow the labs**: Numbered by chapter, and each name says the lite module. Every request has tests: read the Test Results tab, not just the status.
 - **It stores a live secret**: Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.
 
 <!--
-Verified with newman against the Docker stack: 24 requests, 0 failed, on a fresh database and again on a re-run; with a wrong password 17 assertions fail, so the tests can fail. The Inspector CLI (chapters 07 and 09) stays in the terminal on purpose: it is a real MCP client.
+The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP client, which is the point of those chapters.
 -->
 
 ---

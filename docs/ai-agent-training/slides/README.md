@@ -15,13 +15,12 @@ Each chapter has four slides:
 1. **Divider:** chapter goal and draft lab time.
 2. **Run this:** the commands, in the terminal card.
 3. **Checkpoint:** what correct output looks like, and when the lab counts as done. The card
-   label says where the output came from: _captured_ means observed on this code while the
-   course was built, _from the code_ means literal values taken from the source, and
+   label says where the output came from: _captured_ means observed when running this code, _from the code_ means literal values taken from the source, and
    _expected_ means checking it is part of the lab.
 4. **If you're stuck:** the snags we actually hit while building the course.
 
-Slides that used to show curl now show an orange **In Postman** panel: the folder and the
-requests to send, in order. The script reads the starter's Postman collection and **fails
+Where a lab calls the API, the _Run this_ slide has an orange **In Postman** panel: the
+folder and the requests to send, in order. The script reads the starter's Postman collection and **fails
 the build** if a slide names a folder or request that the collection does not have, so the
 deck cannot point at a request that was renamed.
 

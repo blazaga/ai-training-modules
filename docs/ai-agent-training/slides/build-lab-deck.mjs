@@ -27,7 +27,7 @@ const Fi = require('react-icons/fi');
 
 const OUT = process.argv[2] ?? '.';
 
-// The Postman collection the labs use instead of curl. Slides name its folders and
+// The Postman collection the labs use for every API call. Slides name its folders and
 // requests; every name is checked against the file below, so a renamed request fails
 // the build instead of leaving a slide that points at nothing.
 const COLLECTION =
@@ -76,7 +76,7 @@ const POSTMAN = 'EF5B25'; // Postman orange, used only on the Postman panel
 // ---- the content ----------------------------------------------------------------
 // Draft lab times are ESTIMATES, not measured with learners: adjust after a dry run.
 // `outputSource` says where each checkpoint output came from:
-//   captured      observed on this code while the course was built
+//   captured      observed when running this code
 //   from the code literal values from the source (not a captured terminal)
 //   expected      what should appear; checking it IS part of the lab
 const CH = (n, title, minutes, goal) => ({ n, title, minutes, goal });
@@ -130,14 +130,14 @@ const SLIDES = [
   },
   {
     type: 'rules',
-    title: 'Postman instead of curl',
+    title: 'Calling the API with Postman',
     rows: [
       ['FiDownload', 'Import one file', 'In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.'],
       ['FiPlay', 'Folders follow the labs', 'Numbered by chapter, and each name says the lite module. Every request has tests: read the Test Results tab, not just the status.'],
       ['FiLock', 'It stores a live secret', 'Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.'],
     ],
     notes:
-      'Verified with newman against the Docker stack: 24 requests, 0 failed, on a fresh database and again on a re-run; with a wrong password 17 assertions fail, so the tests can fail. The Inspector CLI (chapters 07 and 09) stays in the terminal on purpose: it is a real MCP client.',
+      'The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP client, which is the point of those chapters.',
   },
   {
     type: 'agenda',
@@ -716,7 +716,7 @@ const LITE_SLIDES = [
     ],
   },
 
-  { type: 'section', ch: '4', notes: cutNote(MODULES[3], 'the separate envelope-discussion lab (chapter 05): the raw initialize below replaces it.') },
+  { type: 'section', ch: '4', notes: cutNote(MODULES[3], 'the separate envelope-discussion lab (chapter 05): the raw initialize below covers it.') },
   { ...SLIDES.find((s) => s.type === 'run' && s.ch === '05'), ch: '4', title: 'Run this (1/2): a raw MCP initialize' },
   { ...SLIDES.find((s) => s.type === 'run' && s.ch === '06'), ch: '4', title: 'Run this (2/2): add a publish-note tool' },
   {

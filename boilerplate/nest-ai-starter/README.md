@@ -28,13 +28,12 @@ See the course's Chapter 00 for details.
 ## Call it from Postman
 
 `postman/nest-ai-starter.postman_collection.json` holds every REST and MCP call the course
-labs make, so nobody has to type curl. Import it; `baseUrl` is `http://localhost:3000`.
+labs make. Import it; `baseUrl` is `http://localhost:3000`.
 Folders are numbered by chapter, and every request carries tests (the Test Results tab).
 Run the folders in order the first time: 03 signs up the demo user, and 04 issues the device
 credentials that the MCP folders use.
 
-Verified with newman against this compose stack: 24 requests, 0 failures, on a fresh
-database and on a re-run. **Issuing credentials stores a live device secret in a collection
+**Issuing credentials stores a live device secret in a collection
 variable: never export or share the collection after a run.**
 
 ## Add a resource
