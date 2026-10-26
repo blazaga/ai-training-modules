@@ -417,7 +417,7 @@ same accessKeyId, new secretLast4
 ## If you are stuck: chapter 04
 
 - **"Cannot add a NOT NULL column"**: Your migration hit existing rows (measured). Hand-edit: deal with those rows first, as drizzle/0002 does.
-- **Deleting a user gives a 500**: A blocked delete reports SQLITE_CONSTRAINT_TRIGGER (RESTRICT) or …\_FOREIGNKEY (NO ACTION). Map both to 409.
+- **Deleting a user gives a 500**: A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.
 - **Another user's device is 404**: By design: 404, not 403, so ids cannot be probed.
 
 ---

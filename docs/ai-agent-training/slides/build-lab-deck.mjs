@@ -395,7 +395,7 @@ const SLIDES = [
     type: 'stuck', ch: '04', title: 'If you are stuck: chapter 04',
     rows: [
       ['"Cannot add a NOT NULL column"', 'Your migration hit existing rows (measured). Hand-edit: deal with those rows first, as drizzle/0002 does.'],
-      ['Deleting a user gives a 500', 'A blocked delete reports SQLITE_CONSTRAINT_TRIGGER (RESTRICT) or …_FOREIGNKEY (NO ACTION). Map both to 409.'],
+      ['Deleting a user gives a 500', 'A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.'],
       ['Another user\'s device is 404', 'By design: 404, not 403, so ids cannot be probed.'],
     ],
   },
@@ -756,7 +756,7 @@ const LITE_SLIDES = [
     rows: [
       ['"2 passed | 30 skipped", exit 1', 'A beforeAll threw (e.g. sign-up lost @Public()). The failure is on the Test Files line.'],
       ['My new route answers 401', 'Secure by default: the guard is global. Add @Public() only on purpose.'],
-      ['Deleting a user gives a 500', 'A blocked delete reports SQLITE_CONSTRAINT_TRIGGER (RESTRICT) or …_FOREIGNKEY (NO ACTION). Map both to 409.'],
+      ['Deleting a user gives a 500', 'A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.'],
     ],
   },
 
