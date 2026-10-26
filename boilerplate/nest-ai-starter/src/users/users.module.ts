@@ -8,7 +8,7 @@ import { UsersService } from './users.service.js';
   controllers: [UsersController],
   providers: [
     UsersService,
-    // Postgres via drizzle (DB is provided globally by DatabaseModule).
+    // SQLite via drizzle (DB is provided globally by DatabaseModule).
     { provide: USERS_REPOSITORY, useClass: DrizzleUsersRepository },
   ],
   exports: [UsersService],

@@ -12,21 +12,21 @@ The idea: split every piece of work by who does it best.
 | domain      | an AI agent, guided by `.claude/skills/`                      | fields, business rules and their tests, only inside `AI-FILL` markers   |
 | proof       | `pnpm verify`                                                 | typecheck, lint, zero markers left, unit + e2e tests                    |
 
-## Run it (Docker only: no local Node needed)
+## Run it (Node 24 + pnpm, no database server)
 
 ```bash
-docker compose up -d --build                # Postgres + Redis → migrate → app
+corepack enable && pnpm install
+cp .env.example .env                        # DATABASE_URL=file:./data/app.db
+pnpm build && pnpm db:migrate               # create the SQLite file, apply drizzle/, print the ledger
+pnpm start                                  # app on :3000 (pnpm start:dev to watch)
 curl localhost:3000/api/health              # {"status":"ok"}
 open http://localhost:3000/api/docs         # OpenAPI, generated from the zod schemas
-docker compose run --rm dev pnpm verify     # the full gate, in the toolbox container
-docker compose --profile inspector up -d inspector   # MCP Inspector web UI on localhost:6274
+pnpm verify                                 # the full gate
+pnpm mcp:inspect:ui                         # MCP Inspector web UI on localhost:6274
 ```
 
-Services: `db` (Postgres 17), `redis` (Redis 8, infrastructure for later chapters; not
-used by the app yet), `migrate` (one-shot), `app`, `dev` (the toolbox, profile `dev`) and `inspector` (the MCP Inspector web UI, profile
-`inspector`; `docker compose logs inspector` prints its URL with a token, and in the UI you add
-`http://app:3000/mcp` as a `streamable-http` server with your device's two headers).
-See the course's Chapter 00 for details.
+In the Inspector UI, add `http://localhost:3000/mcp` as a `streamable-http` server with your
+device's two headers. See the course's Chapter 00 for details.
 
 ## Call it from Postman
 
@@ -42,11 +42,10 @@ variable: never export or share the collection after a run.**
 ## Add a resource
 
 ```bash
-T="docker compose run --rm dev"
-$T pnpm exec nest g resource orders --type rest --crud     # 1. nest-cli
-$T pnpm resource:template --name order --plural orders     # 2. templates
+pnpm exec nest g resource orders --type rest --crud     # 1. nest-cli
+pnpm resource:template --name order --plural orders     # 2. templates
 # 3. ask your agent: "fill the AI-FILL markers for orders from specs/orders.md"
-$T pnpm verify                                             # 4. proof
+pnpm verify                                             # 4. proof
 ```
 
 See `CLAUDE.md` for conventions and `.claude/skills/nest-resource-scaffold/SKILL.md` for
@@ -61,8 +60,9 @@ the full procedure. `src/notes` + `specs/notes.md` is a finished example.
 - Env validated at boot. Bad config stops the process with the variable **name**, never
   its value.
 - One error shape: `DomainError` → 404/409/422, and validation → 400.
-- A repository port with an in-memory adapter, swappable per module.
-- A multi-stage Dockerfile that runs as a non-root user and has a health check.
+- A repository port with an in-memory adapter and a drizzle adapter, swappable per module.
+- SQLite through libSQL: one file, committed migrations, and `pnpm verify` checks the
+  tables against them.
 
 ## Differences from a bare `nest new` (Nest 12)
 

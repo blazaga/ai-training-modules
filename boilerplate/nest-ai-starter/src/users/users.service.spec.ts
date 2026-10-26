@@ -1,12 +1,12 @@
 import { ConflictError, NotFoundError } from '../common/errors/domain-error.js';
 import { verifyPassword } from '../common/security/password.js';
-import { connectPglite, type Connection } from '../database/connect.js';
+import { connectInMemory, type Connection } from '../database/connect.js';
 import { DrizzleUsersRepository } from './users.drizzle-repository.js';
 import { UsersService } from './users.service.js';
 import { users } from './users.table.js';
 
 /**
- * Unit tests against REAL Postgres (PGlite, in memory, migrated): the
+ * Unit tests against a REAL database (SQLite in memory, migrated): the
  * repository's SQL is exercised, not mocked. One database per file.
  */
 describe('UsersService', () => {
@@ -22,7 +22,7 @@ describe('UsersService', () => {
   };
 
   beforeAll(async () => {
-    connection = await connectPglite();
+    connection = await connectInMemory();
   });
 
   afterAll(async () => {

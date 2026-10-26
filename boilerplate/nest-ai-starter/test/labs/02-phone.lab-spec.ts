@@ -88,7 +88,7 @@ describe('Lab 02 · users.phone', () => {
       .map((f) => readFileSync(join(dir, f), 'utf8'))
       .join('\n');
     expect(sql, 'run `pnpm db:generate` and commit drizzle/').toMatch(
-      /ADD COLUMN\s+"phone"/i,
+      /ADD\s+(COLUMN\s+)?[`"]phone[`"]/i,
     );
   });
 

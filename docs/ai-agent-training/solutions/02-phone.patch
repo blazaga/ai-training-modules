@@ -1,124 +1,128 @@
-diff --git a/drizzle/0003_fancy_infant_terrible.sql b/drizzle/0003_fancy_infant_terrible.sql
+diff --git a/drizzle/0003_youthful_psynapse.sql b/drizzle/0003_youthful_psynapse.sql
 new file mode 100644
-index 0000000..90eef24
+index 0000000..45a9824
 --- /dev/null
-+++ b/drizzle/0003_fancy_infant_terrible.sql
++++ b/drizzle/0003_youthful_psynapse.sql
 @@ -0,0 +1 @@
-+ALTER TABLE "users" ADD COLUMN "phone" text;
++ALTER TABLE `users` ADD `phone` text;
 \ No newline at end of file
 diff --git a/drizzle/meta/0003_snapshot.json b/drizzle/meta/0003_snapshot.json
 new file mode 100644
-index 0000000..188e6c9
+index 0000000..5207a7b
 --- /dev/null
 +++ b/drizzle/meta/0003_snapshot.json
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,218 @@
 +{
-+  "id": "750e9d8a-af38-40ce-bf64-3535101fa322",
-+  "prevId": "6de5eb0b-8826-427f-8a05-ada061b14c8f",
-+  "version": "7",
-+  "dialect": "postgresql",
++  "version": "6",
++  "dialect": "sqlite",
++  "id": "dc1c4d52-efe2-4e08-8247-d5610eabfba0",
++  "prevId": "fdf7f59f-bd38-48ba-922b-3a9315fcfe6c",
 +  "tables": {
-+    "public.users": {
++    "users": {
 +      "name": "users",
-+      "schema": "",
 +      "columns": {
 +        "id": {
 +          "name": "id",
-+          "type": "uuid",
++          "type": "text",
 +          "primaryKey": true,
 +          "notNull": true,
-+          "default": "gen_random_uuid()"
++          "autoincrement": false
 +        },
 +        "email": {
 +          "name": "email",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "name": {
 +          "name": "name",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "status": {
 +          "name": "status",
 +          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
++          "autoincrement": false,
 +          "default": "'active'"
-+        },
-+        "phone": {
-+          "name": "phone",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": false
 +        },
 +        "password_hash": {
 +          "name": "password_hash",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
++        },
++        "phone": {
++          "name": "phone",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "created_at": {
 +          "name": "created_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        },
 +        "updated_at": {
 +          "name": "updated_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        }
 +      },
-+      "indexes": {},
-+      "foreignKeys": {},
-+      "compositePrimaryKeys": {},
-+      "uniqueConstraints": {
++      "indexes": {
 +        "users_email_unique": {
 +          "name": "users_email_unique",
-+          "nullsNotDistinct": false,
 +          "columns": [
 +            "email"
-+          ]
++          ],
++          "isUnique": true
 +        }
 +      },
-+      "policies": {},
-+      "checkConstraints": {},
-+      "isRLSEnabled": false
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "checkConstraints": {}
 +    },
-+    "public.devices": {
++    "devices": {
 +      "name": "devices",
-+      "schema": "",
 +      "columns": {
 +        "id": {
 +          "name": "id",
-+          "type": "uuid",
++          "type": "text",
 +          "primaryKey": true,
 +          "notNull": true,
-+          "default": "gen_random_uuid()"
++          "autoincrement": false
 +        },
 +        "owner_user_id": {
 +          "name": "owner_user_id",
-+          "type": "uuid",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "name": {
 +          "name": "name",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "description": {
 +          "name": "description",
 +          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
++          "autoincrement": false,
 +          "default": "''"
 +        },
 +        "status": {
@@ -126,60 +130,75 @@ index 0000000..188e6c9
 +          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
++          "autoincrement": false,
 +          "default": "'draft'"
 +        },
 +        "access_key_id": {
 +          "name": "access_key_id",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "secret_hash": {
 +          "name": "secret_hash",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "secret_last4": {
 +          "name": "secret_last4",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "secret_rotated_at": {
 +          "name": "secret_rotated_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "last_used_at": {
 +          "name": "last_used_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "archived_at": {
 +          "name": "archived_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "created_at": {
 +          "name": "created_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        },
 +        "updated_at": {
 +          "name": "updated_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        }
 +      },
-+      "indexes": {},
++      "indexes": {
++        "devices_access_key_id_unique": {
++          "name": "devices_access_key_id_unique",
++          "columns": [
++            "access_key_id"
++          ],
++          "isUnique": true
++        }
++      },
 +      "foreignKeys": {
 +        "devices_owner_user_id_users_id_fk": {
 +          "name": "devices_owner_user_id_users_id_fk",
@@ -196,55 +215,43 @@ index 0000000..188e6c9
 +        }
 +      },
 +      "compositePrimaryKeys": {},
-+      "uniqueConstraints": {
-+        "devices_access_key_id_unique": {
-+          "name": "devices_access_key_id_unique",
-+          "nullsNotDistinct": false,
-+          "columns": [
-+            "access_key_id"
-+          ]
-+        }
-+      },
-+      "policies": {},
-+      "checkConstraints": {},
-+      "isRLSEnabled": false
++      "uniqueConstraints": {},
++      "checkConstraints": {}
 +    }
 +  },
-+  "enums": {},
-+  "schemas": {},
-+  "sequences": {},
-+  "roles": {},
-+  "policies": {},
 +  "views": {},
++  "enums": {},
 +  "_meta": {
-+    "columns": {},
 +    "schemas": {},
-+    "tables": {}
++    "tables": {},
++    "columns": {}
++  },
++  "internal": {
++    "indexes": {}
 +  }
 +}
 \ No newline at end of file
 diff --git a/drizzle/meta/_journal.json b/drizzle/meta/_journal.json
-index 0a467b2..56c5ebd 100644
+index f5382f9..f2ff197 100644
 --- a/drizzle/meta/_journal.json
 +++ b/drizzle/meta/_journal.json
 @@ -22,6 +22,13 @@
-       "when": 1792932234157,
-       "tag": "0002_light_human_fly",
+       "when": 1792980807818,
+       "tag": "0002_mean_gressill",
        "breakpoints": true
 +    },
 +    {
 +      "idx": 3,
-+      "version": "7",
-+      "when": 1792976158858,
-+      "tag": "0003_fancy_infant_terrible",
++      "version": "6",
++      "when": 1792981391715,
++      "tag": "0003_youthful_psynapse",
 +      "breakpoints": true
      }
    ]
--}
-+}
+ }
 \ No newline at end of file
 diff --git a/specs/users.md b/specs/users.md
-index 37363f9..af00a54 100644
+index a2e06a0..04c3f62 100644
 --- a/specs/users.md
 +++ b/specs/users.md
 @@ -11,6 +11,7 @@
@@ -283,7 +290,7 @@ index aaa991f..18814d4 100644
    createdAt: z.string().datetime(),
    updatedAt: z.string().datetime(),
 diff --git a/src/users/users.service.spec.ts b/src/users/users.service.spec.ts
-index ed77d87..37720c5 100644
+index 23fdaa0..17f0b31 100644
 --- a/src/users/users.service.spec.ts
 +++ b/src/users/users.service.spec.ts
 @@ -18,6 +18,7 @@ describe('UsersService', () => {
@@ -326,18 +333,18 @@ index ed77d87..37720c5 100644
      const created = await service.create(valid);
      const repo = new DrizzleUsersRepository(connection.db);
 diff --git a/src/users/users.table.ts b/src/users/users.table.ts
-index 01ff72f..19a7033 100644
+index 71af273..51ede9a 100644
 --- a/src/users/users.table.ts
 +++ b/src/users/users.table.ts
-@@ -13,6 +13,8 @@ export const users = pgTable('users', {
+@@ -18,6 +18,8 @@ export const users = sqliteTable('users', {
    status: text('status', { enum: ['active', 'disabled'] })
      .notNull()
      .default('active'),
-+  // Nullable: optional field (spec R4), and a nullable ADD COLUMN is safe on a populated table.
++  // Nullable: optional field (spec R4), and a nullable ADD is safe on a populated table.
 +  phone: text('phone'),
    passwordHash: text('password_hash').notNull(),
-   createdAt: timestamp('created_at', { withTimezone: true })
-     .notNull()
+   createdAt: createdAtColumn(),
+   updatedAt: updatedAtColumn(),
 diff --git a/test/users.e2e-spec.ts b/test/users.e2e-spec.ts
 index 25c3d28..11ee616 100644
 --- a/test/users.e2e-spec.ts

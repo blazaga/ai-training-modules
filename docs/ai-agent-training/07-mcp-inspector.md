@@ -5,25 +5,23 @@ scripts. **Commit:** `course(ch07)`. The version is pinned to `2.12.0`, the vers
 captures came from.
 
 ```bash
-docker compose --profile inspector up -d inspector   # the web UI, over Streamable HTTP
-docker compose run --rm dev pnpm build
-docker compose run --rm dev pnpm mcp:inspect:cli --method tools/list   # the CLI, over stdio
+pnpm mcp:inspect:ui                            # the web UI, over Streamable HTTP
+pnpm build
+pnpm mcp:inspect:cli --method tools/list       # the CLI, over stdio
 ```
 
 ## The web UI
 
-In Docker it is the compose service `inspector` (chapter 00 explains how it is exposed: on your
-machine's loopback only). It connects to the running app over **Streamable HTTP**, so it needs
+It runs on your machine's loopback only (`127.0.0.1:6274`). It connects to the running app over **Streamable HTTP**, so it needs
 a device's headers, exactly as any other client does (chapter 09).
 
 1. Start it, then open the URL it prints (with its token):
    ```bash
-   docker compose --profile inspector up -d inspector
-   docker compose logs inspector   # http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=…
+   pnpm mcp:inspect:ui     # http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=…
    ```
 2. **Add Servers** → **+ Add manually**: Server ID `nest-ai-starter`, Transport
-   `streamable-http`, URL `http://app:3000/mcp` → **Add**. (The three example servers that
-   are already listed can be ignored.)
+   `streamable-http`, URL `http://localhost:3000/mcp` → **Add**. (The three example servers
+   that are already listed can be ignored.)
 3. On your server's card, **Settings** → **Custom Headers** → **+ Add Header** twice:
    `X-Access-Key-Id` and `X-Secret-Key`, with a device's values (the lab helper prints them).
    Close the dialog: header changes apply on the next connect.
@@ -40,8 +38,8 @@ MCP Inspector Web is up and running at:
 Pick `create-note`: the form is generated from the zod-derived schema. Tools are listed as soon
 as you connect, so there is no separate "list" step in 2.12.0.
 
-With Node on your machine you can also run the UI against the **stdio** server, without Docker
-and without device headers: `pnpm build && pnpm mcp:inspect`.
+You can also run the UI against the **stdio** server, without the running app and without
+device headers: `pnpm build && pnpm mcp:inspect`.
 
 ## The CLI: scriptable, and usable as a check
 

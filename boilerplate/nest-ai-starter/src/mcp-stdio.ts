@@ -18,7 +18,11 @@ import { MCP_SERVER_INFO, McpToolsModule } from './mcp/mcp-tools.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+      ignoreEnvFile: process.env.NODE_ENV === 'test', // see app.module.ts
+    }),
     DatabaseModule, // whoami (ch09) reads users
     McpToolsModule,
   ],

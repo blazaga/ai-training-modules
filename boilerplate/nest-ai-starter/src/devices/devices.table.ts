@@ -1,4 +1,10 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  createdAtColumn,
+  idColumn,
+  timestampColumn,
+  updatedAtColumn,
+} from '../database/columns.js';
 import { users } from '../users/users.table.js';
 
 /**
@@ -7,9 +13,9 @@ import { users } from '../users/users.table.js';
  * fails on any drift. After changing it: `pnpm db:generate`, then commit the
  * whole drizzle/ folder.
  */
-export const devices = pgTable('devices', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  ownerUserId: uuid('owner_user_id')
+export const devices = sqliteTable('devices', {
+  id: idColumn(),
+  ownerUserId: text('owner_user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'restrict' }),
   name: text('name').notNull(),
@@ -20,13 +26,9 @@ export const devices = pgTable('devices', {
   accessKeyId: text('access_key_id').unique(),
   secretHash: text('secret_hash'),
   secretLast4: text('secret_last4'),
-  secretRotatedAt: timestamp('secret_rotated_at', { withTimezone: true }),
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
-  archivedAt: timestamp('archived_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  secretRotatedAt: timestampColumn('secret_rotated_at'),
+  lastUsedAt: timestampColumn('last_used_at'),
+  archivedAt: timestampColumn('archived_at'),
+  createdAt: createdAtColumn(),
+  updatedAt: updatedAtColumn(),
 });

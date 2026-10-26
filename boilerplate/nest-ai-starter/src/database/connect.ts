@@ -1,44 +1,52 @@
-import { PGlite } from '@electric-sql/pglite';
-import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
-import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
-import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
+import { migrate } from 'drizzle-orm/libsql/migrator';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Pool } from 'pg';
 import * as schema from './schema.js';
 import type { Db } from './database.types.js';
 
-/** drizzle/ at the project root, from src/database (tests) or dist/database (build). */
+/** The committed migrations (`pnpm db:generate` writes them; `pnpm db:migrate` applies them). */
 export const MIGRATIONS_FOLDER = fileURLToPath(
   new URL('../../drizzle', import.meta.url),
 );
 
 export interface Connection {
   db: Db;
-  driver: 'postgres' | 'pglite';
+  /** `file`: a database file (DATABASE_URL); `memory`: gone when the process ends. */
+  driver: 'file' | 'memory';
   close(): Promise<void>;
 }
 
-/** Real Postgres. Migrations are applied separately, with `pnpm db:migrate`. */
-export function connectPostgres(url: string): Connection {
-  const pool = new Pool({ connectionString: url });
+/**
+ * SQLite through libSQL. `url` is a libSQL URL such as `file:./data/app.db`; without one the
+ * database lives in memory.
+ *
+ * - A FILE database is migrated by `pnpm db:migrate` (`dist/database/migrate.js`) before the
+ *   app starts, never by the app itself. Its folder is created if missing: libSQL cannot
+ *   open a file in a folder that does not exist (measured: ConnectionFailed).
+ * - An IN-MEMORY database is empty on every start, so it is migrated here, from the same
+ *   committed SQL. Tests therefore run exactly the migrations production applies.
+ *
+ * Foreign keys: libSQL enables them by default (`PRAGMA foreign_keys` reads 1, measured), and
+ * plain SQLite does not. The pragma is set anyway, so ON DELETE RESTRICT never depends on a
+ * driver default.
+ */
+export async function connectSqlite(url?: string): Promise<Connection> {
+  if (url?.startsWith('file:')) {
+    mkdirSync(dirname(url.slice('file:'.length)), { recursive: true });
+  }
+  const client = createClient({ url: url ?? ':memory:' });
+  await client.execute('PRAGMA foreign_keys = ON');
+  const db = drizzle({ client, schema });
+  if (!url) await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
   return {
-    db: drizzlePg({ client: pool, schema }) as unknown as Db,
-    driver: 'postgres',
-    close: () => pool.end(),
+    db,
+    driver: url ? 'file' : 'memory',
+    close: async () => client.close(),
   };
 }
 
-/**
- * In-process Postgres (PGlite), in memory, migrated on creation. Used by tests
- * and by `start:dev` when no DATABASE_URL is set. Data is lost when it closes.
- */
-export async function connectPglite(): Promise<Connection> {
-  const client = new PGlite();
-  const db = drizzlePglite({ client, schema });
-  await migratePglite(db, { migrationsFolder: MIGRATIONS_FOLDER });
-  return {
-    db: db as unknown as Db,
-    driver: 'pglite',
-    close: () => client.close(),
-  };
-}
+/** A fresh, fully migrated in-memory database: what the unit tests use. */
+export const connectInMemory = (): Promise<Connection> => connectSqlite();

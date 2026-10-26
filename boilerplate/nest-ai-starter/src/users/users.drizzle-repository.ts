@@ -6,7 +6,7 @@ import type { UsersRepository } from './users.repository.js';
 import { users } from './users.table.js';
 import type { User } from './entities/user.entity.js';
 
-/** Postgres storage for users (drizzle). CRUD comes from DrizzleRepository. */
+/** SQLite storage for users (drizzle). CRUD comes from DrizzleRepository. */
 @Injectable()
 export class DrizzleUsersRepository
   extends DrizzleRepository<User>

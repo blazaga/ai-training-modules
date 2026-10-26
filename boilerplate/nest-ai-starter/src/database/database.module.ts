@@ -7,14 +7,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.schema.js';
-import { connectPglite, connectPostgres, type Connection } from './connect.js';
+import { connectSqlite, type Connection } from './connect.js';
 import { DB } from './database.types.js';
 
 const CONNECTION = Symbol('CONNECTION');
 
 /**
- * Provides DB (drizzle) app-wide. DATABASE_URL set → Postgres. Unset → an
- * in-memory PGlite, migrated on boot (env validation forbids that in
+ * Provides DB (drizzle) app-wide. DATABASE_URL set → that SQLite file. Unset →
+ * an in-memory SQLite database, migrated on boot (env validation forbids that in
  * production). Logs WHICH driver, never the URL.
  */
 @Global()
@@ -27,11 +27,11 @@ const CONNECTION = Symbol('CONNECTION');
         config: ConfigService<Env, true>,
       ): Promise<Connection> => {
         const url = config.get('DATABASE_URL', { infer: true });
-        const connection = url ? connectPostgres(url) : await connectPglite();
+        const connection = await connectSqlite(url);
         new Logger('Database').log(
-          connection.driver === 'pglite'
-            ? 'driver: pglite (in memory, data is lost on restart)'
-            : 'driver: postgres',
+          connection.driver === 'memory'
+            ? 'driver: sqlite (in memory, data is lost on restart)'
+            : 'driver: sqlite (file)',
         );
         return connection;
       },

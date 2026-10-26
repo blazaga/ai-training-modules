@@ -70,7 +70,7 @@ Unit `Tests 44 passed`, e2e `Tests 32 passed`.
 
 ## Labs
 
-Lab 2 is checked the other way round: `dev pnpm lab 03` passes on the starter, fails once
+Lab 2 is checked the other way round: `pnpm lab 03` passes on the starter, fails once
 the 401 bodies differ, and passes again when you put the rule back. Hint: changing the
 strategy alone changes nothing; find where every failure is turned into one body.
 

@@ -8,7 +8,7 @@ paginate: true
 
 # Building Apps with AI Agents
 
-**Lab companion · NestJS 12 · drizzle · Passport · MCP · all in Docker**
+**Lab companion · NestJS 12 · drizzle · SQLite · Passport · MCP**
 
 <!--
 Keep this deck on screen during lab work. Each chapter has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.
@@ -34,12 +34,12 @@ The repeatable work belongs to tools; judgement belongs to the agent, fenced int
 
 ## Three rules for the lab
 
-- **`dev` = the toolbox**: alias dev='docker compose run --rm dev'. Every `pnpm X` in the course becomes `dev pnpm X`.
+- **Node 24 + pnpm**: Every command runs in boilerplate/nest-ai-starter. `corepack enable` once puts pnpm on your PATH; otherwise write `corepack pnpm`.
 - **Counts, not exit codes**: Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.
 - **Never share a secret**: Device secrets, Basic credentials and Inspector URLs (they carry a token) stay in your terminal.
 
 <!--
-PowerShell has no alias for multi-word commands: function dev { docker compose run --rm dev @args }. Not tested here; Linux, macOS and WSL shells were the target.
+Linux, macOS and WSL shells were the target. The `eval "$(…)"` lab helper needs a POSIX shell; on PowerShell, copy the printed values by hand. Not tested on PowerShell.
 -->
 
 ---
@@ -58,7 +58,7 @@ The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP c
 
 ## Lab checks: is my lab done?
 
-- **One check per lab**: `dev pnpm lab 04` runs the check for lab 04, `dev pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
+- **One check per lab**: `pnpm lab 04` runs the check for lab 04, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
 - **Build labs start red**: Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.
 - **Guard labs start green**: Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.
 
@@ -72,7 +72,7 @@ The checks drive the app over HTTP and MCP and never import learner code, so the
 
 | ch  | chapter                         | lab |
 | --- | ------------------------------- | --- |
-| 00  | Everything in Docker            | 15' |
+| 00  | Setup: Node, pnpm, SQLite       | 15' |
 | 01  | CLI and templates               | 30' |
 | 02  | Users with drizzle and zod      | 25' |
 | 03  | Auth: middleware, then Passport | 15' |
@@ -94,57 +94,57 @@ Times are ESTIMATES. Nobody has run these labs with an audience yet. Adjust afte
 
 **CHAPTER 00**
 
-# Everything in Docker
+# Setup: Node, pnpm, SQLite
 
-Start the stack and the toolbox. Everything else in the course runs here.
+Install, migrate the SQLite file, start the app, run the gate.
 
 ⏱ 15 min lab (draft estimate)
 
 ---
 
-## Run this: the stack and the toolbox
+## Run this: install, migrate, start
 
 ```bash
 cd boilerplate/nest-ai-starter
-docker compose up -d --build
-docker compose ps -a
-docker compose logs migrate
+corepack enable && pnpm install
+cp .env.example .env
+pnpm build && pnpm db:migrate
+pnpm start          # leave it running
 
-alias dev='docker compose run --rm dev'
-dev pnpm verify
+# in a second terminal:
+pnpm verify
 ```
 
 **In Postman**
 
-- **00 · Stack (lite module 1)**: Health
+- **00 · Setup (lite module 1)**: Health
 
 <!--
-The first build takes a few minutes. While it runs, walk through docker-compose.yml: db, redis (infra only), migrate (one-shot), app, dev (profile).
+While pnpm install runs, open .env.example: DATABASE_URL=file:./data/app.db is the whole database. db:migrate creates that file and applies drizzle/; the app never migrates a file database itself.
 -->
 
 ---
 
-## Checkpoint: stack up, gate green
+## Checkpoint: app up, gate green
 
 _Output: captured (abridged)_
 
 ```bash
-# docker compose ps -a  (STATUS)
-app       Up … (healthy)
-migrate   Exited (0)
-# docker compose logs migrate
+# pnpm db:migrate
 db:migrate: ledger rows: 3
+# pnpm start
+Nest application successfully started
 # Postman: 00 › Health
 {"status":"ok"}
-# dev pnpm verify
-Tests  67 passed (67)
+# pnpm verify
+Tests  69 passed (69)
 Tests  61 passed (61)
 ```
 
 **Done when**
 
-- [ ] app healthy, migrate exited 0
-- [ ] ledger rows: 3 (read the ledger, not a log line)
+- [ ] data/app.db exists, ledger rows: 3 (read the ledger, not a log line)
+- [ ] health answers {"status":"ok"}
 - [ ] both Tests lines AND both "Test Files … passed"
 
 <!--
@@ -155,9 +155,9 @@ Counts are from the final starter. If a learner sees fewer tests, they are on an
 
 ## If you are stuck: chapter 00
 
-- **A port is already in use**: Something local owns 5432, 6379 or 3000. Stop it, or change the LEFT side of that `ports:` entry.
-- **app never starts**: By design if `migrate` failed: `docker compose logs migrate`. The app waits for a successful migration.
-- **Changed package.json?**: `dev pnpm install`, then `docker compose build`. Dependencies live in the image, not on your host.
+- **pnpm: command not found**: Run `corepack enable`, or write `corepack pnpm` instead of `pnpm`.
+- **Port 3000 is already in use**: Something local owns it. Stop it, or set PORT=3001 in .env and use that port everywhere (Postman baseUrl too).
+- **no such table: users**: The file was never migrated: `pnpm build && pnpm db:migrate`, then start again.
 
 ---
 
@@ -177,15 +177,15 @@ Add an `orders` resource: generate → template → fill → verify.
 
 ```bash
 # 1. write specs/orders.md (copy specs/notes.md)
-dev pnpm exec nest g resource orders \
+pnpm exec nest g resource orders \
   --type rest --crud
-dev pnpm resource:template \
+pnpm resource:template \
   --name order --plural orders
-dev pnpm check:ai-fill      # your to-do list
+pnpm check:ai-fill      # your to-do list
 # 2. your agent fills every AI-FILL marker
 #    from specs/orders.md
-dev pnpm verify
-dev pnpm lab 01   # the lab check: all green?
+pnpm verify
+pnpm lab 01   # the lab check: all green?
 ```
 
 <!--
@@ -204,12 +204,12 @@ files written: 11;
 AI-FILL markers to complete: 16
 # expected: after your agent filled them
 AI-FILL markers: 0
-Tests  N passed  (N > 67)
+Tests  N passed  (N > 69)
 ```
 
 **Done when**
 
-- [ ] `dev pnpm lab 01`: every test passes
+- [ ] `pnpm lab 01`: every test passes
 - [ ] check:ai-fill prints 0 markers
 - [ ] delete each service rule once: exactly one test goes red
 - [ ] verify green, counts read aloud
@@ -245,13 +245,14 @@ Add a `phone` column and watch the migration checks work for you.
 ```bash
 # 1. specs/users.md: phone (optional, E.164)
 # 2. user.schema.ts + users.table.ts
-dev pnpm check:migrations   # FAILS: drift
-dev pnpm db:generate        # READ the SQL
-dev pnpm check:migrations   # clean now
-dev pnpm verify
-docker compose up -d --build
-docker compose logs migrate
-dev pnpm lab 02   # the lab check: all green?
+pnpm check:migrations   # FAILS: drift
+pnpm db:generate        # READ the SQL
+pnpm check:migrations   # clean now
+pnpm verify
+# stop the app (Ctrl+C), then:
+pnpm build && pnpm db:migrate
+pnpm start
+pnpm lab 02   # the lab check: all green?
 ```
 
 <!--
@@ -271,13 +272,13 @@ check-migrations: DRIFT - tables
 # db:generate (captured format)
 [✓] Your SQL migration file ➜
     drizzle/0003_….sql
-# after up -d --build (expected)
+# pnpm db:migrate (expected)
 db:migrate: ledger rows: 4
 ```
 
 **Done when**
 
-- [ ] `dev pnpm lab 02`: every test passes
+- [ ] `pnpm lab 02`: every test passes
 - [ ] check:migrations failed BEFORE generating
 - [ ] you read the SQL in `drizzle/0003_*`
 - [ ] ledger rows: 4; phone appears in responses
@@ -286,9 +287,9 @@ db:migrate: ledger rows: 4
 
 ## If you are stuck: chapter 02
 
-- **All tests pass, check fails**: Correct: tests run on the MIGRATION SQL (PGlite), not your TypeScript table. Generate the migration.
+- **All tests pass, check fails**: Correct: tests run on the MIGRATION SQL (in-memory SQLite), not your TypeScript table. Generate the migration.
 - **Drift test fails**: The zod schema and the table must declare exactly the same fields, with the same TS names.
-- **The generated SQL says NOT NULL**: That fails on populated tables (measured). Use nullable, then backfill, then SET NOT NULL.
+- **The generated SQL says NOT NULL**: SQLite refuses it on any table with rows (measured). Decide what happens to existing rows first, as drizzle/0002 does.
 
 ---
 
@@ -310,9 +311,9 @@ Break the "one identical 401" rule on purpose and see which test catches it.
 git log --oneline --grep 'course(ch03'
 # send the Postman requests, then the lab:
 # change the message for unknown emails
-dev pnpm test:e2e     # which test fails?
+pnpm test:e2e     # which test fails?
 # re-send "Me: unknown email" in Postman too
-dev pnpm lab 03   # green now; break it, see red, revert
+pnpm lab 03   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -342,7 +343,7 @@ WWW-Authenticate: Basic
 
 **Done when**
 
-- [ ] `dev pnpm lab 03`: every test passes
+- [ ] `pnpm lab 03`: every test passes
 - [ ] you saw the test that pins the rule fail
 - [ ] you can say why the bodies must be identical
 - [ ] reverted; verify green
@@ -375,9 +376,9 @@ Issue, rotate and inspect device credentials; then add `expiresAt`.
 # send the Postman requests first, then the lab:
 # add expiresAt: spec → schema → table
 #   → migration → rule → tests
-dev pnpm verify
+pnpm verify
 # re-send "Issue credentials" = a rotation
-dev pnpm lab 04   # the lab check: all green?
+pnpm lab 04   # the lab check: all green?
 ```
 
 **In Postman**
@@ -406,7 +407,7 @@ same accessKeyId, new secretLast4
 
 **Done when**
 
-- [ ] `dev pnpm lab 04`: every test passes
+- [ ] `pnpm lab 04`: every test passes
 - [ ] no response but /credentials ever shows a secret
 - [ ] an expired secret fails verifyAccessKey (unit test)
 - [ ] another user's device → 404 still holds
@@ -415,8 +416,8 @@ same accessKeyId, new secretLast4
 
 ## If you are stuck: chapter 04
 
-- **"contains null values"**: Your NOT NULL migration hit existing rows (measured). Hand-edit: nullable → decide → SET NOT NULL.
-- **Deleting a user gives a 500**: Blocked FK deletes report 23001 (RESTRICT) or 23503 (NO ACTION). The adapter maps both to 409.
+- **"Cannot add a NOT NULL column"**: Your migration hit existing rows (measured). Hand-edit: deal with those rows first, as drizzle/0002 does.
+- **Deleting a user gives a 500**: A blocked delete reports SQLITE_CONSTRAINT_TRIGGER (RESTRICT) or …\_FOREIGNKEY (NO ACTION). Map both to 409.
 - **Another user's device is 404**: By design: 404, not 403, so ids cannot be probed.
 
 ---
@@ -471,7 +472,7 @@ data: {"result":{
 ## If you are stuck: chapter 05
 
 - **401 Unauthorized**: Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-send folder 04 · Devices.
-- **403 Invalid Host**: You called the app by a name not in MCP_ALLOWED_HOSTS (compose sets localhost,app).
+- **403 Invalid Host**: You called the app by a name not in MCP_ALLOWED_HOSTS (default: localhost and 127.0.0.1 only).
 - **Plain JSON, no SSE**: enableJsonResponse is true: the DEFAULT of @rekog/mcp-nest 2.0.8. Ours sets false.
 
 ---
@@ -500,11 +501,11 @@ Add a `publish-note` tool and pin it with tests.
 publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {
   return runTool(() => this.notes.update(id, { status: 'published' }));
 }
-dev pnpm lab 06   # the lab check: all green?
+pnpm lab 06   # the lab check: all green?
 ```
 
 <!--
-Then: dev pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.
+Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.
 -->
 
 ---
@@ -526,7 +527,7 @@ publish-note, whoami
 
 **Done when**
 
-- [ ] `dev pnpm lab 06`: every test passes
+- [ ] `pnpm lab 06`: every test passes
 - [ ] the stdio e2e tool list updated on purpose
 - [ ] a test: publishing an empty note → isError
 - [ ] the RAW stdout test still green
@@ -556,11 +557,10 @@ Turn an Inspector call into a CI check with its exit code.
 ## Run this: the Inspector UI
 
 ```bash
-docker compose --profile inspector up -d inspector
-docker compose logs inspector
+pnpm mcp:inspect:ui      # leave it running
 # open the localhost:6274 URL it prints
-eval "$(docker compose run --rm -T dev \
-  node scripts/demo-device.mjs | grep '^export ')"
+# in a second terminal:
+eval "$(node scripts/demo-device.mjs)"
 # the values for the two headers:
 echo "$MCP_KEY_ID"
 echo "$MCP_SECRET"
@@ -569,14 +569,14 @@ echo "$MCP_SECRET"
 **In the Inspector UI**
 
 1. Add Servers → + Add manually
-2. streamable-http · http://app:3000/mcp → Add
+2. streamable-http · http://localhost:3000/mcp → Add
 3. Settings → Custom Headers → + Add Header, twice
 4. X-Access-Key-Id and X-Secret-Key, then close
 5. Switch the card on: Connected
 6. Tools → whoami → Execute Tool
 
 <!--
-The Inspector runs in its own container and is published on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.
+The Inspector listens on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.
 -->
 
 ---
@@ -584,9 +584,9 @@ The Inspector runs in its own container and is published on loopback only (127.0
 ## Run this: the Inspector as a CI check
 
 ```bash
-dev pnpm build
-dev pnpm mcp:inspect:cli --method tools/list
-dev pnpm mcp:inspect:cli --method tools/call \
+pnpm build
+pnpm mcp:inspect:cli --method tools/list
+pnpm mcp:inspect:cli --method tools/call \
   --tool-name get-note \
   --tool-arg id=00000000-0000-4000-8000-000000000000
 echo "exit: $?"
@@ -600,7 +600,7 @@ The CLI is the scriptable half: its exit code is what makes it a CI check. The w
 
 ## Checkpoint: a tool error is exit 5
 
-_Output: captured (through pnpm + compose)_
+_Output: captured_
 
 ```bash
 { "content": [ { "type": "text",
@@ -623,7 +623,7 @@ Exit 5 comes from the tool's own isError, not from the absence of a crash. That 
 
 ## If you are stuck: chapter 07
 
-- **No such file dist/mcp-stdio.js**: Build first: dev pnpm build.
+- **No such file dist/mcp-stdio.js**: Build first: pnpm build.
 - **The UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.
 - **Sharing the UI URL**: Don't: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.
 
@@ -648,10 +648,11 @@ Flip `enableJsonResponse` and compare what goes over the wire.
 #    Content-Type and the Body
 # 2. src/bootstrap/attach-mcp.ts:
 #      enableJsonResponse: true
-docker compose up -d --build app
+# stop the app (Ctrl+C), then:
+pnpm build && pnpm start
 # 3. re-send initialize: what changed?
 # 4. revert, rebuild
-dev pnpm lab 08   # green now; break it, see red, revert
+pnpm lab 08   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -681,7 +682,7 @@ content-type: application/json
 
 **Done when**
 
-- [ ] `dev pnpm lab 08`: every test passes
+- [ ] `pnpm lab 08`: every test passes
 - [ ] both responses captured and compared
 - [ ] you can say why fetch cannot test Host
 - [ ] MCP_ALLOWED_HOSTS explained in one sentence
@@ -692,7 +693,7 @@ content-type: application/json
 
 - **Host test without credentials**: You get 401, not 403: device auth runs first. Send the device headers too.
 - **My fetch Host test passes 200**: fetch silently replaces Host (measured). node:http, curl and Postman send it as written.
-- **Called by service name: 403**: Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).
+- **Called by hostname: 403**: Add that name to MCP_ALLOWED_HOSTS: localhost,<hostname> (measured: 403 without, 200 with).
 
 ---
 
@@ -711,14 +712,13 @@ Rotate a secret mid-session and watch the next call fail.
 ## Run this: rotate mid-session
 
 ```bash
-eval "$(docker compose run --rm -T dev \
-  node scripts/demo-device.mjs | grep '^export ')"
-dev npx -y @modelcontextprotocol/inspector@2.12.0 \
-  --cli http://app:3000/mcp \
+eval "$(node scripts/demo-device.mjs)"
+npx -y @modelcontextprotocol/inspector@2.12.0 \
+  --cli http://localhost:3000/mcp \
   --method tools/call --tool-name whoami \
   --header "X-Access-Key-Id: $MCP_KEY_ID" \
   --header "X-Secret-Key: $MCP_SECRET"
-dev pnpm lab 09   # green now; break it, see red, revert
+pnpm lab 09   # green now; break it, see red, revert
 ```
 
 **In Postman**
@@ -747,7 +747,7 @@ whoami with the NEW secret   200
 
 **Done when**
 
-- [ ] `dev pnpm lab 09`: every test passes
+- [ ] `pnpm lab 09`: every test passes
 - [ ] the old secret failed on the NEXT call
 - [ ] the 7 failure modes → one 401, explained
 - [ ] why stdio whoami is a tool error (local trust)
@@ -797,7 +797,7 @@ Distinction: a false statement found in a comment, skill, spec or this course, m
 
 # What you built
 
-Docker stack → REST + drizzle → Auth → Devices → MCP server
+Node + SQLite → REST + drizzle → Auth → Devices → MCP server
 
 Next: OAuth for interactive MCP clients (@rekog/mcp-nest-auth) · Redis-backed rate limits · deploy with MCP_ALLOWED_HOSTS set
 

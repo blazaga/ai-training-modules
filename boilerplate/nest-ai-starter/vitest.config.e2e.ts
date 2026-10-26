@@ -4,6 +4,8 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     globals: true,
+    // The app ignores .env under test, so these suites never open data/app.db (src/app.module.ts).
+    env: { NODE_ENV: 'test' },
     root: './',
     include: ['**/*.e2e-spec.ts'],
     // e2e suites boot the whole app and spawn the stdio server (3-7 s under load):

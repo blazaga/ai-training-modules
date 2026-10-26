@@ -18,7 +18,7 @@ describe('validateEnv', () => {
   });
 
   it('turns docs off by default in production', () => {
-    const prod = { NODE_ENV: 'production', DATABASE_URL: 'postgres://db/app' };
+    const prod = { NODE_ENV: 'production', DATABASE_URL: 'file:/data/app.db' };
     expect(validateEnv(prod).SWAGGER_ENABLED).toBe(false);
   });
 
@@ -26,7 +26,7 @@ describe('validateEnv', () => {
     expect(
       validateEnv({
         NODE_ENV: 'production',
-        DATABASE_URL: 'postgres://db/app',
+        DATABASE_URL: 'file:/data/app.db',
         SWAGGER_ENABLED: 'true',
       }).SWAGGER_ENABLED,
     ).toBe(true);
@@ -39,7 +39,8 @@ describe('validateEnv', () => {
   });
 
   it('a malformed DATABASE_URL is rejected without echoing it', () => {
-    const url = 'mysql://user:hunter2-not-real@host/db';
+    // Not a file: URL (here a network URL with a password in it).
+    const url = 'postgres://user:hunter2-not-real@host/db';
     expect(() => validateEnv({ DATABASE_URL: url })).toThrow(/DATABASE_URL/);
     expect(() => validateEnv({ DATABASE_URL: url })).not.toThrow(/hunter2/);
   });

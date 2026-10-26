@@ -17,12 +17,9 @@ export const envSchema = z
     /** Serve OpenAPI docs at /api/docs. Unset: on, except in production. */
     SWAGGER_ENABLED: z.enum(['true', 'false']).optional(),
     /**
-     * secret: may embed a password. Postgres connection URL. Unset → in-memory
-     * PGlite (dev/test only).
-     */
-    /**
      * ch08: Host names the MCP HTTP endpoint accepts (comma-separated). Unset →
-     * 'localhost' only (DNS-rebinding protection). Set it when deployed.
+     * 'localhost' (measured: localhost and 127.0.0.1 pass, the machine's hostname gets
+     * 403; DNS-rebinding protection). Set it when deployed.
      */
     MCP_ALLOWED_HOSTS: z
       .string()
@@ -35,12 +32,10 @@ export const envSchema = z
               .filter(Boolean)
           : ('localhost' as const),
       ),
+    // A libSQL URL for an SQLite file, e.g. file:./data/app.db. Unset → in memory (dev/test only).
     DATABASE_URL: z
       .string()
-      .regex(
-        /^postgres(ql)?:\/\//,
-        'must start with postgres:// or postgresql://',
-      )
+      .regex(/^file:./, 'must be a file: URL, e.g. file:./data/app.db')
       .optional(),
   })
   .refine((env) => env.NODE_ENV !== 'production' || env.DATABASE_URL, {

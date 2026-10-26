@@ -8,7 +8,7 @@ import { DevicesService } from './devices.service.js';
   controllers: [DevicesController],
   providers: [
     DevicesService,
-    // Postgres via drizzle (DB is provided globally by DatabaseModule).
+    // SQLite via drizzle (DB is provided globally by DatabaseModule).
     { provide: DEVICES_REPOSITORY, useClass: DrizzleDevicesRepository },
   ],
   exports: [DevicesService],

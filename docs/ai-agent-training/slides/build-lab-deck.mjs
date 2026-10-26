@@ -4,7 +4,7 @@
 //   lab-companion.md    (Marp-compatible Markdown; plain Markdown viewers work too)
 // Both come from the SLIDES array below, so they cannot drift apart.
 //
-// Rebuild (any machine with Docker; see README.md in this folder):
+// Rebuild (any machine with Node; see README.md in this folder):
 //   node build-lab-deck.mjs [outDir]
 // Requires the npm packages pptxgenjs, react, react-dom, react-icons and sharp.
 // Reads the Postman collection (POSTMAN_COLLECTION, default: the starter's postman/ folder)
@@ -82,7 +82,7 @@ const INSPECTOR = '6D4AE8'; // the Inspector UI panel
 //   expected      what should appear; checking it IS part of the lab
 const CH = (n, title, minutes, goal) => ({ n, title, minutes, goal });
 const CHAPTERS = [
-  CH('00', 'Everything in Docker', 15, 'Start the stack and the toolbox. Everything else in the course runs here.'),
+  CH('00', 'Setup: Node, pnpm, SQLite', 15, 'Install, migrate the SQLite file, start the app, run the gate.'),
   CH('01', 'CLI and templates', 30, 'Add an `orders` resource: generate → template → fill → verify.'),
   CH('02', 'Users with drizzle and zod', 25, 'Add a `phone` column and watch the migration checks work for you.'),
   CH('03', 'Auth: middleware, then Passport', 15, 'Break the "one identical 401" rule on purpose and see which test catches it.'),
@@ -94,15 +94,14 @@ const CHAPTERS = [
   CH('09', 'MCP auth with device keys', 15, 'Rotate a secret mid-session and watch the next call fail.'),
   CH('10', 'Capstone', 60, 'Device-scoped notes through every layer, with evidence.'),
 ];
-const DEMO = `eval "$(docker compose run --rm -T dev \\
-  node scripts/demo-device.mjs | grep '^export ')"`;
+const DEMO = `eval "$(node scripts/demo-device.mjs)"`;
 
-// The MCP Inspector web UI (compose service `inspector`), steps as measured on 2.12.0.
+// The MCP Inspector web UI (pnpm mcp:inspect:ui), steps as measured on 2.12.0.
 const INSPECTOR_UI = {
   title: 'In the Inspector UI',
   steps: [
     'Add Servers → + Add manually',
-    'streamable-http · http://app:3000/mcp → Add',
+    'streamable-http · http://localhost:3000/mcp → Add',
     'Settings → Custom Headers → + Add Header, twice',
     'X-Access-Key-Id and X-Secret-Key, then close',
     'Switch the card on: Connected',
@@ -110,9 +109,9 @@ const INSPECTOR_UI = {
   ],
 };
 const INSPECTOR_UP = [
-  'docker compose --profile inspector up -d inspector',
-  'docker compose logs inspector',
+  'pnpm mcp:inspect:ui      # leave it running',
   '# open the localhost:6274 URL it prints',
+  '# in a second terminal:',
   DEMO,
   '# the values for the two headers:',
   'echo "$MCP_KEY_ID"',
@@ -120,13 +119,13 @@ const INSPECTOR_UP = [
 ];
 const UI_FAILED = ['The UI says Failed', 'Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.'];
 const UI_NOTES =
-  'The Inspector runs in its own container and is published on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.';
+  'The Inspector listens on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.';
 
 const SLIDES = [
   {
     type: 'title',
     title: 'Building Apps with AI Agents',
-    subtitle: 'Lab companion · NestJS 12 · drizzle · Passport · MCP · all in Docker',
+    subtitle: 'Lab companion · NestJS 12 · drizzle · SQLite · Passport · MCP',
     notes:
       'Keep this deck on screen during lab work. Each chapter has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.',
   },
@@ -147,12 +146,12 @@ const SLIDES = [
     type: 'rules',
     title: 'Three rules for the lab',
     rows: [
-      ['FiTerminal', '`dev` = the toolbox', "alias dev='docker compose run --rm dev'. Every `pnpm X` in the course becomes `dev pnpm X`."],
+      ['FiTerminal', 'Node 24 + pnpm', 'Every command runs in boilerplate/nest-ai-starter. `corepack enable` once puts pnpm on your PATH; otherwise write `corepack pnpm`.'],
       ['FiCheckCircle', 'Counts, not exit codes', 'Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.'],
       ['FiLock', 'Never share a secret', 'Device secrets, Basic credentials and Inspector URLs (they carry a token) stay in your terminal.'],
     ],
     notes:
-      'PowerShell has no alias for multi-word commands: function dev { docker compose run --rm dev @args }. Not tested here; Linux, macOS and WSL shells were the target.',
+      'Linux, macOS and WSL shells were the target. The `eval "$(…)"` lab helper needs a POSIX shell; on PowerShell, copy the printed values by hand. Not tested on PowerShell.',
   },
   {
     type: 'rules',
@@ -168,7 +167,7 @@ const SLIDES = [
     type: 'rules',
     title: 'Lab checks: is my lab done?',
     rows: [
-      ['FiCheckSquare', 'One check per lab', '`dev pnpm lab 04` runs the check for lab 04, `dev pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.'],
+      ['FiCheckSquare', 'One check per lab', '`pnpm lab 04` runs the check for lab 04, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.'],
       ['FiTool', 'Build labs start red', 'Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.'],
       ['FiShield', 'Guard labs start green', 'Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.'],
     ],
@@ -186,37 +185,37 @@ const SLIDES = [
   // ---------------------------------------------------------------- ch00
   { type: 'section', ch: '00' },
   {
-    type: 'run', ch: '00', title: 'Run this: the stack and the toolbox',
+    type: 'run', ch: '00', title: 'Run this: install, migrate, start',
     code: [
       'cd boilerplate/nest-ai-starter',
-      'docker compose up -d --build',
-      'docker compose ps -a',
-      'docker compose logs migrate',
+      'corepack enable && pnpm install',
+      'cp .env.example .env',
+      'pnpm build && pnpm db:migrate',
+      'pnpm start          # leave it running',
       '',
-      "alias dev='docker compose run --rm dev'",
-      'dev pnpm verify',
+      '# in a second terminal:',
+      'pnpm verify',
     ],
     postman: postman(['00', ['Health']]),
-    notes: 'The first build takes a few minutes. While it runs, walk through docker-compose.yml: db, redis (infra only), migrate (one-shot), app, dev (profile).',
+    notes: 'While pnpm install runs, open .env.example: DATABASE_URL=file:./data/app.db is the whole database. db:migrate creates that file and applies drizzle/; the app never migrates a file database itself.',
   },
   {
-    type: 'checkpoint', ch: '00', title: 'Checkpoint: stack up, gate green',
+    type: 'checkpoint', ch: '00', title: 'Checkpoint: app up, gate green',
     outputSource: 'captured (abridged)',
     output: [
-      '# docker compose ps -a  (STATUS)',
-      'app       Up … (healthy)',
-      'migrate   Exited (0)',
-      '# docker compose logs migrate',
+      '# pnpm db:migrate',
       'db:migrate: ledger rows: 3',
+      '# pnpm start',
+      'Nest application successfully started',
       '# Postman: 00 › Health',
       '{"status":"ok"}',
-      '# dev pnpm verify',
-      'Tests  67 passed (67)',
+      '# pnpm verify',
+      'Tests  69 passed (69)',
       'Tests  61 passed (61)',
     ],
     done: [
-      'app healthy, migrate exited 0',
-      'ledger rows: 3 (read the ledger, not a log line)',
+      'data/app.db exists, ledger rows: 3 (read the ledger, not a log line)',
+      'health answers {"status":"ok"}',
       'both Tests lines AND both "Test Files … passed"',
     ],
     notes: 'Counts are from the final starter. If a learner sees fewer tests, they are on an older commit.',
@@ -224,26 +223,25 @@ const SLIDES = [
   {
     type: 'stuck', ch: '00', title: 'If you are stuck: chapter 00',
     rows: [
-      ['A port is already in use', 'Something local owns 5432, 6379 or 3000. Stop it, or change the LEFT side of that `ports:` entry.'],
-      ['app never starts', 'By design if `migrate` failed: `docker compose logs migrate`. The app waits for a successful migration.'],
-      ['Changed package.json?', '`dev pnpm install`, then `docker compose build`. Dependencies live in the image, not on your host.'],
+      ['pnpm: command not found', 'Run `corepack enable`, or write `corepack pnpm` instead of `pnpm`.'],
+      ['Port 3000 is already in use', 'Something local owns it. Stop it, or set PORT=3001 in .env and use that port everywhere (Postman baseUrl too).'],
+      ['no such table: users', 'The file was never migrated: `pnpm build && pnpm db:migrate`, then start again.'],
     ],
   },
-
   // ---------------------------------------------------------------- ch01
   { type: 'section', ch: '01' },
   {
     type: 'run', ch: '01', title: 'Run this: add an orders resource',
     code: [
       '# 1. write specs/orders.md (copy specs/notes.md)',
-      'dev pnpm exec nest g resource orders \\',
+      'pnpm exec nest g resource orders \\',
       '  --type rest --crud',
-      'dev pnpm resource:template \\',
+      'pnpm resource:template \\',
       '  --name order --plural orders',
-      'dev pnpm check:ai-fill      # your to-do list',
+      'pnpm check:ai-fill      # your to-do list',
       '# 2. your agent fills every AI-FILL marker',
       '#    from specs/orders.md',
-      'dev pnpm verify',
+      'pnpm verify',
     ],
     notes: 'Learners should give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.',
   },
@@ -256,7 +254,7 @@ const SLIDES = [
       'AI-FILL markers to complete: 16',
       '# expected: after your agent filled them',
       'AI-FILL markers: 0',
-      'Tests  N passed  (N > 67)',
+      'Tests  N passed  (N > 69)',
     ],
     done: [
       'check:ai-fill prints 0 markers',
@@ -281,12 +279,13 @@ const SLIDES = [
     code: [
       '# 1. specs/users.md: phone (optional, E.164)',
       '# 2. user.schema.ts + users.table.ts',
-      'dev pnpm check:migrations   # FAILS: drift',
-      'dev pnpm db:generate        # READ the SQL',
-      'dev pnpm check:migrations   # clean now',
-      'dev pnpm verify',
-      'docker compose up -d --build',
-      'docker compose logs migrate',
+      'pnpm check:migrations   # FAILS: drift',
+      'pnpm db:generate        # READ the SQL',
+      'pnpm check:migrations   # clean now',
+      'pnpm verify',
+      '# stop the app (Ctrl+C), then:',
+      'pnpm build && pnpm db:migrate',
+      'pnpm start',
     ],
     notes: 'Make learners read the generated SQL out loud. A nullable ADD COLUMN is safe on populated tables; NOT NULL is not (chapter 04).',
   },
@@ -300,7 +299,7 @@ const SLIDES = [
       '# db:generate (captured format)',
       '[✓] Your SQL migration file ➜',
       '    drizzle/0003_….sql',
-      '# after up -d --build (expected)',
+      '# pnpm db:migrate (expected)',
       'db:migrate: ledger rows: 4',
     ],
     done: [
@@ -312,9 +311,9 @@ const SLIDES = [
   {
     type: 'stuck', ch: '02', title: 'If you are stuck: chapter 02',
     rows: [
-      ['All tests pass, check fails', 'Correct: tests run on the MIGRATION SQL (PGlite), not your TypeScript table. Generate the migration.'],
+      ['All tests pass, check fails', 'Correct: tests run on the MIGRATION SQL (in-memory SQLite), not your TypeScript table. Generate the migration.'],
       ['Drift test fails', 'The zod schema and the table must declare exactly the same fields, with the same TS names.'],
-      ['The generated SQL says NOT NULL', 'That fails on populated tables (measured). Use nullable, then backfill, then SET NOT NULL.'],
+      ['The generated SQL says NOT NULL', 'SQLite refuses it on any table with rows (measured). Decide what happens to existing rows first, as drizzle/0002 does.'],
     ],
   },
 
@@ -326,7 +325,7 @@ const SLIDES = [
       "git log --oneline --grep 'course(ch03'",
       '# send the Postman requests, then the lab:',
       '# change the message for unknown emails',
-      'dev pnpm test:e2e     # which test fails?',
+      'pnpm test:e2e     # which test fails?',
       '# re-send "Me: unknown email" in Postman too',
     ],
     postman: postman(['03', ['Sign up (public)', 'Me: no credentials → 401', 'Me: wrong password → the same 401', 'Me: unknown email → the same 401', 'Me (Basic auth)']]),
@@ -368,7 +367,7 @@ const SLIDES = [
       '# send the Postman requests first, then the lab:',
       '# add expiresAt: spec → schema → table',
       '#   → migration → rule → tests',
-      'dev pnpm verify',
+      'pnpm verify',
       '# re-send "Issue credentials" = a rotation',
     ],
     postman: postman(['04', ['Create device', 'Issue credentials (secret shown once)', 'Activate device', 'Get device (no secret, no hash)']]),
@@ -395,8 +394,8 @@ const SLIDES = [
   {
     type: 'stuck', ch: '04', title: 'If you are stuck: chapter 04',
     rows: [
-      ['"contains null values"', 'Your NOT NULL migration hit existing rows (measured). Hand-edit: nullable → decide → SET NOT NULL.'],
-      ['Deleting a user gives a 500', 'Blocked FK deletes report 23001 (RESTRICT) or 23503 (NO ACTION). The adapter maps both to 409.'],
+      ['"Cannot add a NOT NULL column"', 'Your migration hit existing rows (measured). Hand-edit: deal with those rows first, as drizzle/0002 does.'],
+      ['Deleting a user gives a 500', 'A blocked delete reports SQLITE_CONSTRAINT_TRIGGER (RESTRICT) or …_FOREIGNKEY (NO ACTION). Map both to 409.'],
       ['Another user\'s device is 404', 'By design: 404, not 403, so ids cannot be probed.'],
     ],
   },
@@ -432,7 +431,7 @@ const SLIDES = [
     type: 'stuck', ch: '05', title: 'If you are stuck: chapter 05',
     rows: [
       ['401 Unauthorized', 'Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-send folder 04 · Devices.'],
-      ['403 Invalid Host', 'You called the app by a name not in MCP_ALLOWED_HOSTS (compose sets localhost,app).'],
+      ['403 Invalid Host', 'You called the app by a name not in MCP_ALLOWED_HOSTS (default: localhost and 127.0.0.1 only).'],
       ['Plain JSON, no SSE', 'enableJsonResponse is true: the DEFAULT of @rekog/mcp-nest 2.0.8. Ours sets false.'],
     ],
   },
@@ -452,7 +451,7 @@ const SLIDES = [
       "  return runTool(() => this.notes.update(id, { status: 'published' }));",
       '}',
     ],
-    notes: 'Then: dev pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.',
+    notes: 'Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.',
   },
   {
     type: 'checkpoint', ch: '06', title: 'Checkpoint: the rule holds over MCP',
@@ -493,9 +492,9 @@ const SLIDES = [
   {
     type: 'run', ch: '07', title: 'Run this: the Inspector as a CI check',
     code: [
-      'dev pnpm build',
-      'dev pnpm mcp:inspect:cli --method tools/list',
-      'dev pnpm mcp:inspect:cli --method tools/call \\',
+      'pnpm build',
+      'pnpm mcp:inspect:cli --method tools/list',
+      'pnpm mcp:inspect:cli --method tools/call \\',
       '  --tool-name get-note \\',
       '  --tool-arg id=00000000-0000-4000-8000-000000000000',
       'echo "exit: $?"',
@@ -504,7 +503,7 @@ const SLIDES = [
   },
   {
     type: 'checkpoint', ch: '07', title: 'Checkpoint: a tool error is exit 5',
-    outputSource: 'captured (through pnpm + compose)',
+    outputSource: 'captured',
     output: [
       '{ "content": [ { "type": "text",',
       '  "text": "NOT_FOUND: Note … not found" } ],',
@@ -521,7 +520,7 @@ const SLIDES = [
   {
     type: 'stuck', ch: '07', title: 'If you are stuck: chapter 07',
     rows: [
-      ['No such file dist/mcp-stdio.js', 'Build first: dev pnpm build.'],
+      ['No such file dist/mcp-stdio.js', 'Build first: pnpm build.'],
       UI_FAILED,
       ['Sharing the UI URL', 'Don\'t: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.'],
     ],
@@ -536,7 +535,8 @@ const SLIDES = [
       '#    Content-Type and the Body',
       '# 2. src/bootstrap/attach-mcp.ts:',
       '#      enableJsonResponse: true',
-      'docker compose up -d --build app',
+      '# stop the app (Ctrl+C), then:',
+      'pnpm build && pnpm start',
       '# 3. re-send initialize: what changed?',
       '# 4. revert, rebuild',
     ],
@@ -566,7 +566,7 @@ const SLIDES = [
     rows: [
       ['Host test without credentials', 'You get 401, not 403: device auth runs first. Send the device headers too.'],
       ['My fetch Host test passes 200', 'fetch silently replaces Host (measured). node:http, curl and Postman send it as written.'],
-      ['Called by service name: 403', 'Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).'],
+      ['Called by hostname: 403', 'Add that name to MCP_ALLOWED_HOSTS: localhost,<hostname> (measured: 403 without, 200 with).'],
     ],
   },
 
@@ -576,8 +576,8 @@ const SLIDES = [
     type: 'run', ch: '09', title: 'Run this: rotate mid-session',
     code: [
       DEMO,
-      'dev npx -y @modelcontextprotocol/inspector@2.12.0 \\',
-      '  --cli http://app:3000/mcp \\',
+      'npx -y @modelcontextprotocol/inspector@2.12.0 \\',
+      '  --cli http://localhost:3000/mcp \\',
       '  --method tools/call --tool-name whoami \\',
       '  --header "X-Access-Key-Id: $MCP_KEY_ID" \\',
       '  --header "X-Secret-Key: $MCP_SECRET"',
@@ -631,7 +631,7 @@ const SLIDES = [
   },
   {
     type: 'closing', title: 'What you built',
-    chain: ['Docker stack', 'REST + drizzle', 'Auth', 'Devices', 'MCP server'],
+    chain: ['Node + SQLite', 'REST + drizzle', 'Auth', 'Devices', 'MCP server'],
     next: 'Next: OAuth for interactive MCP clients (@rekog/mcp-nest-auth) · Redis-backed rate limits · deploy with MCP_ALLOWED_HOSTS set',
     notes: 'Close by asking each learner for one false statement they found in a tool, a doc or this course, and how they measured it.',
   },
@@ -660,36 +660,36 @@ const fromFull = (ch, to, types) =>
 const cutNote = (m, cut) => `Covers full-track chapters ${m.covers}. Cut for time: ${cut}`;
 
 const LITE_SLIDES = [
-  { ...SLIDES.find((s) => s.type === 'title'), subtitle: 'Lab companion, LITE track · six modules · NestJS 12 · drizzle · Passport · MCP · Docker' },
+  { ...SLIDES.find((s) => s.type === 'title'), subtitle: 'Lab companion, LITE track · six modules · NestJS 12 · drizzle · SQLite · Passport · MCP' },
   ...SLIDES.filter((s) => s.type === 'flow' || s.type === 'rules'),
   { type: 'agenda', title: 'The lite track (draft lab times)', notes: 'Six modules, about 170 minutes of labs plus the capstone as homework. Times are ESTIMATES: nobody has run these labs with an audience yet. The full track (ch00-ch10) has the labs this one cuts.' },
 
-  { type: 'section', ch: '1', notes: cutNote(MODULES[0], 'the stack-persistence and clean-wipe demos (chapter 00).') },
+  { type: 'section', ch: '1', notes: cutNote(MODULES[0], 'the persistence and clean-wipe demos (chapter 00).') },
   {
-    type: 'run', ch: '1', title: 'Run this: stack up, then an orders resource',
+    type: 'run', ch: '1', title: 'Run this: set up, then an orders resource',
     code: [
       'cd boilerplate/nest-ai-starter',
-      'docker compose up -d --build',
-      "alias dev='docker compose run --rm dev'",
-      'dev pnpm verify                # 67 + 61 tests',
+      'corepack enable && pnpm install',
+      'cp .env.example .env',
+      'pnpm build && pnpm db:migrate',
+      'pnpm verify                # 69 + 61 tests',
       '# write specs/orders.md (copy specs/notes.md), then:',
-      'dev pnpm exec nest g resource orders --type rest --crud',
-      'dev pnpm resource:template --name order --plural orders',
-      "dev pnpm check:ai-fill         # your agent's to-do list",
+      'pnpm exec nest g resource orders --type rest --crud',
+      'pnpm resource:template --name order --plural orders',
+      "pnpm check:ai-fill         # your agent's to-do list",
       '# your agent fills every AI-FILL marker, then:',
-      'dev pnpm verify',
+      'pnpm verify',
     ],
-    notes: 'The first image build takes a few minutes: use it to walk through docker-compose.yml and specs/notes.md. Learners give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.',
+    notes: 'While pnpm install runs, walk through specs/notes.md. Learners give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.',
   },
   {
-    type: 'checkpoint', ch: '1', title: 'Checkpoint: stack green, markers to zero',
+    type: 'checkpoint', ch: '1', title: 'Checkpoint: gate green, markers to zero',
     outputSource: 'captured, then expected',
     output: [
-      '# docker compose ps -a  (STATUS)',
-      'app       Up … (healthy)',
-      'migrate   Exited (0)',
-      '# dev pnpm verify (before your resource)',
-      'Tests  67 passed (67)',
+      '# pnpm db:migrate',
+      'db:migrate: ledger rows: 3',
+      '# pnpm verify (before your resource)',
+      'Tests  69 passed (69)',
       'Tests  61 passed (61)',
       '# after the template step (captured)',
       'files written: 11;',
@@ -698,7 +698,7 @@ const LITE_SLIDES = [
       'AI-FILL markers: 0',
     ],
     done: [
-      'app healthy, migrate exited 0, both gates green',
+      'ledger rows: 3, both gates green',
       'check:ai-fill prints 0 markers',
       'delete one service rule: exactly one test goes red',
     ],
@@ -706,7 +706,7 @@ const LITE_SLIDES = [
   {
     type: 'stuck', ch: '1', title: 'If you are stuck: module 1',
     rows: [
-      ['A port is already in use', 'Something local owns 5432, 6379 or 3000. Stop it, or change the LEFT side of that `ports:` entry.'],
+      ['pnpm: command not found', 'Run `corepack enable`, or write `corepack pnpm` instead of `pnpm`.'],
       ['"Run step 1 first"', 'The template script refuses before `nest g resource`, and refuses a second run. Never use --force after filling.'],
       ['Unit green, e2e red', 'Validation, defaults and status codes live at the HTTP boundary. Only e2e sees them.'],
     ],
@@ -721,7 +721,7 @@ const LITE_SLIDES = [
     code: [
       '# send folder 03, then the lab:',
       '# unknown emails get a different message',
-      'dev pnpm test:e2e   # which test fails?',
+      'pnpm test:e2e   # which test fails?',
       '# re-send 03 in Postman, then revert',
       '# then send folder 04',
     ],
@@ -756,7 +756,7 @@ const LITE_SLIDES = [
     rows: [
       ['"2 passed | 30 skipped", exit 1', 'A beforeAll threw (e.g. sign-up lost @Public()). The failure is on the Test Files line.'],
       ['My new route answers 401', 'Secure by default: the guard is global. Add @Public() only on purpose.'],
-      ['Deleting a user gives a 500', 'Blocked FK deletes report 23001 (RESTRICT) or 23503 (NO ACTION). The adapter maps both to 409.'],
+      ['Deleting a user gives a 500', 'A blocked delete reports SQLITE_CONSTRAINT_TRIGGER (RESTRICT) or …_FOREIGNKEY (NO ACTION). Map both to 409.'],
     ],
   },
 
@@ -802,13 +802,14 @@ const LITE_SLIDES = [
   {
     type: 'run', ch: '5', title: 'Run this (2/2): a CI check, then the wire',
     code: [
-      'dev pnpm build',
-      'dev pnpm mcp:inspect:cli --method tools/call \\',
+      'pnpm build',
+      'pnpm mcp:inspect:cli --method tools/call \\',
       '  --tool-name get-note \\',
       '  --tool-arg id=00000000-0000-4000-8000-000000000000',
       'echo "exit: $?"',
       '# attach-mcp.ts: enableJsonResponse: true',
-      'docker compose up -d --build app',
+      '# restart the app: Ctrl+C, then',
+      'pnpm build && pnpm start',
       '# re-send Postman 05 › initialize: what changed?',
       '# then revert enableJsonResponse',
     ],
@@ -838,7 +839,7 @@ const LITE_SLIDES = [
     rows: [
       UI_FAILED,
       ['Sharing the Inspector UI URL', 'Don\'t: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.'],
-      ['Called by service name: 403', 'Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).'],
+      ['Called by hostname: 403', 'Add that name to MCP_ALLOWED_HOSTS: localhost,<hostname> (measured: 403 without, 200 with).'],
     ],
   },
 
@@ -857,7 +858,7 @@ function withLabChecks(slides, labsByUnit) {
   return slides.map((s, i) => {
     const labs = labsByUnit[s.ch];
     if (!labs) return s;
-    const cmd = `dev pnpm lab ${labs.join(' ')}`;
+    const cmd = `pnpm lab ${labs.join(' ')}`;
     const guard = labs.every((l) => GUARD_LABS.has(l));
     if (s.type === 'run' && lastRun.get(s.ch) === i) {
       const comment = guard ? '# green now; break it, see red, revert' : '# the lab check: all green?';
@@ -993,7 +994,7 @@ async function buildPptx(file, track) {
       slide = pres.addSlide({ masterName: 'TITLE' });
       slide.addText(s.title, { placeholder: 'title' });
       slide.addText(s.subtitle, { placeholder: 'subtitle' });
-      terminal(slide, 0.6, 4.05, 5.6, 0.85, ['$ docker compose run --rm dev pnpm verify'], { fontSize: 12 });
+      terminal(slide, 0.6, 4.05, 5.6, 0.85, ['$ pnpm verify'], { fontSize: 12 });
     } else if (s.type === 'section') {
       const c = chap(s.ch);
       slide = pres.addSlide({ masterName: 'SECTION' });

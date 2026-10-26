@@ -8,7 +8,7 @@ import { __Names__Service } from './__names__.service.js';
   controllers: [__Names__Controller],
   providers: [
     __Names__Service,
-    // Postgres via drizzle (DB is provided globally by DatabaseModule).
+    // SQLite via drizzle (DB is provided globally by DatabaseModule).
     { provide: __NAMES___REPOSITORY, useClass: Drizzle__Names__Repository },
   ],
   exports: [__Names__Service],

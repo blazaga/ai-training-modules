@@ -9,7 +9,7 @@ modules. Lecturer decks for both tracks are in [`slides/`](slides/README.md).
 
 | ch  |                                                                            |
 | --- | -------------------------------------------------------------------------- |
-| 00  | [Everything in Docker](00-docker-setup.md)                                 |
+| 00  | [Setup: Node, pnpm and one SQLite file](00-setup.md)                       |
 | 01  | [Starting from the CLI and templates](01-cli-and-templates.md)             |
 | 02  | [A users table with drizzle and zod](02-users-drizzle-zod.md)              |
 | 03  | [Auth: BasicAuth middleware, then Passport](03-auth-basic-to-passport.md)  |
@@ -26,6 +26,7 @@ Principles P1–P9 (working with agents) are in [`principles/`](principles/). Al
 
 ```bash
 cd boilerplate/nest-ai-starter
-docker compose up -d --build               # Postgres + Redis → migrate → app on :3000
-docker compose run --rm dev pnpm verify    # typecheck, lint, format, markers, migrations, unit, e2e
+corepack enable && pnpm install && cp .env.example .env
+pnpm build && pnpm db:migrate && pnpm start   # SQLite file data/app.db, app on :3000
+pnpm verify                                   # typecheck, lint, format, markers, migrations, unit, e2e
 ```

@@ -29,7 +29,7 @@ covers.
 
 ## Why these merges
 
-- **00 + 01:** the Docker setup has no lab of its own worth a slot. The first `pnpm verify`
+- **00 + 01:** the setup has no lab of its own worth a slot. The first `pnpm verify`
   becomes the starting line for the resource lab.
 - **03 + 04:** both are about identity. Devices exist so MCP can authenticate, and the
   rotation lab exercises the same "one 401 for every failure" rule.

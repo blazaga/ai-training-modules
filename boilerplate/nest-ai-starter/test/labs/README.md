@@ -5,11 +5,11 @@ the way a client would. It never imports your code, so it tells you whether the 
 **behaves** as asked, not how you built it.
 
 ```bash
-dev pnpm lab 01      # one lab (any part of the file name works: 01, orders, …)
-dev pnpm lab         # every lab
+pnpm lab 01      # one lab (any part of the file name works: 01, orders, …)
+pnpm lab         # every lab
 ```
 
-(`dev` is `docker compose run --rm dev`; with Node installed, `corepack pnpm lab 01` works too.)
+(Without `corepack enable`, write `corepack pnpm lab 01`.)
 
 **Read the counts.** A lab is done when its check reports `Test Files 1 passed` and every
 test in `Tests` passed. A failure message names the rule it checks and usually says where
@@ -80,6 +80,8 @@ in the future, else 400. The response carries `expiresAt` (`null` when not given
 again without it clears it, and `GET` on the device shows it. An expired secret is refused
 by `verifyAccessKey`, so `/mcp` answers the same 401 as any other failure. Compare against
 the clock in TypeScript: the check moves the clock two hours forward.
+Store it as `new Date(x).toISOString()` whatever offset was sent: SQLite keeps the exact
+string, and a `+08:00` value then fails the response schema (a 500).
 
 ### 06 · publish-note
 

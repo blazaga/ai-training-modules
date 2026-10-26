@@ -53,16 +53,26 @@ This step deliberately changes generated signatures. Templates get you a consist
 start; evolving a resource afterwards is normal, as long as the change is explicit and
 tested.
 
-### Two measurements that changed the code
+### Three measurements that changed the code
 
-1. **drizzle-kit's migration fails on a populated table.** It generated `ADD COLUMN
-owner_user_id uuid NOT NULL` with no warning; applied to a table with a ch04a device,
-   it failed with `contains null values`. The migration was hand-edited to: add as
-   nullable → remove unattributable pre-ownership devices (assigning them would hand
-   someone else's credentials to an arbitrary user) → `SET NOT NULL` → FK. The reasoning is
-   in a SQL comment. It was probed on a populated and a fresh database.
-2. **RESTRICT and NO ACTION report different SQLSTATEs:** 23001 vs 23503. The first 409
-   mapping handled only 23503, and the e2e test caught a 500.
+1. **drizzle-kit's migration fails on a populated table.** It generated
+   ``ALTER TABLE `devices` ADD `owner_user_id` text NOT NULL REFERENCES users(id)`` with no
+   warning. On an empty table it applies, so a fresh test database hides the problem;
+   applied to a table with a ch04a device it failed with `Cannot add a NOT NULL column with
+default value NULL`. The migration was hand-edited to remove the unattributable
+   pre-ownership devices first (assigning them would hand someone else's credentials to an
+   arbitrary user), after which SQLite accepts the NOT NULL column. The reasoning is in a
+   SQL comment, and it was probed on a populated and a fresh database.
+2. **The generated SQL dropped the delete rule.** `devices.table.ts` says
+   `onDelete: 'restrict'`; the generated `ADD … REFERENCES users(id)` has no `ON DELETE`, so
+   the column got SQLite's default (NO ACTION). `check:migrations` cannot see it, because the
+   snapshot and the TypeScript agree and only the SQL is wrong. The clause is written out in
+   the hand-edited migration; afterwards a blocked delete reports the RESTRICT code below,
+   which is how we know it took effect.
+3. **RESTRICT and NO ACTION report different codes:** `SQLITE_CONSTRAINT_TRIGGER` vs
+   `SQLITE_CONSTRAINT_FOREIGNKEY` (both say "FOREIGN KEY constraint failed"). With only the
+   second mapped to 409, the e2e test "a user who still owns a device cannot be deleted
+   (409)" fails (measured), so the adapter maps both.
 
 ## Verify
 
@@ -71,7 +81,7 @@ Unit `Tests 66 passed`, e2e `Tests 47 passed`. Removing the owner check fails 1 
 
 ## Labs
 
-Lab 1 is checked: `dev pnpm lab 04`. The contract (the optional body, 400 for a past
+Lab 1 is checked: `pnpm lab 04`. The contract (the optional body, 400 for a past
 date, `null` when not given, the 401 after expiry) is in
 `boilerplate/nest-ai-starter/test/labs/README.md`.
 

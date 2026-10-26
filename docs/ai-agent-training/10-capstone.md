@@ -22,7 +22,7 @@ user's note is 404 over REST and a `NOT_FOUND` tool error over MCP.
 | 7   | Inspector CLI capture with headers (secret redacted)                                              | the capture                                                                                                             |
 | 8   | WORKLOG entry (skill `worklog-handoff`) with any corrections you made                             | the entry                                                                                                               |
 
-The behaviour is checked: `dev pnpm lab 10` (contract in
+The behaviour is checked: `pnpm lab 10` (contract in
 `boilerplate/nest-ai-starter/test/labs/README.md`). A green check is one row of evidence,
 not the grade.
 

@@ -68,12 +68,13 @@ in this course).
 | stdio           | the local user who started the process    | none: `whoami` is a tool error |
 | Streamable HTTP | only an active device with a valid secret | the device + its owner         |
 
-## Production check (real Postgres, Docker)
+## End-to-end check (the built app on its SQLite file)
 
-Real Postgres + the app image: `db:migrate` ledger 3 rows (idempotent) → sign-up → device
-→ credentials → activate → **MCP `whoami` 200** with the right device; no credentials 401;
-and the `MCP_ALLOWED_HOSTS` trap from chapter 08 reproduced and fixed by setting the
-variable.
+`pnpm build`, `pnpm db:migrate` (ledger 3 rows, idempotent), `pnpm start` → sign-up →
+device → credentials → activate → **MCP `whoami` 200** with the right device; no
+credentials 401. The `MCP_ALLOWED_HOSTS` trap from chapter 08, reproduced: `localhost` and
+`127.0.0.1` pass by default (200), the machine's hostname is refused (403 `Invalid Host`),
+and `MCP_ALLOWED_HOSTS=localhost,<hostname>` lets it through (200).
 
 ## Verify
 
@@ -81,7 +82,7 @@ Unit `Tests 67 passed`, e2e `Tests 61 passed`.
 
 ## Labs
 
-Lab 3 is checked: `dev pnpm lab 09` pins what rotation does to a connected client (the
+Lab 3 is checked: `pnpm lab 09` pins what rotation does to a connected client (the
 old secret fails on the very next call). It passes on the starter; to see it fail, let a
 non-active device through `verifyAccessKey`.
 

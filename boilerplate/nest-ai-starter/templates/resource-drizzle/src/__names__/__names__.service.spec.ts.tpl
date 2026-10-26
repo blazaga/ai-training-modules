@@ -1,11 +1,11 @@
 import { NotFoundError } from '../common/errors/domain-error.js';
-import { connectPglite, type Connection } from '../database/connect.js';
+import { connectInMemory, type Connection } from '../database/connect.js';
 import { Drizzle__Names__Repository } from './__names__.drizzle-repository.js';
 import { __Names__Service } from './__names__.service.js';
 import { __namesCamel__ } from './__names__.table.js';
 
 /**
- * Unit tests against REAL Postgres (PGlite, in memory, migrated): the
+ * Unit tests against a REAL database (SQLite in memory, migrated): the
  * repository's SQL is exercised, not mocked. One database per file.
  */
 describe('__Names__Service', () => {
@@ -16,7 +16,7 @@ describe('__Names__Service', () => {
   const valid = {} as never;
 
   beforeAll(async () => {
-    connection = await connectPglite();
+    connection = await connectInMemory();
   });
 
   afterAll(async () => {

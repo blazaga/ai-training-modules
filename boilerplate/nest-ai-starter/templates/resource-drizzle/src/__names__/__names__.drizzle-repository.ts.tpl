@@ -5,7 +5,7 @@ import type { __Names__Repository } from './__names__.repository.js';
 import { __namesCamel__ } from './__names__.table.js';
 import type { __Name__ } from './entities/__name__.entity.js';
 
-/** Postgres storage for __names__ (drizzle). CRUD comes from DrizzleRepository. */
+/** SQLite storage for __names__ (drizzle). CRUD comes from DrizzleRepository. */
 @Injectable()
 export class Drizzle__Names__Repository
   extends DrizzleRepository<__Name__>

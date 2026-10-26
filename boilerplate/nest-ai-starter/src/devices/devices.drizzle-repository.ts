@@ -7,7 +7,7 @@ import type { DevicesRepository } from './devices.repository.js';
 import { devices } from './devices.table.js';
 import type { Device } from './entities/device.entity.js';
 
-/** Postgres storage for devices (drizzle). CRUD comes from DrizzleRepository. */
+/** SQLite storage for devices (drizzle). CRUD comes from DrizzleRepository. */
 @Injectable()
 export class DrizzleDevicesRepository
   extends DrizzleRepository<Device>

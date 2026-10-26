@@ -79,12 +79,12 @@ next reader knows it was considered and not forgotten.
 ### Storage: `--storage drizzle`
 
 - Adds `<plural>.table.ts`, a drizzle repository, a module wired to it, a service spec that
-  runs on **real Postgres (PGlite)**, and a **drift test** (table columns == schema fields).
+  runs on **real SQLite (in memory)**, and a **drift test** (table columns == schema fields).
 - Registers the table in `src/database/schema.ts` automatically.
 - After filling `columns`, run `pnpm db:generate` and commit the **whole** `drizzle/`
   folder. `verify` runs `check:migrations`, which fails if a table changed without a
-  migration. Tests cannot catch that by themselves, because PGlite is built from the
-  migration SQL, not from the TypeScript table.
+  migration. Tests cannot catch that by themselves, because the in-memory database is built
+  from the migration SQL, not from the TypeScript table.
 
 ## 4. Verify
 

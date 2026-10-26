@@ -2,8 +2,8 @@
 // Fails when the drizzle tables in src/ and the committed migrations in drizzle/
 // disagree, i.e. someone changed a *.table.ts and forgot `pnpm db:generate`.
 //
-// Why this needs its own check: tests run on PGlite built from the MIGRATION SQL,
-// not from the TypeScript tables. Measured: with `.unique()` removed from
+// Why this needs its own check: tests run on an in-memory database built from the
+// MIGRATION SQL, not from the TypeScript tables. Measured: with `.unique()` removed from
 // users.table.ts and no new migration, all 7 users unit tests still passed.
 //
 // Method: copy drizzle/ to a scratch dir inside the project, run drizzle-kit
@@ -36,21 +36,37 @@ try {
   }
   const run = spawnSync(
     kit,
-    ['generate', '--dialect', 'postgresql', '--schema', './src/database/schema.ts', '--out', `./${SCRATCH}`],
+    [
+      'generate',
+      '--dialect',
+      'sqlite',
+      '--schema',
+      './src/database/schema.ts',
+      '--out',
+      `./${SCRATCH}`,
+    ],
     { cwd: root, encoding: 'utf8' },
   );
   const output = `${run.stdout ?? ''}${run.stderr ?? ''}`;
   if (output.includes(DRIFT)) {
-    console.error('check-migrations: DRIFT - tables changed without a migration.');
-    console.error('  run `pnpm db:generate` and commit the whole drizzle/ folder.');
+    console.error(
+      'check-migrations: DRIFT - tables changed without a migration.',
+    );
+    console.error(
+      '  run `pnpm db:generate` and commit the whole drizzle/ folder.',
+    );
     process.exit(1);
   }
   if (!output.includes(CLEAN)) {
-    console.error(`check-migrations: could not verify (drizzle-kit exit ${run.status}); output tail:`);
+    console.error(
+      `check-migrations: could not verify (drizzle-kit exit ${run.status}); output tail:`,
+    );
     console.error(output.trim().split('\n').slice(-5).join('\n'));
     process.exit(2);
   }
-  console.log('check-migrations: tables match committed migrations (drizzle-kit: no schema changes)');
+  console.log(
+    'check-migrations: tables match committed migrations (drizzle-kit: no schema changes)',
+  );
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

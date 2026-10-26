@@ -2,7 +2,7 @@
 
 - **singular / plural:** `device` / `devices`
 - **route:** `/api/v1/devices`
-- **storage:** `drizzle` (Postgres table `devices`)
+- **storage:** `drizzle` (SQLite table `devices`)
 - **Modelled on:** dna_forms, where a device is a non-human account with an app id + secret
   sent as request headers. This spec keeps that shape and **corrects** the weaknesses
   measured there (see "Do not copy").

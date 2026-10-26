@@ -2,7 +2,7 @@
 
 - **singular / plural:** `user` / `users`
 - **route:** `/api/v1/users`
-- **storage:** `drizzle` (Postgres table `users`)
+- **storage:** `drizzle` (SQLite table `users`)
 
 ## Fields
 

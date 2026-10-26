@@ -6,18 +6,18 @@ written spec. Every change ends with `pnpm verify`.
 
 ## Quick start
 
-Everything runs in Docker; no local Node is needed (`docker-compose.yml`):
+Node 24 and pnpm (`corepack enable`); no database server:
 
 ```bash
-docker compose up -d --build                 # db + redis → migrate (one-shot) → app on :3000
-docker compose run --rm dev pnpm verify      # the toolbox: ANY pnpm/nest command runs here
-docker compose down                          # add -v to delete the data volumes
+pnpm install && cp .env.example .env         # DATABASE_URL=file:./data/app.db
+pnpm build && pnpm db:migrate                # migrate the SQLite file BEFORE starting
+pnpm start                                   # app on :3000
+pnpm verify                                  # the gate
 ```
 
-`pnpm X` anywhere in this file = `docker compose run --rm dev pnpm X`. Inside the compose
-network the app is `http://app:3000`, Postgres `db:5432`, Redis `redis:6379`. Redis is
-infrastructure only: the app does not connect to it yet. With Node installed you can
-also run `corepack pnpm install && corepack pnpm start:dev` (in-memory PGlite).
+The database is SQLite: the file `data/app.db` (git-ignored). The app never migrates a file
+database itself; `pnpm db:migrate` does. Without `DATABASE_URL` the app and the tests use an
+in-memory database, migrated on connect.
 
 `pnpm-workspace.yaml` sets `frozenLockfile: true` (pnpm 12 ignores that key in `.npmrc`). To
 change dependencies on purpose, run `pnpm install --no-frozen-lockfile` and commit the
@@ -50,7 +50,7 @@ src/
 ├── app.module.ts               ConfigModule (validated), global ZodValidationPipe + DomainExceptionFilter
 ├── bootstrap/configure-app.ts  prefix /api, URI versioning v1, swagger; shared by main.ts AND e2e
 ├── config/env.schema.ts        the ONLY place env vars are declared and validated
-├── database/                   DatabaseModule (DB token: Postgres if DATABASE_URL, else PGlite), schema.ts, migrate.ts
+├── database/                   DatabaseModule (DB token: the SQLite file in DATABASE_URL, else in memory), schema.ts, migrate.ts
 ├── common/
 │   ├── errors/domain-error.ts      NotFoundError 404 · ConflictError 409 · RuleViolationError 422
 │   ├── filters/                    DomainError → HTTP, one error body shape
@@ -68,7 +68,7 @@ specs/<plural>.md               one spec per resource; the input for step 3
 
 1. `pnpm exec nest g resource <plural> --type rest --crud` (nest-cli: wiring)
 2. `pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]`
-   (templates: conventions; `drizzle` adds a Postgres table + repository)
+   (templates: conventions; `drizzle` adds an SQLite table + repository)
 3. Fill every `AI-FILL(...)` marker from `specs/<plural>.md`, then run `pnpm verify`.
 
 Full procedure and traps: `.claude/skills/nest-resource-scaffold/SKILL.md`. `src/notes/`
@@ -88,10 +88,11 @@ is the finished worked example, and `specs/notes.md` is its spec.
 - **Controllers:** parse, delegate, return. Use `ParseUUIDPipe` on ids. A successful
   DELETE returns 204.
 - **Data access:** inject the repository **token** (`<PLURAL>_REPOSITORY`), never a class.
-  Storage is swapped in the module only. Postgres tables are drizzle (`*.table.ts`),
-  registered in `src/database/schema.ts`; after any table change, `pnpm db:generate` and
-  commit all of `drizzle/`. Verify a migration by reading `drizzle.__drizzle_migrations`,
-  never drizzle's log.
+  Storage is swapped in the module only. SQLite tables are drizzle (`*.table.ts`),
+  registered in `src/database/schema.ts`; ids and timestamps use the helpers in
+  `src/database/columns.ts` (TEXT: a UUID, an ISO string). After any table change,
+  `pnpm db:generate` and commit all of `drizzle/`. Verify a migration by reading the
+  `__drizzle_migrations` table, never drizzle's log.
 - **Private fields** (password/secret hashes) live in the schema's `PRIVATE` set. Responses
   go through `<Name>ResponseSchema`, so they never leave the API.
 - **Auth (secure by default):** `BasicAuthGuard` is a global `APP_GUARD` (Passport,
@@ -102,12 +103,14 @@ is the finished worked example, and `specs/notes.md` is its spec.
   and answers 400 for malformed headers (measured).
 - **Ownership:** user-owned resources take the owner id from `@CurrentUser()` and scope
   every read and write to it (see `DevicesService.findOne`). Another user's row is **404**,
-  never 403, so ids cannot be probed. FK deletes that are blocked map to 409 (SQLSTATE 23001
-  for RESTRICT, 23503 for NO ACTION; the adapter handles both).
-- **Generated migrations are not automatically safe.** drizzle-kit emits `ADD COLUMN …
-  NOT NULL` with no warning, and it fails on any populated table. Read every generated SQL
-  file; hand-edit it to nullable → backfill/decide → `SET NOT NULL`, and say why in a SQL
-  comment (see `drizzle/0002_*`).
+  never 403, so ids cannot be probed. FK deletes that are blocked map to 409
+  (`SQLITE_CONSTRAINT_TRIGGER` for RESTRICT, `SQLITE_CONSTRAINT_FOREIGNKEY` for NO ACTION;
+  the adapter handles both).
+- **Generated migrations are not automatically safe.** drizzle-kit emits `ADD … NOT NULL`
+  with no warning, and SQLite refuses it on any table that has rows (an empty test database
+  hides that). It also drops `ON DELETE` from a foreign key added with `ADD`. Read every
+  generated SQL file; hand-edit it (decide what happens to existing rows, write the
+  `ON DELETE` clause out), and say why in a SQL comment (see `drizzle/0002_*`).
 - **Passwords:** `src/common/security/password.ts` (scrypt, salted, timing-safe). Never
   log, return or store a plain password.
 - **Config:** read via `ConfigService<Env, true>`, never `process.env`. **Never log config

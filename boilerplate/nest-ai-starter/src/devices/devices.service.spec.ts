@@ -2,14 +2,14 @@ import {
   NotFoundError,
   RuleViolationError,
 } from '../common/errors/domain-error.js';
-import { connectPglite, type Connection } from '../database/connect.js';
+import { connectInMemory, type Connection } from '../database/connect.js';
 import { DrizzleDevicesRepository } from './devices.drizzle-repository.js';
 import { DevicesService } from './devices.service.js';
 import { devices } from './devices.table.js';
 import { users } from '../users/users.table.js';
 
 /**
- * Unit tests against REAL Postgres (PGlite, in memory, migrated): the
+ * Unit tests against a REAL database (SQLite in memory, migrated): the
  * repository's SQL is exercised, not mocked. One database per file.
  */
 describe('DevicesService', () => {
@@ -24,7 +24,7 @@ describe('DevicesService', () => {
   let stranger: string;
 
   beforeAll(async () => {
-    connection = await connectPglite();
+    connection = await connectInMemory();
     const [a, b] = await connection.db
       .insert(users)
       .values([

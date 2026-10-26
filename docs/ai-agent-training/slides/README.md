@@ -24,10 +24,9 @@ folder and the requests to send, in order. The script reads the starter's Postma
 the build** if a slide names a folder or request that the collection does not have, so the
 deck cannot point at a request that was renamed.
 
-The commands assume `alias dev='docker compose run --rm dev'` (slide 3) and the
-`scripts/demo-device.mjs` helper in the starter, which creates a demo user and an active
-device and prints `export` lines. Keep its `grep '^export '` filter: when compose builds the
-image first, the build log goes to the same stdout.
+The commands run in `boilerplate/nest-ai-starter` with Node 24 and pnpm (slide 3). From
+chapter 04 on they use the starter's `scripts/demo-device.mjs` helper, which creates a demo
+user and an active device and prints `export` lines for `eval`.
 
 ## Rebuild
 
@@ -36,16 +35,4 @@ With Node and the packages `pptxgenjs react react-dom react-icons sharp` install
 ```bash
 node build-lab-deck.mjs .     # writes both decks: lab-companion{,-lite}.{pptx,md}
 MD_ONLY=1 node build-lab-deck.mjs .   # only the two Markdown files
-```
-
-Without Node, run it in a container (no bind mount needed):
-
-```bash
-docker run --name deck -d node:24-bookworm-slim sleep infinity
-docker exec deck sh -c 'mkdir /w && cd /w && npm init -y >/dev/null && npm i pptxgenjs react react-dom react-icons sharp'
-docker cp build-lab-deck.mjs deck:/w/
-docker cp ../../../boilerplate/nest-ai-starter/postman/nest-ai-starter.postman_collection.json deck:/w/c.json
-docker exec -w /w -e POSTMAN_COLLECTION=/w/c.json deck node build-lab-deck.mjs /w
-for f in lab-companion lab-companion-lite; do docker cp deck:/w/$f.pptx . && docker cp deck:/w/$f.md .; done
-docker rm -f deck
 ```

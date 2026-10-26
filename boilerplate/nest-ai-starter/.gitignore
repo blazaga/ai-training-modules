@@ -22,3 +22,10 @@ coverage/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# a local SQLite database (DATABASE_URL=file:./data/app.db) is data, never source
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

@@ -2,20 +2,15 @@
 // Lab helper: on a RUNNING app, sign up (or reuse) a demo user, create a fresh
 // device, issue its credentials and activate it, then print shell exports.
 //
-//   eval "$(docker compose run --rm -T dev node scripts/demo-device.mjs | grep '^export ')"
-//
-// Keep the `grep '^export '`: when compose builds the image first, the BUILD LOG
-// is written to the same stdout, and a bare eval would run those lines as shell
-// commands (measured).
+//   eval "$(node scripts/demo-device.mjs)"
 //   curl … -H "X-Access-Key-Id: $MCP_KEY_ID" -H "X-Secret-Key: $MCP_SECRET"
 //
-// Base URL: argv[2], else APP_URL, else http://app:3000 (the compose service name,
-// as seen from the dev toolbox). The secret is printed ONCE, for your terminal only:
-// never paste it into a ticket, chat or commit.
+// Base URL: argv[2], else APP_URL, else http://localhost:3000. The secret is printed
+// ONCE, for your terminal only: never paste it into a ticket, chat or commit.
 const base = (
   process.argv[2] ??
   process.env.APP_URL ??
-  'http://app:3000'
+  'http://localhost:3000'
 ).replace(/\/$/, '');
 const user = {
   email: 'demo@example.com',

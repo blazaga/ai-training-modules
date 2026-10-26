@@ -14,7 +14,14 @@ import { DevicesModule } from './devices/devices.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+      // Tests never read .env: its DATABASE_URL would point them at data/app.db, the file the
+      // running app uses (measured: SQLITE_BUSY and 409s on the e2e sign-ups). Without it they
+      // get an in-memory database. The vitest configs pin NODE_ENV=test.
+      ignoreEnvFile: process.env.NODE_ENV === 'test',
+    }),
     DatabaseModule,
     HealthModule,
     McpToolsModule, // ch08: MCP tool controllers, served at /mcp

@@ -1,21 +1,23 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import { connectPglite, type Connection } from '../../database/connect.js';
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  createdAtColumn,
+  idColumn,
+  timestampColumn,
+  updatedAtColumn,
+} from '../../database/columns.js';
+import { connectInMemory, type Connection } from '../../database/connect.js';
 import { ConflictError } from '../errors/domain-error.js';
 import { DrizzleRepository } from './drizzle-repository.js';
 import type { Entity } from './repository.js';
 
 /** A throwaway table, created by hand, to test the generic adapter alone. */
-const things = pgTable('things', {
-  id: uuid('id').primaryKey().defaultRandom(),
+const things = sqliteTable('things', {
+  id: idColumn(),
   name: text('name').notNull().unique(),
-  seenAt: timestamp('seen_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  seenAt: timestampColumn('seen_at'),
+  createdAt: createdAtColumn(),
+  updatedAt: updatedAtColumn(),
 });
 interface Thing extends Entity {
   name: string;
@@ -27,11 +29,10 @@ describe('DrizzleRepository', () => {
   let repo: DrizzleRepository<Thing>;
 
   beforeAll(async () => {
-    connection = await connectPglite();
-    await connection.db.execute(sql`create table things (
-      id uuid primary key default gen_random_uuid(), name text not null unique,
-      seen_at timestamptz, created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now())`);
+    connection = await connectInMemory();
+    await connection.db.run(sql`create table things (
+      id text primary key, name text not null unique, seen_at text,
+      created_at text not null, updated_at text not null)`);
     repo = new DrizzleRepository<Thing>(connection.db, things, 'Thing');
   });
 

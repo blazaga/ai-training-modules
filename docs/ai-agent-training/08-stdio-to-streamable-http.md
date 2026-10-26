@@ -57,9 +57,10 @@ data: {"result":{"protocolVersion":"2025-06-18",…,"serverInfo":{"name":"nest-a
 
 ### The deployment trap: `MCP_ALLOWED_HOSTS`
 
-Reproduced with real containers: the app reached **by its service name** from another
-container, with **valid** credentials, answered **403** with `{"error":{"code":-32000,
-"message":"Invalid Host: edu-nas-app"}}`. With `MCP_ALLOWED_HOSTS=edu-nas-app` it answered 200. Set this in every deployment that is not reached as `localhost`.
+Reproduced on one machine: the app reached **by the machine's hostname**, with **valid**
+credentials, answered **403** with `{"error":{"code":-32000,"message":"Invalid Host: <hostname>"}}`.
+`localhost` and `127.0.0.1` passed (200). With `MCP_ALLOWED_HOSTS=localhost,<hostname>` the
+hostname answered 200 too. Set this in every deployment that is not reached as `localhost`.
 
 ### The instrument trap: `fetch` cannot test it
 
@@ -82,11 +83,11 @@ the Host check.
 
 ## Labs
 
-Labs 1 and 2 are checked the other way round: `dev pnpm lab 08` passes on the starter,
+Labs 1 and 2 are checked the other way round: `pnpm lab 08` passes on the starter,
 fails while either setting is flipped, and passes again once you revert and rebuild.
 
 1. Set `enableJsonResponse: true` and capture the reply. What changed on the wire?
 2. Turn on `statefulMode` and capture the `Mcp-Session-Id` header. What must the client
    now send back?
-3. Run the app in Docker and call it by container name with and without
-   `MCP_ALLOWED_HOSTS`.
+3. Call the running app by your machine's hostname (`curl http://$(hostname):3000/mcp …`)
+   with and without that name in `MCP_ALLOWED_HOSTS`.

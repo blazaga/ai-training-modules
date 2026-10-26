@@ -9,7 +9,10 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const checks = [
   { label: 'AI-FILL markers', re: /AI-FILL\(/ },
-  { label: 'nest-cli stub bodies ("This action ...")', re: /This action (adds|returns|updates|removes)/ },
+  {
+    label: 'nest-cli stub bodies ("This action ...")',
+    re: /This action (adds|returns|updates|removes)/,
+  },
 ];
 
 function walk(dir) {
@@ -21,7 +24,9 @@ function walk(dir) {
 
 const files = ['src', 'test'].flatMap((d) => walk(join(root, d)));
 if (files.length === 0) {
-  console.error('check-ai-fill: no .ts files found under src/ or test/ - wrong directory?');
+  console.error(
+    'check-ai-fill: no .ts files found under src/ or test/ - wrong directory?',
+  );
   process.exit(2);
 }
 
@@ -31,7 +36,9 @@ for (const { label, re } of checks) {
   const hits = files.flatMap((f) =>
     readFileSync(f, 'utf8')
       .split('\n')
-      .flatMap((line, i) => (re.test(line) ? [`${relative(root, f)}:${i + 1}: ${line.trim()}`] : [])),
+      .flatMap((line, i) =>
+        re.test(line) ? [`${relative(root, f)}:${i + 1}: ${line.trim()}`] : [],
+      ),
   );
   console.log(`  ${label}: ${hits.length}`);
   for (const h of hits) console.log(`    ${h}`);

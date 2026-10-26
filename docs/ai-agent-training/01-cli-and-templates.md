@@ -122,7 +122,7 @@ exactly one test go red (skill `nest-verify`).
 
 Lab 1 is checked. The exact contract (fields, rules O1 and O2, status codes) is in
 `boilerplate/nest-ai-starter/test/labs/README.md`: write it into `specs/orders.md` first,
-build, then run `dev pnpm lab 01` until every test passes.
+build, then run `pnpm lab 01` until every test passes.
 
 1. **Add `orders`** from a spec you write (two rules, one needing stored state). Hand in:
    the spec, the template output (file count + marker count), `verify` output with both

@@ -1,10 +1,9 @@
 import { defineConfig } from 'drizzle-kit';
 
-// `pnpm db:generate` diffs src/database/schema.ts against drizzle/ and writes a
-// new migration. Commit the WHOLE drizzle/ folder (SQL + meta/), or the
-// journal and the files disagree.
+// `pnpm db:generate` diffs src/database/schema.ts against the committed snapshots in
+// drizzle/meta and writes the next migration. It needs no database.
 export default defineConfig({
-  dialect: 'postgresql',
+  dialect: 'sqlite',
   schema: './src/database/schema.ts',
   out: './drizzle',
 });

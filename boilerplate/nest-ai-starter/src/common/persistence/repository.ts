@@ -16,7 +16,7 @@ export interface Page<T> {
 /**
  * The persistence port every resource depends on. Services inject it through a
  * per-resource token (e.g. NOTES_REPOSITORY), never a concrete class, so the
- * storage can change (in-memory → Postgres) without touching the service or its
+ * storage can change (in-memory → SQLite) without touching the service or its
  * tests.
  */
 export interface Repository<T extends Entity> {

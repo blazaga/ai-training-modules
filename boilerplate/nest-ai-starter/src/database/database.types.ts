@@ -1,12 +1,8 @@
-import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type * as schema from './schema.js';
 
-/** Injection token for the drizzle database. Inject this, never a driver. */
+/** Injection token for the drizzle database (`@Inject(DB) private readonly db: Db`). */
 export const DB = Symbol('DB');
 
-/**
- * The common type of both drivers this starter uses (node-postgres in
- * production, PGlite in tests and keyless dev), so repositories never know
- * which one they got.
- */
-export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
+/** drizzle over libSQL (SQLite), for a database file and for the in-memory test database alike. */
+export type Db = LibSQLDatabase<typeof schema>;

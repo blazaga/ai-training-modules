@@ -23,8 +23,8 @@ the repository root:
 git apply --check --directory=boilerplate/nest-ai-starter docs/ai-agent-training/solutions/04-expires-at.patch
 git apply --directory=boilerplate/nest-ai-starter docs/ai-agent-training/solutions/04-expires-at.patch
 cd boilerplate/nest-ai-starter
-dev pnpm lab 04        # Test Files 1 passed
-dev pnpm verify        # still green
+pnpm lab 04        # Test Files 1 passed
+pnpm verify        # still green
 ```
 
 **When the starter is its own repository**, run `git apply <patch>` from its root.
@@ -55,10 +55,12 @@ guard labs (`pnpm lab 03 08 09`) and the full `pnpm verify`:
   turns no unit test red, because unit tests receive already-parsed input; only e2e and the
   lab check see it. The contract is silent on reopening a fulfilled order; the solution records
   that as an open question in the spec instead of inventing a rule.
-- **02:** the generated SQL is a nullable `ADD COLUMN`, safe on a populated table; compare the
-  hand-edited `0002` for a `NOT NULL` column.
+- **02:** the generated SQL is a nullable ``ALTER TABLE `users` ADD `phone` text``, safe on a
+  populated table; compare the hand-edited `0002`, where a `NOT NULL` column was not.
 - **04:** the expiry rule lives in `DevicesService.verifyAccessKey`, so `/mcp` returns the same
-  401 as every other failure; a secret is expired _from_ its `expiresAt` instant on.
+  401 as every other failure; a secret is expired _from_ its `expiresAt` instant on. SQLite
+  stores timestamps as the exact text it is given, so the input schema normalizes any offset
+  (`+08:00`) to `toISOString()`: without that, the e2e test with an offset gets a 500.
 - **06:** the tool calls `NotesService.update`, so rule R5 is enforced once, in the service; the
   tool adds no rule of its own.
 - **10:** ownership is enforced in the service (another user's note is "not found"); over stdio,

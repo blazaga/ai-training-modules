@@ -1,11 +1,11 @@
 // `pnpm db:migrate`: apply drizzle/ migrations to DATABASE_URL, then print the
-// ledger. Verify a migration by reading drizzle.__drizzle_migrations, never by
+// ledger. Verify a migration by reading the `__drizzle_migrations` table, never by
 // trusting this script's exit code. drizzle's own output is the same for nine
 // migrations and for zero.
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { migrate } from 'drizzle-orm/libsql/migrator';
 import { sql } from 'drizzle-orm';
 import { validateEnv } from '../config/env.schema.js';
-import { connectPostgres, MIGRATIONS_FOLDER } from './connect.js';
+import { connectSqlite, MIGRATIONS_FOLDER } from './connect.js';
 
 const env = validateEnv(process.env);
 if (!env.DATABASE_URL) {
@@ -13,16 +13,17 @@ if (!env.DATABASE_URL) {
   process.exit(1);
 }
 
-const connection = connectPostgres(env.DATABASE_URL);
+const connection = await connectSqlite(env.DATABASE_URL);
 const { db } = connection;
 try {
-  await migrate(db as never, { migrationsFolder: MIGRATIONS_FOLDER });
-  // node-postgres returns { rows }; the driver-agnostic Db type leaves it unknown.
-  const ledger = (await db.execute(
-    sql`select id, hash, created_at from drizzle.__drizzle_migrations order by id`,
-  )) as unknown as { rows: Record<string, unknown>[] };
-  console.log(`db:migrate: ledger rows: ${ledger.rows.length}`);
-  for (const row of ledger.rows) console.log(`  ${JSON.stringify(row)}`);
+  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+  // drizzle declares this table's id as SERIAL, which SQLite does not auto-fill (it reads
+  // null), so the ledger is ordered by when each migration was applied.
+  const ledger = await db.all<{ hash: string; created_at: number }>(
+    sql`select hash, created_at from __drizzle_migrations order by created_at`,
+  );
+  console.log(`db:migrate: ledger rows: ${ledger.length}`);
+  for (const row of ledger) console.log(`  ${JSON.stringify(row)}`);
 } finally {
   await connection.close();
 }

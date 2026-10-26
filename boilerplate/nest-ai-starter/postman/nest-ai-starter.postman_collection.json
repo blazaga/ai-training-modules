@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c74dabb4-902e-5f8a-a4c6-401f45cc8254",
     "name": "nest-ai-starter labs",
-    "description": "Every REST and MCP call the course labs make.\n\n1. `docker compose up -d --build` in boilerplate/nest-ai-starter.\n2. Import this file into Postman. `baseUrl` is http://localhost:3000.\n3. Run the folders in order (or the whole collection with the Runner).\n\nFolders are numbered by full-track chapter; each name also says the lite-track module.\n\nAuth: the collection uses Basic auth with {{email}} / {{password}} (a local demo user). Requests that must not send credentials override it with No Auth.\n\nSECRETS: issuing credentials stores the device secret in the `secret` variable (current value). Never export, share or commit the collection after running it. Re-import the clean file instead.",
+    "description": "Every REST and MCP call the course labs make.\n\n1. In boilerplate/nest-ai-starter: `pnpm build && pnpm db:migrate && pnpm start`.\n2. Import this file into Postman. `baseUrl` is http://localhost:3000.\n3. Run the folders in order (or the whole collection with the Runner).\n\nFolders are numbered by full-track chapter; each name also says the lite-track module.\n\nAuth: the collection uses Basic auth with {{email}} / {{password}} (a local demo user). Requests that must not send credentials override it with No Auth.\n\nSECRETS: issuing credentials stores the device secret in the `secret` variable (current value). Never export, share or commit the collection after running it. Re-import the clean file instead.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -56,8 +56,8 @@
   ],
   "item": [
     {
-      "id": "529aab21-d88a-58b5-9215-43bd5b062e42",
-      "name": "00 · Stack (lite module 1)",
+      "id": "f481bb35-4126-53f6-b206-8e0cc39e087e",
+      "name": "00 · Setup (lite module 1)",
       "description": "Is the app up? Run this first.",
       "item": [
         {

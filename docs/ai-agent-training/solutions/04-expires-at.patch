@@ -1,118 +1,121 @@
-diff --git a/drizzle/0003_amazing_cyclops.sql b/drizzle/0003_amazing_cyclops.sql
+diff --git a/drizzle/0003_tricky_komodo.sql b/drizzle/0003_tricky_komodo.sql
 new file mode 100644
-index 0000000..a0aaad3
+index 0000000..78e6b34
 --- /dev/null
-+++ b/drizzle/0003_amazing_cyclops.sql
++++ b/drizzle/0003_tricky_komodo.sql
 @@ -0,0 +1 @@
-+ALTER TABLE "devices" ADD COLUMN "expires_at" timestamp with time zone;
++ALTER TABLE `devices` ADD `expires_at` text;
 \ No newline at end of file
 diff --git a/drizzle/meta/0003_snapshot.json b/drizzle/meta/0003_snapshot.json
 new file mode 100644
-index 0000000..787dec8
+index 0000000..5bbb2da
 --- /dev/null
 +++ b/drizzle/meta/0003_snapshot.json
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,218 @@
 +{
-+  "id": "57940a1c-db53-49b5-b9b8-742796dc9be6",
-+  "prevId": "6de5eb0b-8826-427f-8a05-ada061b14c8f",
-+  "version": "7",
-+  "dialect": "postgresql",
++  "version": "6",
++  "dialect": "sqlite",
++  "id": "c928ea8b-1e81-416d-823f-2df871e3fb55",
++  "prevId": "fdf7f59f-bd38-48ba-922b-3a9315fcfe6c",
 +  "tables": {
-+    "public.users": {
++    "users": {
 +      "name": "users",
-+      "schema": "",
 +      "columns": {
 +        "id": {
 +          "name": "id",
-+          "type": "uuid",
++          "type": "text",
 +          "primaryKey": true,
 +          "notNull": true,
-+          "default": "gen_random_uuid()"
++          "autoincrement": false
 +        },
 +        "email": {
 +          "name": "email",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "name": {
 +          "name": "name",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "status": {
 +          "name": "status",
 +          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
++          "autoincrement": false,
 +          "default": "'active'"
 +        },
 +        "password_hash": {
 +          "name": "password_hash",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "created_at": {
 +          "name": "created_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        },
 +        "updated_at": {
 +          "name": "updated_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        }
 +      },
-+      "indexes": {},
-+      "foreignKeys": {},
-+      "compositePrimaryKeys": {},
-+      "uniqueConstraints": {
++      "indexes": {
 +        "users_email_unique": {
 +          "name": "users_email_unique",
-+          "nullsNotDistinct": false,
 +          "columns": [
 +            "email"
-+          ]
++          ],
++          "isUnique": true
 +        }
 +      },
-+      "policies": {},
-+      "checkConstraints": {},
-+      "isRLSEnabled": false
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "checkConstraints": {}
 +    },
-+    "public.devices": {
++    "devices": {
 +      "name": "devices",
-+      "schema": "",
 +      "columns": {
 +        "id": {
 +          "name": "id",
-+          "type": "uuid",
++          "type": "text",
 +          "primaryKey": true,
 +          "notNull": true,
-+          "default": "gen_random_uuid()"
++          "autoincrement": false
 +        },
 +        "owner_user_id": {
 +          "name": "owner_user_id",
-+          "type": "uuid",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "name": {
 +          "name": "name",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": true
++          "notNull": true,
++          "autoincrement": false
 +        },
 +        "description": {
 +          "name": "description",
 +          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
++          "autoincrement": false,
 +          "default": "''"
 +        },
 +        "status": {
@@ -120,66 +123,82 @@ index 0000000..787dec8
 +          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
++          "autoincrement": false,
 +          "default": "'draft'"
 +        },
 +        "access_key_id": {
 +          "name": "access_key_id",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "secret_hash": {
 +          "name": "secret_hash",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "secret_last4": {
 +          "name": "secret_last4",
 +          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "secret_rotated_at": {
 +          "name": "secret_rotated_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
-+        },
-+        "expires_at": {
-+          "name": "expires_at",
-+          "type": "timestamp with time zone",
-+          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "last_used_at": {
 +          "name": "last_used_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "archived_at": {
 +          "name": "archived_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
-+          "notNull": false
++          "notNull": false,
++          "autoincrement": false
++        },
++        "expires_at": {
++          "name": "expires_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
 +        },
 +        "created_at": {
 +          "name": "created_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        },
 +        "updated_at": {
 +          "name": "updated_at",
-+          "type": "timestamp with time zone",
++          "type": "text",
 +          "primaryKey": false,
 +          "notNull": true,
-+          "default": "now()"
++          "autoincrement": false
 +        }
 +      },
-+      "indexes": {},
++      "indexes": {
++        "devices_access_key_id_unique": {
++          "name": "devices_access_key_id_unique",
++          "columns": [
++            "access_key_id"
++          ],
++          "isUnique": true
++        }
++      },
 +      "foreignKeys": {
 +        "devices_owner_user_id_users_id_fk": {
 +          "name": "devices_owner_user_id_users_id_fk",
@@ -196,55 +215,43 @@ index 0000000..787dec8
 +        }
 +      },
 +      "compositePrimaryKeys": {},
-+      "uniqueConstraints": {
-+        "devices_access_key_id_unique": {
-+          "name": "devices_access_key_id_unique",
-+          "nullsNotDistinct": false,
-+          "columns": [
-+            "access_key_id"
-+          ]
-+        }
-+      },
-+      "policies": {},
-+      "checkConstraints": {},
-+      "isRLSEnabled": false
++      "uniqueConstraints": {},
++      "checkConstraints": {}
 +    }
 +  },
-+  "enums": {},
-+  "schemas": {},
-+  "sequences": {},
-+  "roles": {},
-+  "policies": {},
 +  "views": {},
++  "enums": {},
 +  "_meta": {
-+    "columns": {},
 +    "schemas": {},
-+    "tables": {}
++    "tables": {},
++    "columns": {}
++  },
++  "internal": {
++    "indexes": {}
 +  }
 +}
 \ No newline at end of file
 diff --git a/drizzle/meta/_journal.json b/drizzle/meta/_journal.json
-index 0a467b2..ac03ec3 100644
+index f5382f9..b89d047 100644
 --- a/drizzle/meta/_journal.json
 +++ b/drizzle/meta/_journal.json
 @@ -22,6 +22,13 @@
-       "when": 1792932234157,
-       "tag": "0002_light_human_fly",
+       "when": 1792980807818,
+       "tag": "0002_mean_gressill",
        "breakpoints": true
 +    },
 +    {
 +      "idx": 3,
-+      "version": "7",
-+      "when": 1792976188731,
-+      "tag": "0003_amazing_cyclops",
++      "version": "6",
++      "when": 1792981446968,
++      "tag": "0003_tricky_komodo",
 +      "breakpoints": true
      }
    ]
--}
-+}
+ }
 \ No newline at end of file
 diff --git a/specs/devices.md b/specs/devices.md
-index 1f7e5ae..1aee04d 100644
+index 2953152..742fc14 100644
 --- a/specs/devices.md
 +++ b/specs/devices.md
 @@ -18,6 +18,7 @@
@@ -285,7 +292,7 @@ index 1f7e5ae..1aee04d 100644
  ## Extra endpoints (beyond the template's CRUD)
  
 diff --git a/src/devices/device.schema.ts b/src/devices/device.schema.ts
-index 98cde60..1c7a868 100644
+index 98cde60..676ec85 100644
 --- a/src/devices/device.schema.ts
 +++ b/src/devices/device.schema.ts
 @@ -19,6 +19,8 @@ export const DeviceSchema = z.object({
@@ -305,7 +312,7 @@ index 98cde60..1c7a868 100644
    lastUsedAt: true,
    archivedAt: true,
  } as const;
-@@ -71,3 +74,20 @@ export const CreateDeviceSchema = DeviceFields;
+@@ -71,3 +74,23 @@ export const CreateDeviceSchema = DeviceFields;
   * (see patchSchema: .partial() would overwrite stored values with defaults).
   */
  export const UpdateDeviceSchema = patchSchema(DeviceFields);
@@ -323,6 +330,9 @@ index 98cde60..1c7a868 100644
 +      .refine((value) => Date.parse(value) > Date.now(), {
 +        message: 'expiresAt must be in the future',
 +      })
++      // Stored as TEXT (src/database/columns.ts): normalize every accepted form, offsets
++      // included, to the one ISO-UTC format, or the stored value fails the response schema.
++      .transform((value) => new Date(value).toISOString())
 +      .optional(),
 +  })
 +  .default({});
@@ -361,7 +371,7 @@ index b1b5c80..d93352a 100644
    }
  
 diff --git a/src/devices/devices.service.spec.ts b/src/devices/devices.service.spec.ts
-index 410fbb1..dfdede8 100644
+index efcca83..10fdf8e 100644
 --- a/src/devices/devices.service.spec.ts
 +++ b/src/devices/devices.service.spec.ts
 @@ -147,6 +147,74 @@ describe('DevicesService', () => {
@@ -502,17 +512,17 @@ index 7e831e8..b83a2df 100644
        (await this.repo.update(device.id, {
          lastUsedAt: new Date().toISOString(),
 diff --git a/src/devices/devices.table.ts b/src/devices/devices.table.ts
-index 7041fd1..a20c76d 100644
+index 7255212..c9073ef 100644
 --- a/src/devices/devices.table.ts
 +++ b/src/devices/devices.table.ts
-@@ -21,6 +21,7 @@ export const devices = pgTable('devices', {
+@@ -27,6 +27,7 @@ export const devices = sqliteTable('devices', {
    secretHash: text('secret_hash'),
    secretLast4: text('secret_last4'),
-   secretRotatedAt: timestamp('secret_rotated_at', { withTimezone: true }),
-+  expiresAt: timestamp('expires_at', { withTimezone: true }),
-   lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
-   archivedAt: timestamp('archived_at', { withTimezone: true }),
-   createdAt: timestamp('created_at', { withTimezone: true })
+   secretRotatedAt: timestampColumn('secret_rotated_at'),
++  expiresAt: timestampColumn('expires_at'),
+   lastUsedAt: timestampColumn('last_used_at'),
+   archivedAt: timestampColumn('archived_at'),
+   createdAt: createdAtColumn(),
 diff --git a/src/devices/dto/issue-credentials.dto.ts b/src/devices/dto/issue-credentials.dto.ts
 new file mode 100644
 index 0000000..7e3a67a
