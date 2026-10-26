@@ -19,10 +19,13 @@ docker compose up -d --build                # Postgres + Redis → migrate → a
 curl localhost:3000/api/health              # {"status":"ok"}
 open http://localhost:3000/api/docs         # OpenAPI, generated from the zod schemas
 docker compose run --rm dev pnpm verify     # the full gate, in the toolbox container
+docker compose --profile inspector up -d inspector   # MCP Inspector web UI on localhost:6274
 ```
 
 Services: `db` (Postgres 17), `redis` (Redis 8, infrastructure for later chapters; not
-used by the app yet), `migrate` (one-shot), `app`, and `dev` (the toolbox, profile `dev`).
+used by the app yet), `migrate` (one-shot), `app`, `dev` (the toolbox, profile `dev`) and `inspector` (the MCP Inspector web UI, profile
+`inspector`; `docker compose logs inspector` prints its URL with a token, and in the UI you add
+`http://app:3000/mcp` as a `streamable-http` server with your device's two headers).
 See the course's Chapter 00 for details.
 
 ## Call it from Postman

@@ -395,7 +395,35 @@ Covers full-track chapters 07 + 08. Cut for time: the Host-header lab (chapter 0
 
 ---
 
-## Run this: a CI check, then the wire
+## Run this (1/2): the Inspector UI
+
+```bash
+docker compose --profile inspector up -d inspector
+docker compose logs inspector
+# open the localhost:6274 URL it prints
+eval "$(docker compose run --rm -T dev \
+  node scripts/demo-device.mjs | grep '^export ')"
+# the values for the two headers:
+echo "$MCP_KEY_ID"
+echo "$MCP_SECRET"
+```
+
+**In the Inspector UI**
+
+1. Add Servers → + Add manually
+2. streamable-http · http://app:3000/mcp → Add
+3. Settings → Custom Headers → + Add Header, twice
+4. X-Access-Key-Id and X-Secret-Key, then close
+5. Switch the card on: Connected
+6. Tools → whoami → Execute Tool
+
+<!--
+The Inspector runs in its own container and is published on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.
+-->
+
+---
+
+## Run this (2/2): a CI check, then the wire
 
 ```bash
 dev pnpm build
@@ -416,7 +444,7 @@ dev pnpm lab 08   # green now; break it, see red, revert
 - **08 · Host check (lite module 5)**: Foreign Host → 403
 
 <!--
-The Inspector web UI binds 127.0.0.1 inside its container: use the CLI in Docker. Exit 5 comes from the tool's own isError, which is why it is a sound CI signal.
+The CLI is the scriptable half of the Inspector. Exit 5 comes from the tool's own isError, which is why it is a sound CI signal.
 -->
 
 ---
@@ -438,15 +466,15 @@ content-type: application/json
 **Done when**
 
 - [ ] `dev pnpm lab 08`: every test passes
+- [ ] the Inspector UI shows Connected
 - [ ] a script that FAILS when create-note accepts `{title:'x', status:'published'}`
 - [ ] both framings captured and compared
-- [ ] MCP_ALLOWED_HOSTS explained in one sentence
 
 ---
 
 ## If you are stuck: module 5
 
-- **No such file dist/mcp-stdio.js**: Build first: dev pnpm build.
+- **The UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.
 - **Sharing the Inspector UI URL**: Don't: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.
 - **Called by service name: 403**: Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).
 

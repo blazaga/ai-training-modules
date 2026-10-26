@@ -553,6 +553,34 @@ Turn an Inspector call into a CI check with its exit code.
 
 ---
 
+## Run this: the Inspector UI
+
+```bash
+docker compose --profile inspector up -d inspector
+docker compose logs inspector
+# open the localhost:6274 URL it prints
+eval "$(docker compose run --rm -T dev \
+  node scripts/demo-device.mjs | grep '^export ')"
+# the values for the two headers:
+echo "$MCP_KEY_ID"
+echo "$MCP_SECRET"
+```
+
+**In the Inspector UI**
+
+1. Add Servers → + Add manually
+2. streamable-http · http://app:3000/mcp → Add
+3. Settings → Custom Headers → + Add Header, twice
+4. X-Access-Key-Id and X-Secret-Key, then close
+5. Switch the card on: Connected
+6. Tools → whoami → Execute Tool
+
+<!--
+The Inspector runs in its own container and is published on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.
+-->
+
+---
+
 ## Run this: the Inspector as a CI check
 
 ```bash
@@ -565,7 +593,7 @@ echo "exit: $?"
 ```
 
 <!--
-The web UI binds 127.0.0.1 inside its container. In Docker use the CLI; learners with Node can run the UI on the host with npx.
+The CLI is the scriptable half: its exit code is what makes it a CI check. The web UI (previous slide) is for exploring.
 -->
 
 ---
@@ -583,6 +611,7 @@ exit: 5
 
 **Done when**
 
+- [ ] the UI shows Connected, and whoami returns your device
 - [ ] a script that FAILS when create-note accepts `{title:'x', status:'published'}`
 - [ ] you know why this exit code is a SOUND signal
 
@@ -595,7 +624,7 @@ Exit 5 comes from the tool's own isError, not from the absence of a crash. That 
 ## If you are stuck: chapter 07
 
 - **No such file dist/mcp-stdio.js**: Build first: dev pnpm build.
-- **Web UI unreachable**: It listens on 127.0.0.1 inside the container. Use the CLI, or npx on your host.
+- **The UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.
 - **Sharing the UI URL**: Don't: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.
 
 ---

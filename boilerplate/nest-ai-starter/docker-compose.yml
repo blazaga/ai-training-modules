@@ -73,6 +73,33 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # The MCP Inspector web UI (chapters 07-09). Not started by `up` (profile):
+  #   docker compose --profile inspector up -d inspector
+  #   docker compose logs inspector     # open the http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=… URL
+  # In the UI add a server: Streamable HTTP, http://app:3000/mcp, and your device's two headers.
+  # It listens on every interface INSIDE its own container (so Docker can forward to it) and
+  # is published on your machine's loopback only, never on your network. Keep the token: the
+  # Inspector's backend can connect to MCP servers for whoever holds it.
+  inspector:
+    profiles: ['inspector']
+    image: node:24-bookworm-slim
+    command:
+      - npx
+      - -y
+      - '@modelcontextprotocol/inspector@2.12.0'
+      - --web
+    environment:
+      HOST: 0.0.0.0
+      DANGEROUSLY_BIND_ALL_INTERFACES: 'true' # inside this container only; see ports
+      MCP_AUTO_OPEN_ENABLED: 'false' # no browser inside a container
+      MCP_INSPECTOR_SECRET_STORE: memory # no OS keychain in a container; secrets end with it
+    ports:
+      - '127.0.0.1:6274:6274' # the UI
+      - '127.0.0.1:6275:6275' # its sandbox origin
+    depends_on:
+      app:
+        condition: service_healthy
+
   # The toolbox. Not started by `up` (profile). Your source is mounted, so files that
   # nest-cli or the template script write appear in your project.
   dev:

@@ -72,6 +72,7 @@ const THEME = {
 };
 const CODE_FONT = 'Courier New';
 const POSTMAN = 'EF5B25'; // Postman orange, used only on the Postman panel
+const INSPECTOR = '6D4AE8'; // the Inspector UI panel
 
 // ---- the content ----------------------------------------------------------------
 // Draft lab times are ESTIMATES, not measured with learners: adjust after a dry run.
@@ -95,6 +96,31 @@ const CHAPTERS = [
 ];
 const DEMO = `eval "$(docker compose run --rm -T dev \\
   node scripts/demo-device.mjs | grep '^export ')"`;
+
+// The MCP Inspector web UI (compose service `inspector`), steps as measured on 2.12.0.
+const INSPECTOR_UI = {
+  title: 'In the Inspector UI',
+  steps: [
+    'Add Servers → + Add manually',
+    'streamable-http · http://app:3000/mcp → Add',
+    'Settings → Custom Headers → + Add Header, twice',
+    'X-Access-Key-Id and X-Secret-Key, then close',
+    'Switch the card on: Connected',
+    'Tools → whoami → Execute Tool',
+  ],
+};
+const INSPECTOR_UP = [
+  'docker compose --profile inspector up -d inspector',
+  'docker compose logs inspector',
+  '# open the localhost:6274 URL it prints',
+  DEMO,
+  '# the values for the two headers:',
+  'echo "$MCP_KEY_ID"',
+  'echo "$MCP_SECRET"',
+];
+const UI_FAILED = ['The UI says Failed', 'Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.'];
+const UI_NOTES =
+  'The Inspector runs in its own container and is published on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.';
 
 const SLIDES = [
   {
@@ -459,6 +485,12 @@ const SLIDES = [
   // ---------------------------------------------------------------- ch07
   { type: 'section', ch: '07' },
   {
+    type: 'run', ch: '07', title: 'Run this: the Inspector UI',
+    code: INSPECTOR_UP,
+    ui: INSPECTOR_UI,
+    notes: UI_NOTES,
+  },
+  {
     type: 'run', ch: '07', title: 'Run this: the Inspector as a CI check',
     code: [
       'dev pnpm build',
@@ -468,7 +500,7 @@ const SLIDES = [
       '  --tool-arg id=00000000-0000-4000-8000-000000000000',
       'echo "exit: $?"',
     ],
-    notes: 'The web UI binds 127.0.0.1 inside its container. In Docker use the CLI; learners with Node can run the UI on the host with npx.',
+    notes: 'The CLI is the scriptable half: its exit code is what makes it a CI check. The web UI (previous slide) is for exploring.',
   },
   {
     type: 'checkpoint', ch: '07', title: 'Checkpoint: a tool error is exit 5',
@@ -480,6 +512,7 @@ const SLIDES = [
       'exit: 5',
     ],
     done: [
+      'the UI shows Connected, and whoami returns your device',
       "a script that FAILS when create-note accepts `{title:'x', status:'published'}`",
       'you know why this exit code is a SOUND signal',
     ],
@@ -489,7 +522,7 @@ const SLIDES = [
     type: 'stuck', ch: '07', title: 'If you are stuck: chapter 07',
     rows: [
       ['No such file dist/mcp-stdio.js', 'Build first: dev pnpm build.'],
-      ['Web UI unreachable', 'It listens on 127.0.0.1 inside the container. Use the CLI, or npx on your host.'],
+      UI_FAILED,
       ['Sharing the UI URL', 'Don\'t: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.'],
     ],
   },
@@ -761,7 +794,13 @@ const LITE_SLIDES = [
 
   { type: 'section', ch: '5', notes: cutNote(MODULES[4], 'the Host-header lab (chapter 08). Mention MCP_ALLOWED_HOSTS; the stuck slide covers its snags.') },
   {
-    type: 'run', ch: '5', title: 'Run this: a CI check, then the wire',
+    type: 'run', ch: '5', title: 'Run this (1/2): the Inspector UI',
+    code: INSPECTOR_UP,
+    ui: INSPECTOR_UI,
+    notes: UI_NOTES,
+  },
+  {
+    type: 'run', ch: '5', title: 'Run this (2/2): a CI check, then the wire',
     code: [
       'dev pnpm build',
       'dev pnpm mcp:inspect:cli --method tools/call \\',
@@ -774,7 +813,7 @@ const LITE_SLIDES = [
       '# then revert enableJsonResponse',
     ],
     postman: postman(['05', ['initialize']], ['08', ['Foreign Host → 403']]),
-    notes: 'The Inspector web UI binds 127.0.0.1 inside its container: use the CLI in Docker. Exit 5 comes from the tool\'s own isError, which is why it is a sound CI signal.',
+    notes: 'The CLI is the scriptable half of the Inspector. Exit 5 comes from the tool\'s own isError, which is why it is a sound CI signal.',
   },
   {
     type: 'checkpoint', ch: '5', title: 'Checkpoint: exit 5, then two framings',
@@ -789,15 +828,15 @@ const LITE_SLIDES = [
       '{"result":…}',
     ],
     done: [
+      'the Inspector UI shows Connected',
       "a script that FAILS when create-note accepts `{title:'x', status:'published'}`",
       'both framings captured and compared',
-      'MCP_ALLOWED_HOSTS explained in one sentence',
     ],
   },
   {
     type: 'stuck', ch: '5', title: 'If you are stuck: module 5',
     rows: [
-      ['No such file dist/mcp-stdio.js', 'Build first: dev pnpm build.'],
+      UI_FAILED,
       ['Sharing the Inspector UI URL', 'Don\'t: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.'],
       ['Called by service name: 403', 'Add that name to MCP_ALLOWED_HOSTS (reproduced in Docker).'],
     ],
@@ -897,6 +936,7 @@ async function buildPptx(file, track) {
     FiShield: await icon('FiShield'),
     FiPlay: await icon('FiPlay'),
     pm: await icon('FiSend', COL.paper),
+    ui: await icon('FiMonitor', COL.paper),
     arrow: await icon('FiArrowRight', COL.muted),
   };
 
@@ -921,15 +961,18 @@ async function buildPptx(file, track) {
     return [14, 12, 11, 10].find((fs) => (long * fs * 0.6) / 72 <= w && (lines.length * fs * 1.2) / 72 <= h) ?? 10;
   }
   // The Postman panel: which folder, which requests, in order.
-  function postmanCard(slide, x, y, w, h, groups) {
+  function postmanCard(slide, x, y, w, h, groups, opts = {}) {
+    const color = opts.color ?? POSTMAN;
+    const title = opts.title ?? 'In Postman';
+    const img = opts.icon ?? icons.pm;
     const wide = w > 5;
-    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color: POSTMAN }, line: { color: POSTMAN }, objectName: 'postman' });
-    slide.addImage({ data: icons.pm, x: x + 0.2, y: y + 0.17, w: 0.26, h: 0.26 });
-    slide.addText('In Postman', { x: x + 0.55, y: y + 0.12, w: w - 0.75, h: 0.36, fontSize: wide ? 18 : 16, bold: true, color: COL.paper, margin: 0, isTextBox: true });
+    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color }, line: { color }, objectName: opts.title ? 'inspector-ui' : 'postman' });
+    slide.addImage({ data: img, x: x + 0.2, y: y + 0.17, w: 0.26, h: 0.26 });
+    slide.addText(title, { x: x + 0.55, y: y + 0.12, w: w - 0.75, h: 0.36, fontSize: wide ? 18 : 16, bold: true, color: COL.paper, margin: 0, isTextBox: true });
     const fs = wide ? 16 : 13;
     const runs = [];
     groups.forEach((g, gi) => {
-      runs.push({ text: g.folder, options: { bold: true, fontSize: fs, color: COL.paper, breakLine: true, paraSpaceBefore: gi ? 6 : 0 } });
+      if (g.folder) runs.push({ text: g.folder, options: { bold: true, fontSize: fs, color: COL.paper, breakLine: true, paraSpaceBefore: gi ? 6 : 0 } });
       g.requests.forEach((r, ri) =>
         runs.push({ text: `${ri + 1}. ${r}`, options: { fontSize: fs, color: COL.paper, breakLine: !(gi === groups.length - 1 && ri === g.requests.length - 1) } }),
       );
@@ -965,19 +1008,21 @@ async function buildPptx(file, track) {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
       const lines = s.code.flatMap((l) => l.split('\n'));
-      const pmW = s.postman ? (lines.length ? 3.1 : 9.0) : 0;
+      const panel = s.postman ?? (s.ui ? [{ folder: '', requests: s.ui.steps }] : undefined);
+      const pmW = panel ? (lines.length ? 3.1 : 9.0) : 0;
       if (lines.length) {
-        const termW = s.postman ? 9.0 - pmW - 0.2 : 9.0;
+        const termW = panel ? 9.0 - pmW - 0.2 : 9.0;
         terminal(slide, 0.5, 1.2, termW, 3.85, lines, { fontSize: fitCode(lines, termW - 0.65, 3.3), label: `${track.unit.toLowerCase()} ${s.ch} · run this` });
       }
       if (s.postman) postmanCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, s.postman);
+      else if (s.ui) postmanCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, panel, { title: s.ui.title, color: INSPECTOR, icon: icons.ui });
     } else if (s.type === 'checkpoint') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
       terminal(slide, 0.5, 1.2, 5.5, 3.85, s.output, { fontSize: 12, label: `output: ${s.outputSource}` });
       slide.addText('Done when', { x: 6.4, y: 1.2, w: 3.1, h: 0.45, fontSize: 20, bold: true, color: COL.text, margin: 0, isTextBox: true });
       s.done.forEach((d, i) => {
-        const y = 1.8 + i * (s.done.length > 3 ? 0.8 : 1.05);
+        const y = 1.8 + i * (s.done.length > 4 ? 0.66 : s.done.length > 3 ? 0.8 : 1.05);
         badge(slide, 6.4, y, 0.42, COL.mint, icons.check);
         slide.addText(md2runs(d), { x: 6.95, y: y - 0.04, w: 2.55, h: 0.95, fontSize: 14, color: COL.text, valign: 'top', margin: 0, isTextBox: true });
       });
@@ -1086,6 +1131,7 @@ function buildMarkdown(track) {
       p.push(`## ${s.title}`);
       if (s.code.length) p.push('', ...fence(s.code));
       if (s.postman) p.push('', '**In Postman**', '', ...s.postman.map((g) => `- **${g.folder}**: ${g.requests.join(' · ')}`));
+      if (s.ui) p.push('', `**${s.ui.title}**`, '', ...s.ui.steps.map((step, i) => `${i + 1}. ${step}`));
     }
     if (s.type === 'checkpoint') {
       p.push(`## ${s.title}`, '', `_Output: ${s.outputSource}_`, '', ...fence(s.output), '', '**Done when**', '', ...s.done.map((d) => `- [ ] ${d}`));

@@ -5,26 +5,43 @@ scripts. **Commit:** `course(ch07)`. The version is pinned to `2.12.0`, the vers
 captures came from.
 
 ```bash
-# In Docker (chapter 00), prefix with `docker compose run --rm dev`; the web UI is not
-# reachable from your browser that way, so use the CLI.
-pnpm build
-pnpm mcp:inspect        # web UI   (npx @modelcontextprotocol/inspector@2.12.0 node dist/mcp-stdio.js)
-pnpm mcp:inspect:cli --method tools/list
+docker compose --profile inspector up -d inspector   # the web UI, over Streamable HTTP
+docker compose run --rm dev pnpm build
+docker compose run --rm dev pnpm mcp:inspect:cli --method tools/list   # the CLI, over stdio
 ```
 
 ## The web UI
 
-It starts on `http://127.0.0.1:6274`. **The URL it prints carries an API token**
-(`?MCP_INSPECTOR_API_TOKEN=…`): treat it as a credential and never paste it into a
-ticket or chat. Captured startup (token redacted):
+In Docker it is the compose service `inspector` (chapter 00 explains how it is exposed: on your
+machine's loopback only). It connects to the running app over **Streamable HTTP**, so it needs
+a device's headers, exactly as any other client does (chapter 09).
+
+1. Start it, then open the URL it prints (with its token):
+   ```bash
+   docker compose --profile inspector up -d inspector
+   docker compose logs inspector   # http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=…
+   ```
+2. **Add Servers** → **+ Add manually**: Server ID `nest-ai-starter`, Transport
+   `streamable-http`, URL `http://app:3000/mcp` → **Add**. (The three example servers that
+   are already listed can be ignored.)
+3. On your server's card, **Settings** → **Custom Headers** → **+ Add Header** twice:
+   `X-Access-Key-Id` and `X-Secret-Key`, with a device's values (the lab helper prints them).
+   Close the dialog: header changes apply on the next connect.
+4. Switch the card on: it shows **Connected**. Then **Tools** → pick a tool → **Execute Tool**.
+
+**The URL it prints carries an API token** (`?MCP_INSPECTOR_API_TOKEN=…`): treat it as a
+credential and never paste it into a ticket or chat. Captured startup (token redacted):
 
 ```
 MCP Inspector Web is up and running at:
-   http://127.0.0.1:6274?MCP_INSPECTOR_API_TOKEN=<REDACTED>
+   http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=<REDACTED>
 ```
 
-In the UI: **Connect** → **Tools** → **List Tools** → pick `create-note` → fill the form
-(generated from the zod-derived schema) → **Run Tool**.
+Pick `create-note`: the form is generated from the zod-derived schema. Tools are listed as soon
+as you connect, so there is no separate "list" step in 2.12.0.
+
+With Node on your machine you can also run the UI against the **stdio** server, without Docker
+and without device headers: `pnpm build && pnpm mcp:inspect`.
 
 ## The CLI: scriptable, and usable as a check
 

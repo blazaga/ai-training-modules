@@ -120,9 +120,29 @@ docker compose run --rm dev npx -y @modelcontextprotocol/inspector@2.12.0 --cli 
   --header "X-Access-Key-Id: AKID…" --header "X-Secret-Key: <SECRET>"
 ```
 
-The **web UI** binds to `127.0.0.1` inside its container, so it is not reachable from your
-browser that way. Run it on your machine with `npx` if you have Node, or use the CLI.
-(Making it listen on all interfaces was not tested here.)
+The **web UI** runs as the compose service `inspector` (profile `inspector`, so `up` does not
+start it). Inside its own container it listens on every interface, which Inspector 2.12.0
+refuses unless `DANGEROUSLY_BIND_ALL_INTERFACES=true`: that override is meant for exactly this
+case. Docker publishes it on your machine's **loopback only** (`127.0.0.1:6274`), never on
+your network.
+
+1. Start it, then open the URL it prints (with its token):
+   ```bash
+   docker compose --profile inspector up -d inspector
+   docker compose logs inspector   # http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=…
+   ```
+2. **Add Servers** → **+ Add manually**: Server ID `nest-ai-starter`, Transport
+   `streamable-http`, URL `http://app:3000/mcp` → **Add**. (The three example servers that
+   are already listed can be ignored.)
+3. On your server's card, **Settings** → **Custom Headers** → **+ Add Header** twice:
+   `X-Access-Key-Id` and `X-Secret-Key`, with a device's values (the lab helper prints them).
+   Close the dialog: header changes apply on the next connect.
+4. Switch the card on: it shows **Connected**. Then **Tools** → pick a tool → **Execute Tool**.
+
+Measured with a real browser on `localhost:6274`: connect with a device's headers, the four
+tools listed, `whoami` returned the device and its owner. With a wrong secret the card shows
+**Failed**, and the Network panel shows the Inspector probing `/.well-known/oauth-*`: it reads
+any 401 as an OAuth challenge.
 
 ## Credentials
 

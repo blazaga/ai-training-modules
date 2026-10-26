@@ -11,3 +11,4 @@ boilerplate/nest-ai-starter/src/common/zod/zod-validation.pipe.spec.ts|value-tha
 boilerplate/nest-ai-starter/docker-compose.yml|PASSWORD: app-local-only|local-only placeholder for the learner's own docker Postgres (documented in .env.example); not a real credential
 boilerplate/nest-ai-starter/test/mcp-http.e2e-spec.ts|password: ownerPassword|a variable reference to a test fixture, not a literal value
 boilerplate/nest-ai-starter/src/mcp/device-auth.middleware.ts|SECRET_KEY_HEADER = 'x-secret-key'|an HTTP header NAME constant, not a secret
+boilerplate/nest-ai-starter/docker-compose.yml|HOST: 0.0.0.0|the Inspector bind address inside its own container (all interfaces there); the host publishes it on 127.0.0.1 only
