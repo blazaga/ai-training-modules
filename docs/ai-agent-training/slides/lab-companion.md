@@ -105,11 +105,13 @@ Covers chapters 00 + 01. Left out for time: the persistence and clean-wipe demos
 
 ```bash
 cd boilerplate/nest-ai-starter
-corepack enable && pnpm install
-cp .env.example .env
+corepack enable   # refused? use corepack pnpm
+pnpm install
+cp .env.example .env   # port busy? set PORT= here
 pnpm build && pnpm db:migrate
 pnpm verify                # 69 + 61 tests
-# write specs/orders.md (copy specs/notes.md), then:
+# write specs/orders.md (copy specs/notes.md);
+#   the contract: test/labs/README.md, 01. Then:
 pnpm exec nest g resource orders --type rest --crud
 pnpm resource:template --name order --plural orders
 pnpm check:ai-fill         # your agent's to-do list
@@ -146,13 +148,13 @@ AI-FILL markers: 0
 - [ ] `pnpm lab 01`: every test passes
 - [ ] ledger rows: 3, both gates green
 - [ ] check:ai-fill prints 0 markers
-- [ ] delete one service rule: exactly one test goes red
+- [ ] delete O2 from the service: `pnpm exec vitest run src/orders` shows one red test
 
 ---
 
 ## If you are stuck: module 1
 
-- **pnpm: command not found**: Run `corepack enable`, or write `corepack pnpm` instead of `pnpm`.
+- **Port 3000 is already in use**: Set PORT=3100 in .env, then use 3100 in Postman (baseUrl) and every URL. The lab helper reads PORT from .env.
 - **"Run step 1 first"**: The template script refuses before `nest g resource`, and refuses a second run. Never use --force after filling.
 - **Unit green, e2e red**: Validation, defaults and status codes live at the HTTP boundary. Only e2e sees them.
 
@@ -182,7 +184,10 @@ Covers chapter 02. Left out for time: nothing. This is chapter 02 as it stands.
 pnpm check:migrations   # FAILS: drift
 pnpm db:generate        # READ the SQL
 pnpm check:migrations   # clean now
-pnpm verify
+# add an allowed and a refused phone case
+#   to test/users.e2e-spec.ts
+pnpm verify   # TS2345 phone missing? add
+#   phone: null to users.service.spec.ts payloads
 # stop the app (Ctrl+C), then:
 pnpm build && pnpm db:migrate
 pnpm start
@@ -249,14 +254,17 @@ Covers chapters 03 + 04. Left out for time: reading the hand-written middleware 
 # send folder 03, then the lab:
 # unknown emails get a different message
 pnpm test:e2e   # which test fails?
-# re-send 03 in Postman, then revert
+pnpm lab 03     # red too
+# restart the app (Ctrl+C), then:
+pnpm build && pnpm start
+# re-send 03 in Postman: red. Revert,
+#   rebuild, restart: all green again
 # then send folder 04
-pnpm lab 03   # green now; break it, see red, revert
 ```
 
 **In Postman**
 
-- **03 · Auth (module 3)**: Sign up (public) · Me: no credentials → 401 · Me: unknown email → the same 401 · Me (Basic auth)
+- **03 · Auth (module 3)**: Sign up (public) · Me: no credentials → 401 · Me: wrong password → the same 401 · Me: unknown email → the same 401 · Me (Basic auth)
 - **04 · Devices (module 3)**: Create device · Issue credentials (secret shown once) · Activate device · Get device (no secret, no hash)
 
 <!--
@@ -338,8 +346,15 @@ Open the Body tab of initialize: one SSE event, `event: message` then `data: {..
 publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {
   return runTool(() => this.notes.update(id, { status: 'published' }));
 }
+# then, in the terminal:
+pnpm verify   # red until you add publish-note to
+#   the tool list in test/mcp-stdio.e2e-spec.ts
 pnpm lab 06   # the lab check: all green?
 ```
+
+**In Postman**
+
+- **06 · Notes over REST (module 4)**: Create note (draft, empty body) · Publish it → 422 RULE_VIOLATION · Get note
 
 <!--
 Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.
@@ -418,7 +433,7 @@ echo "$MCP_SECRET"
 6. Tools → whoami → Execute Tool
 
 <!--
-The Inspector listens on loopback only (127.0.0.1:6274). Its URL carries an API token: a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.
+The Inspector listens on loopback only (127.0.0.1, ports 6274, 6275, 6278). Its startup output shows its API token twice, in the URL and on the Auth token line: both are a credential. The three example servers in its list can be ignored. Secret values: the helper prints them; never paste them anywhere but the header field.
 -->
 
 ---
@@ -435,6 +450,7 @@ echo "exit: $?"
 # restart the app: Ctrl+C, then
 pnpm build && pnpm start
 # re-send Postman 05 › initialize: what changed?
+#   (its test goes red: that is the point)
 # then revert enableJsonResponse
 pnpm lab 08   # green now; break it, see red, revert
 ```
@@ -477,7 +493,7 @@ content-type: application/json
 
 - **The UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.
 - **Sharing the Inspector UI URL**: Don't: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.
-- **Called by hostname: 403**: Add that name to MCP_ALLOWED_HOSTS: localhost,<hostname> (measured: 403 without, 200 with).
+- **Called by hostname: 403**: With valid device headers (without them it is 401: auth runs first). Add the name to MCP_ALLOWED_HOSTS: localhost,<hostname>.
 
 ---
 

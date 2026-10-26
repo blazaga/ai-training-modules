@@ -2,8 +2,8 @@
 
 **You will:** authenticate against the users table twice: first by hand, to see every
 moving part, then with Passport, secure by default. **Commits:** `course(ch03a)` (the
-middleware), `course(ch03b)` (Passport). Check out `ch03a` to read the hand-written
-version.
+middleware), `course(ch03b)` (Passport). To read the hand-written version:
+`git show "$(git log --format=%h -1 --grep='course(ch03a)')"`.
 
 ## Step 1: a hand-written HTTP Basic middleware
 

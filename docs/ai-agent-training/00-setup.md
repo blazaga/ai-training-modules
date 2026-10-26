@@ -13,8 +13,13 @@ pnpm install
 cp .env.example .env       # DATABASE_URL=file:./data/app.db, PORT=3000
 ```
 
-If `corepack enable` is not allowed on your machine, write `corepack pnpm` wherever this
-course writes `pnpm`.
+If `corepack enable` is refused on your machine (it writes into the Node install folder;
+measured: `EACCES` without admin rights), write `corepack pnpm` wherever this course writes
+`pnpm`.
+
+**Port 3000 already taken?** Set another port in `.env` (`PORT=3100`) before starting. Then
+use that port wherever the course writes 3000: the Postman `baseUrl`, the MCP URL in the
+Inspector and in curl. The lab helper below reads `PORT` from `.env` by itself.
 
 ## Run the app
 
@@ -80,6 +85,10 @@ This signs up (or reuses) `demo@example.com`, creates a fresh device, issues its
 credentials, activates it, and sets `DEVICE_ID`, `MCP_KEY_ID`, `MCP_SECRET` and
 `DEMO_BASIC` in your shell. The secret is printed once, for your terminal only.
 
+`DEMO_BASIC` is the whole header value, `Basic …`, so use it as
+`curl -H "Authorization: $DEMO_BASIC" …`. The helper finds the app on the `PORT` in `.env`
+(else 3000); to point it elsewhere, `APP_URL=http://<HOST>:<PORT> node scripts/demo-device.mjs`.
+
 ## The MCP Inspector
 
 The **CLI** is a real MCP client in your terminal (chapters 07 and 09):
@@ -90,11 +99,13 @@ npx -y @modelcontextprotocol/inspector@2.12.0 --cli \
   --header "X-Access-Key-Id: $MCP_KEY_ID" --header "X-Secret-Key: $MCP_SECRET"
 ```
 
-The **web UI** runs on your machine's loopback (`127.0.0.1:6274`), never on your network.
+The **web UI** runs on your machine's loopback (`127.0.0.1`, ports 6274, 6275 and 6278),
+never on your network. Its startup output carries its API token **twice**: in the URL and on
+an `Auth token:` line. Both are a credential; never paste either into a ticket or chat.
 
 1. Start it, then open the URL it prints (with its token):
    ```bash
-   pnpm mcp:inspect:ui     # http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=…
+   pnpm mcp:inspect:ui     # http://127.0.0.1:6274?MCP_INSPECTOR_API_TOKEN=…
    ```
 2. **Add Servers** → **+ Add manually**: Server ID `nest-ai-starter`, Transport
    `streamable-http`, URL `http://localhost:3000/mcp` → **Add**. (The three example servers

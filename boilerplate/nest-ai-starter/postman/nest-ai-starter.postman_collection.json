@@ -1047,7 +1047,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["mcp"]
             },
-            "description": "The rotation took effect on the very next call.",
+            "description": "The rotation took effect on the very next call. The test first checks that a rotation really happened: with no device at all this call is 401 too, and a check that passes by doing nothing proves nothing.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 8,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
@@ -1068,6 +1068,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
+                  "pm.test('a rotation ran first (Rotate credentials stored a new secret)', () => pm.expect(pm.collectionVariables.get('rotatedSecret')).to.be.a('string').and.not.empty);",
                   "pm.test('401', () => pm.response.to.have.status(401));"
                 ]
               }

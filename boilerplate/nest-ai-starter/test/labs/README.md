@@ -1,8 +1,9 @@
 # Lab checks
 
-Each hands-on lab has a check: a test file that drives the running app over HTTP and MCP,
-the way a client would. It never imports your code, so it tells you whether the lab
-**behaves** as asked, not how you built it.
+Each hands-on lab has a check: a test file that starts its own copy of the app (on a free
+port, in memory) and drives it over HTTP and MCP, the way a client would. Your running app
+is not used, so there is nothing to restart first. The check never imports your code, so it
+tells you whether the lab **behaves** as asked, not how you built it.
 
 ```bash
 pnpm lab 01      # one lab (any part of the file name works: 01, orders, …)
@@ -108,7 +109,10 @@ through `verifyAccessKey`.
 Every note has an owner: the signed-in user over REST, the device's owner over MCP. Over
 REST another user's note is 404 for GET, PATCH and DELETE and absent from the list. Over
 MCP a new tool `my-notes` lists only the caller's notes, `create-note` gives the note to the
-device's owner, and `get-note` on someone else's note is a `NOT_FOUND` tool error.
+device's owner, and `get-note` on someone else's note is a `NOT_FOUND` tool error. Over stdio there is no device and so no
+owner: the check does not test that case, so decide it in your spec (failing closed with a
+tool error is the safe answer). Either way the stdio e2e test that creates and lists notes
+changes with it: update it on purpose.
 
 ## When a check fails and you think you are right
 

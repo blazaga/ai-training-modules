@@ -1,8 +1,7 @@
 # Building Apps with AI Agents
 
 Build a NestJS 12 service with AI agents, skills and templated code, then turn it into an
-authenticated **MCP server**. The service is `boilerplate/nest-ai-starter/`; each chapter
-is a commit you can check out.
+authenticated **MCP server**. The service is `boilerplate/nest-ai-starter/`.
 
 The course runs in six modules; start with the [outline](00-OUTLINE.md), which maps each
 module to the chapters below. The lecturer deck is in [`slides/`](slides/README.md).

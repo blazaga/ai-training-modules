@@ -17,7 +17,7 @@ a device's headers, exactly as any other client does (chapter 09).
 
 1. Start it, then open the URL it prints (with its token):
    ```bash
-   pnpm mcp:inspect:ui     # http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=…
+   pnpm mcp:inspect:ui     # http://127.0.0.1:6274?MCP_INSPECTOR_API_TOKEN=…
    ```
 2. **Add Servers** → **+ Add manually**: Server ID `nest-ai-starter`, Transport
    `streamable-http`, URL `http://localhost:3000/mcp` → **Add**. (The three example servers
@@ -27,12 +27,17 @@ a device's headers, exactly as any other client does (chapter 09).
    Close the dialog: header changes apply on the next connect.
 4. Switch the card on: it shows **Connected**. Then **Tools** → pick a tool → **Execute Tool**.
 
-**The URL it prints carries an API token** (`?MCP_INSPECTOR_API_TOKEN=…`): treat it as a
-credential and never paste it into a ticket or chat. Captured startup (token redacted):
+**Its startup output carries an API token twice**, in the URL and on the `Auth token:` line:
+treat both as a credential and never paste them into a ticket or chat. Captured startup
+(token redacted; keychain notices left out):
 
 ```
 MCP Inspector Web is up and running at:
-   http://localhost:6274/?MCP_INSPECTOR_API_TOKEN=<REDACTED>
+   http://127.0.0.1:6274?MCP_INSPECTOR_API_TOKEN=<REDACTED>
+
+   Sandbox (MCP Apps): http://127.0.0.1:6275/sandbox
+
+   Auth token: <REDACTED>
 ```
 
 Pick `create-note`: the form is generated from the zod-derived schema. Tools are listed as soon

@@ -14,6 +14,8 @@ import {
   DEVICES_REPOSITORY,
   type DevicesRepository,
 } from './devices.repository.js';
+import type { z } from 'zod';
+import type { CreateDeviceSchema } from './device.schema.js';
 import type { CreateDeviceDto } from './dto/create-device.dto.js';
 import type { UpdateDeviceDto } from './dto/update-device.dto.js';
 import type { Device } from './entities/device.entity.js';
@@ -35,9 +37,11 @@ export class DevicesService {
   }
 
   /** The create payload in its STORED shape: write-only inputs become private fields. */
+  // `input` is typed as the parsed payload, not the DTO class: spreading a class instance
+  // is flagged by lint (no-misused-spread), and the pipe hands over a plain object anyway.
   private toStored(
     ownerId: string,
-    input: CreateDeviceDto,
+    input: z.infer<typeof CreateDeviceSchema>,
   ): Promise<Omit<Device, keyof Entity>> | Omit<Device, keyof Entity> {
     // A new device is a draft with no credentials (spec); everything else is
     // server-owned and starts empty.

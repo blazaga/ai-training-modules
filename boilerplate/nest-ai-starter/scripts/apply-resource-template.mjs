@@ -81,7 +81,7 @@ const resourceDir = join(root, 'src', plural);
 const generatedModule = join(resourceDir, `${plural}.module.ts`);
 if (!existsSync(generatedModule)) {
   fail(
-    `${relative(root, generatedModule)} not found. Run step 1 first: nest g resource ${plural}`,
+    `${relative(root, generatedModule)} not found. Run step 1 first: pnpm exec nest g resource ${plural} --type rest --crud`,
   );
 }
 const schemaFile = join(resourceDir, `${name}.schema.ts`);

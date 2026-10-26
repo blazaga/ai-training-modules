@@ -4,13 +4,26 @@
 //
 //   eval "$(node scripts/demo-device.mjs)"
 //   curl … -H "X-Access-Key-Id: $MCP_KEY_ID" -H "X-Secret-Key: $MCP_SECRET"
+//   curl … -H "Authorization: $DEMO_BASIC"   # the whole header value, "Basic …"
 //
-// Base URL: argv[2], else APP_URL, else http://localhost:3000. The secret is printed
-// ONCE, for your terminal only: never paste it into a ticket, chat or commit.
+// Base URL: argv[2], else APP_URL, else http://localhost:<PORT>, with PORT read from the
+// environment or from .env (the file the app reads), else 3000. So an app moved to another
+// port in .env is found without extra flags. The secret is printed ONCE, for your terminal
+// only: never paste it into a ticket, chat or commit.
+import { existsSync, readFileSync } from 'node:fs';
+
+function portFromEnvFile() {
+  if (!existsSync('.env')) return undefined;
+  const line = readFileSync('.env', 'utf8')
+    .split('\n')
+    .find((l) => /^\s*PORT\s*=/.test(l));
+  return line?.split('=')[1].trim().replace(/^["']|["']$/g, '') || undefined;
+}
+const port = process.env.PORT ?? portFromEnvFile() ?? '3000';
 const base = (
   process.argv[2] ??
   process.env.APP_URL ??
-  'http://localhost:3000'
+  `http://localhost:${port}`
 ).replace(/\/$/, '');
 const user = {
   email: 'demo@example.com',

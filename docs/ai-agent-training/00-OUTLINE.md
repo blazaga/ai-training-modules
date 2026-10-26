@@ -5,12 +5,17 @@ and keep them consistent, tested and safe.
 
 **How it works:** you build one real service, `boilerplate/nest-ai-starter/` (NestJS 12),
 in **six modules** of roughly **170 minutes** of labs, with the capstone as homework. Each
-module covers one or two chapters, which are the reading; every chapter is a commit
-(`git log --grep 'course(chNN)'`), so you can check out any step. **It runs on Node 24 and pnpm** (chapter 00); the database is a
-SQLite file, so there is no database server to install. Repeatable work is done by tools (nest-cli, templates, a verify gate);
-judgement is done by an agent inside marked regions, guided by skills in
-`.claude/skills/`. Every claim in the chapters was measured on this code, and the traps we
-hit are part of the material.
+module covers one or two chapters, which are the reading. **It runs on Node 24 and pnpm**
+(chapter 00); the database is a SQLite file, so there is no database server to install.
+Repeatable work is done by tools (nest-cli, templates, a verify gate); judgement is done by
+an agent inside marked regions, guided by skills in `.claude/skills/`. Every claim in the
+chapters was measured on this code, and the traps we hit are part of the material.
+
+You work on the starter as it is. Where a chapter names the commit that built a step
+(`course(ch03a)` and so on), read its diff with `git show`; do not check it out to run it,
+because only the starter matches the setup in chapter 00. For the same reason, test counts
+quoted inside a chapter are from that chapter's commit: on the starter, `pnpm verify` reports
+69 unit and 61 e2e tests before you add anything.
 
 ## The track: six modules
 

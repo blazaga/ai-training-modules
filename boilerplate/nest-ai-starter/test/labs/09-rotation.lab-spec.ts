@@ -31,7 +31,7 @@ describe('Lab 09 · device auth and rotation on /mcp', () => {
   });
 
   it.each(['draft', 'archived'] as const)(
-    'a %s device is refused (401)',
+    'a device in state %s is refused (401)',
     async (state) => {
       const creds = await device(lab, auth, state);
       await rawMcp(lab, ping, deviceHeaders(creds)).expect(401);
