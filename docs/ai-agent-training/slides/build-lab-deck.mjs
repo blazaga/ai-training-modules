@@ -266,6 +266,12 @@ const SLIDES = [
   // ---------------------------------------------------------------- module 2
   { type: 'section', ch: '2', notes: cutNote(MODULES[1], 'the stdio framing lab (chapter 03): reading one exchange covers it.') },
   {
+    type: 'restmcp', ch: '2',
+    title: 'MCP next to REST: a second front door',
+    notes:
+      'Module 1 built the REST front door: an HTTP request reaches a controller, the controller calls a service, the service holds the rules. Module 2 adds a second front door for an AI client. The MCP server takes the controller\'s place: each tool parses its input and calls the SAME UsersService and NotesService, so the rules exist once. Measured: removing the never-shared-with-the-owner rule from NotesService turns both the REST tests and the MCP checks red. Two tools are the exception: query and execute run SQL a model wrote, straight on the database, so the server guards them itself. On the wire, MCP is JSON-RPC messages, not REST routes. They travel over a transport: stdio when Claude Desktop starts the server on your machine (what we build), or Streamable HTTP for a server you reach over the network. So MCP can ride on HTTP, but it is not built on REST.',
+  },
+  {
     type: 'prompt', ch: '2', title: 'Instruction: an MCP server on your data',
     proctor: 'The goal: your Claude Desktop app queries and changes this database. The model writes the SQL, so the server decides what may run.',
     prompt: WRAP('I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when npm run lab 02 and npm run verify are green; then show me how to connect it to Claude Desktop, one question I could ask it and one change I could ask it to make.'),
@@ -563,6 +569,44 @@ async function buildPptx(file, track) {
       slide.addShape(pres.shapes.LINE, { x: 3.33, y: 2.03, w: 1.09, h: 0, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
       block(8.0, 3.91, 1.5, 0.75, 'Database', COL.ink, 'database');
       slide.addShape(pres.shapes.LINE, { x: 6.98, y: 4.29, w: 0.99, h: 0, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
+    } else if (s.type === 'restmcp') {
+      // Two front doors (REST controller, MCP tools) over the same services and database.
+      slide = pres.addSlide({ masterName: 'CONTENT' });
+      slide.addText(s.title, { placeholder: 'title' });
+      const box = (x, y, w, h, label, fill, name, size = 15) => {
+        slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.1, fill: { color: fill }, line: { color: fill }, objectName: name });
+        slide.addText(label, { x, y, w, h, fontSize: size, bold: true, color: COL.paper, align: 'center', valign: 'middle', margin: 2, isTextBox: true });
+      };
+      const arrow = (x, y, w, h, extra = {}) =>
+        slide.addShape(pres.shapes.LINE, { x, y, w, h, ...extra, line: { color: COL.muted, width: 2, endArrowType: 'triangle', ...(extra.line ?? {}) } });
+      const caption = (x, y, w, h, text, opts = {}) =>
+        slide.addText(text, { x, y, w, h, fontSize: 11, color: COL.slate, margin: 0, isTextBox: true, ...opts });
+      // lane captions
+      caption(0.5, 1.0, 3.0, 0.3, 'REST · module 1', { bold: true, color: COL.text, fontSize: 12 });
+      caption(6.5, 1.0, 3.0, 0.3, 'MCP · module 2', { bold: true, color: COL.text, fontSize: 12, align: 'right' });
+      // clients
+      box(0.5, 1.35, 3.0, 0.55, 'Browser · /playground', COL.ink, 'rest-client', 14);
+      box(6.5, 1.35, 3.0, 0.55, 'Claude Desktop', COL.ink, 'mcp-client', 14);
+      // wire
+      arrow(2.0, 1.93, 0, 0.52);
+      caption(2.15, 1.98, 1.6, 0.45, 'HTTP: GET /api/v1/notes', { fontSize: 10 });
+      arrow(8.0, 1.93, 0, 0.52);
+      caption(5.9, 1.98, 1.95, 0.45, 'JSON-RPC over stdio: tools/call', { fontSize: 10, align: 'right' });
+      // the replaceable layer
+      box(0.5, 2.5, 3.0, 0.65, 'Controller (routes)', COL.mint, 'controller');
+      box(6.5, 2.5, 3.0, 0.65, 'MCP server (tools)', COL.amber, 'mcp-tools');
+      // shared core
+      arrow(2.0, 3.18, 2.0, 0.37);
+      arrow(6.0, 3.18, 2.0, 0.37, { flipH: true });
+      box(3.0, 3.55, 4.0, 0.6, 'Services: the rules (module 1)', COL.mint, 'services');
+      arrow(5.0, 4.17, 0, 0.3);
+      box(3.0, 4.5, 4.0, 0.5, 'Repository → data/app.db', COL.ink, 'database', 14);
+      // the exception: raw SQL
+      slide.addShape(pres.shapes.LINE, { x: 9.2, y: 3.18, w: 0, h: 1.57, line: { color: COL.amber, width: 1.5, dashType: 'dash' } });
+      slide.addShape(pres.shapes.LINE, { x: 7.03, y: 4.75, w: 2.17, h: 0, flipH: true, line: { color: COL.amber, width: 1.5, dashType: 'dash', endArrowType: 'triangle' } });
+      caption(7.2, 3.55, 1.9, 0.6, 'query · execute: SQL straight to the database, guarded by the server', { fontSize: 10 });
+      // transport note
+      caption(0.5, 3.6, 2.35, 1.4, 'Same services, same rules: MCP replaces the controller, not the app. MCP messages are JSON-RPC; the transport is stdio here (Claude Desktop starts the server) or Streamable HTTP for a remote server.', { fontSize: 10 });
     } else if (s.type === 'rules') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
@@ -657,6 +701,7 @@ function buildMarkdown(track) {
     if (s.type === 'stuck') p.push(`## ${s.title}`, '', ...s.rows.map(([h, b]) => `- **${h}**: ${b}`));
     if (s.type === 'flow') p.push(`## ${s.title}`, '', ...s.steps.map(([h, b], i) => `${i + 1}. **${h}**: ${b}`), '', '_Repeatable work → tools. Judgement → the agent, fenced in._');
     if (s.type === 'blockflow') p.push(`## ${s.title}`, '', '```text', s.blocks.map(([h]) => `[${h}]`).join(' → '), '```', '', s.blocks.map(([h, sub]) => `**${h}**: ${sub}`).join(' · '));
+    if (s.type === 'restmcp') p.push(`## ${s.title}`, '', '```text', 'REST · module 1                     MCP · module 2', '[Browser · /playground]            [Claude Desktop]', '   │ HTTP: GET /api/v1/notes           │ JSON-RPC over stdio: tools/call', '   ▼                                  ▼', '[Controller (routes)]              [MCP server (tools)] ┄┄┐ query · execute:', '          ╲                          ╱                  ┆ raw SQL, guarded', '           ▶ [Services: the rules] ◀                    ┆', '                    ▼                                   ┆', '         [Repository → data/app.db] ◀┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘', '```', '', 'Same services, same rules: MCP replaces the controller, not the app. MCP messages are JSON-RPC; the transport is stdio here (Claude Desktop starts the server) or Streamable HTTP for a remote server.');
     if (s.type === 'blockstack') p.push(`## ${s.title}`, '', '```text', '               ┌──────── Module ────────┐', '[Middleware] ──▶ │   [Controller]         │', '               │        ▼               │', '               │    [Service]           │', '               │        ▼               │', '               │   [Repository] ────────┼──▶ [Database]', '               └────────────────────────┘', '```');
     if (s.type === 'rules') p.push(`## ${s.title}`, '', ...s.rows.map(([, h, b]) => `- **${h}**: ${b}`));
     if (s.type === 'agenda') p.push(`## ${s.title}`, '', ...table([[track.unit === 'MODULE' ? 'mod' : 'ch', track.unit.toLowerCase(), 'lab'], ...track.units.map((c) => [c.n, c.title, `${c.minutes}'`])]));

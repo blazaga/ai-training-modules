@@ -2,6 +2,19 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T13:42:54+08:00 - Deck: a REST-vs-MCP diagram opens module 2
+
+- **Request (operator):** a visual slide mapping how MCP relates to REST, MCP replacing the
+  controller while reusing the services, as the intro to module 2.
+- **What:** new slide type `restmcp` after the module 2 divider: browser → HTTP → controller
+  and Claude Desktop → JSON-RPC over stdio → MCP tools, both into the same services →
+  repository → `data/app.db`; a dashed path shows `query`/`execute` going straight to the
+  database. The Markdown companion carries an ASCII version.
+- **Corrected framing:** the request said MCP is built on HTTP. The server this course builds
+  speaks stdio; MCP is JSON-RPC over a transport (stdio, or Streamable HTTP for a remote
+  server). The slide and its notes say so.
+- Deck rebuilt: 22 slides, validator passed; rendered and checked.
+
 ## 2026-10-27T13:39:08+08:00 - Module times: 15 minutes each
 
 - **Request (operator):** Claude Code should take about 15 minutes to finish each module;

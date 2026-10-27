@@ -275,6 +275,28 @@ Covers chapters 03 + 04. Left out for time: the stdio framing lab (chapter 03): 
 
 ---
 
+## MCP next to REST: a second front door
+
+```text
+REST · module 1                     MCP · module 2
+[Browser · /playground]            [Claude Desktop]
+   │ HTTP: GET /api/v1/notes           │ JSON-RPC over stdio: tools/call
+   ▼                                  ▼
+[Controller (routes)]              [MCP server (tools)] ┄┄┐ query · execute:
+          ╲                          ╱                  ┆ raw SQL, guarded
+           ▶ [Services: the rules] ◀                    ┆
+                    ▼                                   ┆
+         [Repository → data/app.db] ◀┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘
+```
+
+Same services, same rules: MCP replaces the controller, not the app. MCP messages are JSON-RPC; the transport is stdio here (Claude Desktop starts the server) or Streamable HTTP for a remote server.
+
+<!--
+Module 1 built the REST front door: an HTTP request reaches a controller, the controller calls a service, the service holds the rules. Module 2 adds a second front door for an AI client. The MCP server takes the controller's place: each tool parses its input and calls the SAME UsersService and NotesService, so the rules exist once. Measured: removing the never-shared-with-the-owner rule from NotesService turns both the REST tests and the MCP checks red. Two tools are the exception: query and execute run SQL a model wrote, straight on the database, so the server guards them itself. On the wire, MCP is JSON-RPC messages, not REST routes. They travel over a transport: stdio when Claude Desktop starts the server on your machine (what we build), or Streamable HTTP for a server you reach over the network. So MCP can ride on HTTP, but it is not built on REST.
+-->
+
+---
+
 ## Instruction: an MCP server on your data
 
 > **Proctor:** The goal: your Claude Desktop app queries and changes this database. The model writes the SQL, so the server decides what may run.
