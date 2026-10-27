@@ -89,20 +89,23 @@ tool list and its annotations, a read, each write and its rule violations, a wri
 The goal of module 2: your **Claude Desktop** app talks to this server and answers questions
 about the data. Claude Desktop starts the server itself, from its own working folder and with a
 minimal `PATH`, so its config needs **absolute** paths: for `node`, for the built server, and
-for the database. The base prints that entry for your machine:
+for the database. The base writes that entry for your machine:
 
 ```powershell
 npm run build
-node scripts\claude-desktop-config.mjs      # prints the config file path and the entry to paste
+node scripts\claude-desktop-config.mjs --install   # adds "notes-db" to Claude Desktop's config
 ```
 
-1. Open the config file: Claude Desktop → Settings → Developer → Edit Config, or the path the
-   script names (Windows: `%APPDATA%\Claude\claude_desktop_config.json`; macOS:
-   `~/Library/Application Support/Claude/claude_desktop_config.json`). If it does not exist,
-   create it with exactly the printed JSON; otherwise add the `"notes-db"` entry inside its
-   `"mcpServers"` object.
-2. **Quit and reopen** Claude Desktop (on Windows, also quit it from the system tray). The
-   `notes-db` tools then appear in its tools menu.
+1. **Connect it with `--install`, never by hand-editing the file.** The script finds the config
+   file (Windows: `%APPDATA%\Claude\claude_desktop_config.json`; macOS:
+   `~/Library/Application Support/Claude/claude_desktop_config.json`), backs it up, adds or
+   replaces only the `"notes-db"` entry, and **keeps every other server** already in it. It
+   refuses, changing nothing, when the server is not built or the file is not valid JSON.
+   Without `--install` it only prints the entry, for anyone who prefers to paste it
+   (Claude Desktop → Settings → Developer → Edit Config).
+2. **Then the learner restarts Claude Desktop**: quit it completely (on Windows, also from
+   the system tray) and reopen it. The `notes-db` tools then appear in its tools menu. An agent
+   cannot do this step; say it clearly.
 3. Ask it about the data, then ask it to change some. For example: "Which open notes are
    shared with more than one person?", "Add a user Ada Lovelace, ada@example.com, and give
    her a note 'Write the first program' due next Friday", "Ada finished it: mark it done and
@@ -115,7 +118,9 @@ environment, answers `initialize` as `notes-db`, lists the three tables with the
 counts, runs a read-only query, creates a user and a note, shares the note, changes it through
 `execute` and a typed tool, and refuses `delete from notes` through both `query` and
 `execute`. The config format is Claude Desktop's documented
-`mcpServers` form.
+`mcpServers` form. `--install` was measured against test config files: a new file is created;
+an existing one is backed up byte for byte, its other servers and settings kept and a stale
+`notes-db` replaced; an invalid file and an unbuilt server are refused with nothing written.
 
 **Other clients:** the same command and `DATABASE_URL` work in the MCP Inspector
 (`npm run mcp:inspect:ui`, transport stdio) and in Claude Code

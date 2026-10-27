@@ -31,3 +31,17 @@ Every step stopped at its own scope and wrote its WORKLOG entry.
 - The agent's own observations, not acted on: `npm install` skips the install scripts of
   esbuild and `@scarf/scarf` (nothing needs them); `update-note` marked destructive because
   it overwrites data (the spec does not require it either way).
+
+## Step 04 again: connecting to Claude Desktop
+
+`steps/04-mcp-server.md` now also asks the agent to connect the server to Claude Desktop
+(keeping the learner's other servers) and to tell the learner to quit and reopen Claude
+Desktop. A fresh agent ran it from the "after step 03" state, with Claude Desktop's config
+simulated by a file that already held a `filesystem` server (`CLAUDE_DESKTOP_CONFIG`).
+
+- It built the server (lab 02 16/16; verify 46 unit / 69 e2e), then ran
+  `node scripts/claude-desktop-config.mjs --install`.
+- Checked afterwards: the config holds `filesystem` (unchanged) and `notes-db` (absolute paths);
+  the backup is identical to the original; labs 31/31; seed unchanged.
+- Its last message put the restart on the learner, in bold: quit Claude Desktop completely
+  (tray too) and reopen it; then a question and a change to try.

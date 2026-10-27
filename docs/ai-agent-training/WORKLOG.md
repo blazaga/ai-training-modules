@@ -2,6 +2,23 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T16:22:12+08:00 - Step 04 connects the server to Claude Desktop; the learner restarts it
+
+- **Request (operator):** the module 2 instruction should have Claude connect the new server
+  to Claude Desktop and ask the learner to restart Claude Desktop.
+- **What:** `steps/04-mcp-server.md` adds: connect it to my Claude Desktop (keep my other MCP
+  servers), tell me to quit and reopen Claude Desktop, then a question and a change. The
+  starter's `scripts/claude-desktop-config.mjs` gains `--install` (back up, add or replace only
+  `notes-db`, keep everything else, refuse an unparseable file or an unbuilt server;
+  `CLAUDE_DESKTOP_CONFIG` overrides the path). `specs/mcp.md`, chapter 04 and the module 2
+  slides say the agent connects it and the learner restarts; slide 19's checklist gains
+  "connects it to Claude Desktop, keeps your other servers".
+- **Measured:** `--install` on test files (new / existing with another server and a stale
+  entry / invalid JSON / unbuilt server), and the installed entry started from `/` answered.
+  A fresh agent on step 04 connected it with the other server kept and told the learner to
+  restart (dry-run record updated). Deck: 23 slides, validator passed; slides 19 and 20
+  checked.
+
 ## 2026-10-27T16:12:38+08:00 - Dry run: the whole guided course from the step files
 
 - **Request (operator):** run the dry run again with a fresh agent.

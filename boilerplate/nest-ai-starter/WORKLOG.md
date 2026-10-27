@@ -2,6 +2,15 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T16:22:12+08:00 - claude-desktop-config.mjs --install
+
+- **What:** `--install` writes the `notes-db` entry into Claude Desktop's config: backs the file
+  up, keeps every other server and setting, replaces only `notes-db`, and refuses (exit 1,
+  nothing written) an invalid file or an unbuilt server. `CLAUDE_DESKTOP_CONFIG` overrides the
+  path. Without it the script only prints, as before. Step 04 and `specs/mcp.md` use it.
+- **Measured:** four cases on test files as above; the installed entry, started from `/`,
+  answered `list-tables`. `npm run verify` unchanged and green.
+
 ## 2026-10-27T16:12:38+08:00 - specs/notes.md: dueAt needs an offset
 
 - **Why:** two dry-run agents stopped on "any offset accepted" to ask about a value with no

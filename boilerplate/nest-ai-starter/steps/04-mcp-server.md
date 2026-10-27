@@ -6,6 +6,7 @@
 ## Instruction
 
 I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when
-npm run lab 02 and npm run verify are green; then show me how to connect it to Claude
-Desktop, one question I could ask it and one change I could ask it to make. Then stop and
-wait for my next instruction.
+npm run lab 02 and npm run verify are green. Then connect it to my Claude Desktop (keep any
+MCP servers I already have there), tell me to quit and reopen Claude Desktop so it picks the
+server up, and give me one question I could ask it and one change I could ask it to make.
+Then stop and wait for my next instruction.

@@ -131,7 +131,7 @@ const MODULE2_EXPECT = [
   'reads the installed SDK, not its memory',
   'typed write tools call the module 1 services',
   'query and execute each guarded in layers',
-  'gives the Claude Desktop entry with absolute paths',
+  'connects it to Claude Desktop, keeps your other servers',
 ];
 const MODULE2_NOTES =
   'Measured: a fresh agent got labs 31/31 and verify 46 unit / 58 e2e. Five SQL guards, each removed once and caught by lab 02: query is one SELECT/WITH statement (libSQL silently drops a second) run under PRAGMA query_only (a WITH can hide a delete); execute is one statement, only INSERT/UPDATE/DELETE, and UPDATE/DELETE need a WHERE. Its own e2e test missed two of the five: the lab checks come from the spec, not the code. The typed write tools call UsersService and NotesService, so removing a rule there turns the MCP checks red too. execute keeps foreign keys on but does not apply the service rules; its description says so.';
@@ -325,16 +325,16 @@ const SLIDES = [
     code: [
       'npm run verify',
       'npm run lab 02       # the lab check: all green?',
-      'npm run build',
-      'node scripts\\claude-desktop-config.mjs',
-      '# paste the entry into the config file it names,',
-      '# quit and reopen Claude Desktop, then ask:',
-      '# "Which open notes are shared with more',
+      '# your agent connected it: claude-desktop-config.mjs',
+      '#   --install (your other servers are kept)',
+      '# YOU: quit Claude Desktop completely (tray too)',
+      '#   and reopen it: notes-db is in the tools menu',
+      '# then ask: "Which open notes are shared with more',
       '#   than one person?"',
       '# "Add a user Ada, ada@example.com, with',
       '#   a note due next Friday"',
     ],
-    notes: 'Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database: the script prints them. Quit Claude Desktop completely (not just the window) before reopening. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and npm run db:seed puts it back.',
+    notes: 'Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database. The agent connects it with node scripts/claude-desktop-config.mjs --install, which backs the config file up, keeps every other server in it and adds only notes-db; it refuses a file it cannot parse. The one step the agent cannot do is the restart: each learner quits Claude Desktop completely (not just the window; on Windows also from the tray) and reopens it. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and npm run db:seed puts it back.',
   },
   {
     type: 'checkpoint', ch: '2', title: 'Checkpoint: Claude Desktop, your data',

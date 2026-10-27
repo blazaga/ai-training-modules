@@ -95,14 +95,18 @@ Claude Desktop starts the server itself, **from its own working folder and with 
 `PATH`**. Two things then break for anyone new to Node: a bare `node` may not be found (nvm
 and similar installs are not on a desktop app's `PATH`), and a relative `dist/mcp-server.js`
 or `data/app.db` points nowhere. So the config entry uses absolute paths for all three, and
-the base prints it for your machine:
+the base writes it for your machine. **In the workshop your agent does this as the last part of
+step 04:**
 
 ```powershell
 npm run build
-node scripts\claude-desktop-config.mjs
+node scripts\claude-desktop-config.mjs --install
 ```
 
-It prints where the config file is and the entry to paste. On Windows it looks like this (the
+`--install` finds Claude Desktop's config file, backs it up, adds or replaces only the
+`notes-db` entry and **keeps every other MCP server already in it**. It changes nothing when
+the server is not built yet or the file is not valid JSON. Without `--install` the script only
+prints the entry, for anyone who prefers to paste it. On Windows the entry looks like this (the
 script fills in your own paths):
 
 ```json
@@ -121,21 +125,24 @@ Backslashes are doubled inside JSON strings; the database URL uses forward slash
 what libSQL expects (measured: its parser reads `file:C:/Users/…/app.db` as the path
 `C:/Users/…/app.db`, with no host).
 
-1. Open the config file: in Claude Desktop, **Settings → Developer → Edit Config** (Claude
-   Desktop's documentation), or the path the script prints, on Windows
+1. **Your agent connects it** (above), and tells you the config file it changed, on Windows
    `%APPDATA%\Claude\claude_desktop_config.json` (macOS:
-   `~/Library/Application Support/Claude/claude_desktop_config.json`). No file yet: create it with exactly the printed JSON. A file already there:
-   add the `"notes-db"` entry inside its `"mcpServers"` object.
-2. **Quit Claude Desktop completely and reopen it** (on Windows, also from the system tray:
-   closing the window leaves it running). The `notes-db` tools appear in the tools
-   menu of a new chat.
+   `~/Library/Application Support/Claude/claude_desktop_config.json`). To see it yourself:
+   Claude Desktop → **Settings → Developer → Edit Config** (Claude Desktop's documentation).
+2. **You restart Claude Desktop: quit it completely and reopen it** (on Windows, also from the
+   system tray: closing the window leaves it running). Claude Desktop reads the config only
+   when it starts, so this is the one step your agent cannot do for you. The `notes-db` tools
+   appear in the tools menu of a new chat.
 3. Ask it something: "Which open notes are shared with more than one person?"
 
 **What we measured,** on the module 2 build, on Linux, without Claude Desktop: the
 printed entry, started from another working folder with nothing but its own command, arguments
 and environment (as Claude Desktop does), answered `initialize` as `notes-db`, listed
 `users 25, notes 200, note_shares 120`, and ran a read-only query (`done 85, open 115`). Run
-on the base, before the server exists, the script warns and exits 1. The JSON is Claude
+on the base, before the server exists, the script warns and exits 1. `--install`, against
+test config files: a new file is created; an existing one is backed up byte for byte, with its
+other servers and settings kept and a stale `notes-db` replaced; an invalid file and an unbuilt
+server are refused with nothing written; the installed entry, started from `/`, answers. The JSON is Claude
 Desktop's documented `mcpServers` form.
 
 **Not connecting?** The server writes its reason to stderr, which Claude Desktop keeps in its
