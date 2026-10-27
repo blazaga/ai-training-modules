@@ -23,12 +23,11 @@ Copy-Item .env.example .env      # DATABASE_URL=file:./data/app.db, PORT=3000
   without `run`.
 - **One command per line.** Windows PowerShell 5.1 (the one most machines open) does not
   accept `&&` between commands; PowerShell 7 does. The course writes one per line.
-- **`curl` in PowerShell** is an alias for `Invoke-WebRequest` in Windows PowerShell 5.1; write
-  `curl.exe` for the real curl (it ships with Windows 10 and 11), or use the playground page
-  (below).
+- **No curl needed.** The app serves a playground page that sends every request from your
+  browser (below).
 
 **Port 3000 already taken?** Set another port in `.env` (`PORT=3100`) before starting, and
-use that port wherever the course writes 3000 (the playground URL, curl).
+use that port wherever the course writes 3000 (the playground URL).
 
 ## The data
 
@@ -49,23 +48,7 @@ The data was generated with faker by `scripts/seed.mjs`. **`npm run db:seed` reb
 from scratch** (migrations, then the same rows: two runs write byte-identical files,
 measured), so changing data while you experiment costs nothing.
 
-## Run the app
-
-```powershell
-npm run build                              # compile to dist/
-npm start                                  # http://localhost:3000, docs at /api/docs
-curl.exe localhost:3000/api/health      # in a second terminal: {"status":"ok"}
-```
-
-`npm run start:dev` does the same with a file watcher: it rebuilds and restarts when you save.
-On the base the app serves only health and the docs: the users and notes routes are what
-module 1 adds.
-
-The app never migrates a file database itself; `npm run db:migrate` does. The seeded file is
-already migrated: measured, `npm run db:migrate` on it prints `ledger rows: 1` and leaves the
-file byte-identical. You need it again only when a new migration is added.
-
-## The gate: `npm run verify`
+## First, the tests: `npm run verify`
 
 ```powershell
 npm run verify      # typecheck, lint, format, AI-FILL markers, migrations, unit, e2e
@@ -86,6 +69,24 @@ Why that matters: the e2e tests boot the whole app, and an app that read `.env` 
 the same file as your running app. We measured that state on an earlier build:
 `SQLITE_BUSY: database is locked`, rows the tests expected to create already there, and a
 failing run.
+
+## Then run the app
+
+```powershell
+npm run build                              # compile to dist/
+npm start                                  # http://localhost:3000, docs at /api/docs
+```
+
+Then open **http://localhost:3000/playground** in your browser and send **Health**: it answers
+`{"status":"ok"}` (the page is described below).
+
+`npm run start:dev` does the same with a file watcher: it rebuilds and restarts when you save.
+On the base the app serves only health and the docs: the users and notes routes are what
+module 1 adds.
+
+The app never migrates a file database itself; `npm run db:migrate` does. The seeded file is
+already migrated: measured, `npm run db:migrate` on it prints `ledger rows: 1` and leaves the
+file byte-identical. You need it again only when a new migration is added.
 
 ## Trying the API: the playground page
 

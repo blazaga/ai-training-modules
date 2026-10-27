@@ -71,7 +71,7 @@ A module groups one feature: its controller, its service and its repository. The
 - **The data is yours to break**: data/app.db ships seeded. Change it freely while you try things; `npm run db:seed` puts it back, byte for byte.
 
 <!--
-The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line; curl is curl.exe there (plain curl is Invoke-WebRequest). The base starts its tools with node and their JS entry, because the node_modules\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.
+The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line. Nobody needs curl: the playground page sends the requests. The base starts its tools with node and their JS entry, because the node_modules\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.
 -->
 
 ---
@@ -205,12 +205,14 @@ Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first 
 ## Check it: module 1
 
 ```bash
+# 1. the tests first
 npm run verify       # read both Tests lines
+npm run lab 01       # the lab check: all green?
+# 2. then the app on the seeded data
 npm run build
-npm run start
-# second terminal: the seeded rows
-curl.exe "localhost:3000/api/v1/notes?status=done"
-npm run lab 01   # the lab check: all green?
+npm start
+# 3. open localhost:3000/playground
+#    and click Run all in order
 ```
 
 **In the playground** (`localhost:3000/playground`)
@@ -223,7 +225,7 @@ npm run lab 01   # the lab check: all green?
 6. Share with a friend
 
 <!--
-The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then npm run db:seed puts the data back.
+Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then start the app and open the playground: it sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.
 -->
 
 ---
@@ -238,7 +240,7 @@ Tests  43 passed (43)
 Tests  49 passed (49)
 # npm run lab 01
 Tests  15 passed (15)
-# the app on the seeded file
+# /playground on the seeded file
 users total=25  notes total=200
 notes?status=done total=85
 ```
@@ -328,6 +330,7 @@ Measured: a fresh agent got labs 31/31 and verify 46 unit / 58 e2e. Five SQL gua
 
 ```bash
 npm run verify
+npm run lab 02       # the lab check: all green?
 npm run build
 node scripts\claude-desktop-config.mjs
 # paste the entry into the config file it names,
@@ -336,7 +339,6 @@ node scripts\claude-desktop-config.mjs
 #   than one person?"
 # "Add a user Ada, ada@example.com, with
 #   a note due next Friday"
-npm run lab 02   # the lab check: all green?
 ```
 
 <!--

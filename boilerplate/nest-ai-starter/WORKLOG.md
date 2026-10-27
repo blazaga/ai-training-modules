@@ -2,6 +2,12 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T13:59:22+08:00 - README quick start: tests first, playground instead of curl
+
+- **Request (operator):** no curl on Windows; tests before the playground.
+- **What:** the README's PowerShell block runs `npm run verify` and `npm run lab 01` first,
+  then builds, starts and opens `/playground`. No code changed.
+
 ## 2026-10-27T12:44:57+08:00 - The MCP server writes as well as reads: create-user, delete-note, execute
 
 - **Request (operator):** the SQL MCP needs read and write tools, so a learner can query and

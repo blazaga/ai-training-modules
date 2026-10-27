@@ -171,7 +171,7 @@ const SLIDES = [
       ['FiDatabase', 'The data is yours to break', 'data/app.db ships seeded. Change it freely while you try things; `npm run db:seed` puts it back, byte for byte.'],
     ],
     notes:
-      'The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line; curl is curl.exe there (plain curl is Invoke-WebRequest). The base starts its tools with node and their JS entry, because the node_modules\\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.',
+      'The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line. Nobody needs curl: the playground page sends the requests. The base starts its tools with node and their JS entry, because the node_modules\\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.',
   },
   {
     type: 'rules',
@@ -227,14 +227,17 @@ const SLIDES = [
   {
     type: 'run', ch: '1', title: 'Check it: module 1',
     code: [
+      '# 1. the tests first',
       'npm run verify       # read both Tests lines',
+      'npm run lab 01       # the lab check: all green?',
+      '# 2. then the app on the seeded data',
       'npm run build',
-      'npm run start',
-      '# second terminal: the seeded rows',
-      'curl.exe "localhost:3000/api/v1/notes?status=done"',
+      'npm start',
+      '# 3. open localhost:3000/playground',
+      '#    and click Run all in order',
     ],
     playground: playground('Health', 'List users (seeded)', 'Create user', 'Create note', 'Edit a done note → 422 (R2)', 'Share with a friend'),
-    notes: 'The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then npm run db:seed puts the data back.',
+    notes: 'Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then start the app and open the playground: it sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.',
   },
   {
     type: 'checkpoint', ch: '1', title: 'Checkpoint: two MVCs on real data',
@@ -245,7 +248,7 @@ const SLIDES = [
       'Tests  49 passed (49)',
       '# npm run lab 01',
       'Tests  15 passed (15)',
-      '# the app on the seeded file',
+      '# /playground on the seeded file',
       'users total=25  notes total=200',
       'notes?status=done total=85',
     ],
@@ -282,6 +285,7 @@ const SLIDES = [
     type: 'run', ch: '2', title: 'Check it: module 2',
     code: [
       'npm run verify',
+      'npm run lab 02       # the lab check: all green?',
       'npm run build',
       'node scripts\\claude-desktop-config.mjs',
       '# paste the entry into the config file it names,',

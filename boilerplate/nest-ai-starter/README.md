@@ -22,12 +22,12 @@ PowerShell on Windows (one command per line: Windows PowerShell 5.1 has no `&&`)
 ```powershell
 npm install
 Copy-Item .env.example .env                 # DATABASE_URL=file:./data/app.db
+npm run verify                              # the full gate: tests first
+npm run lab 01                              # a module's lab check (red until it is built)
 npm run build
 npm start                                   # app on :3000 (npm run start:dev to watch)
-curl.exe localhost:3000/api/health          # second terminal: {"status":"ok"}
+start http://localhost:3000/playground      # click a request, see the controller's answer
 start http://localhost:3000/api/docs        # OpenAPI, generated from the zod schemas
-npm run verify                              # the full gate
-npm run lab 01                              # a module's lab check (red until it is built)
 ```
 
 See the course's Chapter 00 for details.

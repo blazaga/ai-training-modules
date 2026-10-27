@@ -2,6 +2,17 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T13:59:22+08:00 - Tests first, then the playground; no curl
+
+- **Request (operator):** learners will not have curl on Windows: check through the playground
+  instead; and run the tests before opening the playground, not after.
+- **What:** module 1 "Check it" slide is now (1) `npm run verify`, `npm run lab 01`, (2)
+  `npm run build`, `npm start`, (3) open `/playground` and Run all in order; the curl call is
+  gone. Module 2's check slide runs `npm run lab 02` right after verify too. Chapter 00 puts
+  "First, the tests" before "Then run the app" and checks health in the playground; the
+  starter README's quick start does the same. The checkpoint label says `/playground`.
+- Deck rebuilt: 22 slides, validator passed; both check slides rendered and checked.
+
 ## 2026-10-27T13:42:54+08:00 - Deck: a REST-vs-MCP diagram opens module 2
 
 - **Request (operator):** a visual slide mapping how MCP relates to REST, MCP replacing the
