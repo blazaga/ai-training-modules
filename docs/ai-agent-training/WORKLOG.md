@@ -2,6 +2,19 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T10:30:38+08:00 - Branch `modules-done`: the six modules as an agent built them
+
+- **Request (operator):** keep a branch separate from `main` that already has the modules
+  done, via a dry run.
+- **How:** one project, six modules in order, a fresh agent per module given only the
+  proctor's instruction; after each, `pnpm verify` and every lab so far were re-run
+  independently before the module was committed. Final state: unit 73, e2e 116, labs 01–09
+  52/52. The branch is `main` plus one commit per module (and one doc commit saying which
+  of two measured stdio set-ups this build uses). The checkpoints stay the reference build.
+- **Found on the way, fixed on `main`:** the lab helper made labs 01 and 02 fail after auth
+  step 1 (see the starter WORKLOG); the MCP spec did not say what the stdio entrypoint boots
+  or that the transport settings must be passed explicitly.
+
 ## 2026-10-27T09:49:38+08:00 - Instructions, not recipes: the agent works out how
 
 - **Request (operator):** the AI agent should develop the strategy itself, as the learner

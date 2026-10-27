@@ -2,6 +2,21 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T10:30:38+08:00 - Lab helper works in auth step 1; MCP spec says what to pass
+
+- **Found by:** a chained dry run, one agent per module in one project, each building on the
+  last. After auth step 1 (Basic on every route) labs 01 and 02 went red although the agent
+  was right: `login()` returned no credentials until a login route existed (step 2).
+- **Changed:** `test/labs/lab-harness.ts`: `login()` returns Basic credentials when there
+  is no login route (ignored before auth, needed in step 1), and `hasAuth()` asks a
+  protected route instead of the login route. `specs/mcp.md`: the stdio entrypoint boots
+  only what the tools need (booting `AppModule` puts the global JWT guard on tool calls,
+  which refuses every one: measured), and all three transport settings are passed
+  explicitly (the library's defaults differ).
+- **Measured:** a step-1 state (Basic as the global guard, no login route), labs 01 + 02,
+  only the helper changed: old `2 failed` / 15 failed, 11 passed; new `2 passed` / 26 passed.
+  Every checkpoint re-proved after the change (same counts as before).
+
 ## 2026-10-27T09:49:38+08:00 - Fixes from a learner-agent dry run
 
 - **Why:** six fresh agents built the six modules from goal-level instructions only. All got

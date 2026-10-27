@@ -11,6 +11,7 @@ builds the next layer, and a lab check confirms it.
 | [`docs/ai-agent-training/`](docs/ai-agent-training/README.md) | the course: start at [`00-OUTLINE.md`](docs/ai-agent-training/00-OUTLINE.md) (the six modules), then the chapters they point to |
 | [`docs/ai-agent-training/slides/`](docs/ai-agent-training/slides/README.md) | the proctor deck with each module's instructions, `lab-companion.pptx` and `.md`, and its generator |
 | [`docs/ai-agent-training/checkpoints/`](docs/ai-agent-training/checkpoints/README.md) | one patch per module: catch up to the start of any module |
+| branch [`modules-done`](../../tree/modules-done) | the six modules as an AI agent built them from the instructions, one commit per module |
 | [`boilerplate/nest-ai-starter/`](boilerplate/nest-ai-starter/README.md) | the base your agent builds on: setup, `notes` and `users`, with its skills, specs, templates, lab checks (`pnpm lab NN`) and Postman collection |
 | `tools/scan-sensitive.sh` | the check every commit passes: no credentials, internal hosts or customer data |
 

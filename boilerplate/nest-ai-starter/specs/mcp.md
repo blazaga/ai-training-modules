@@ -23,7 +23,9 @@ body`), which the model can read. Any other error is a real failure and propagat
   same tools.
 - `src/mcp-stdio.ts`: a separate entrypoint (`pnpm mcp:stdio` = `node dist/mcp-stdio.js`).
   **Stdout belongs to the protocol**: Nest's logger is off, diagnostics go to stderr
-  (`mcp-stdio: ready`).
+  (`mcp-stdio: ready`). It boots only what the tools need (config, database,
+  `McpToolsModule`), not `AppModule`: the app's global JWT guard would also run on tool
+  calls and refuse every one (measured).
 - `test/mcp-stdio.e2e-spec.ts` spawns the built entrypoint and reads raw stdout: identity,
   the exact tool list, schemas generated from zod, a rule violation as a tool error, and no
   non-protocol line on stdout.
@@ -33,7 +35,9 @@ body`), which the model can read. Any other error is a real failure and propagat
 - `src/bootstrap/attach-mcp.ts` mounts the same tools at **`/mcp`**, outside the `/api`
   prefix, on the app's own HTTP server; `main.ts` calls it before `listen`.
 - Stateless (`statefulMode: false`), answers as Server-Sent Events (`enableJsonResponse:
-false`): one `event: message` with `data: <JSON-RPC>`.
+false`): one `event: message` with `data: <JSON-RPC>`. Pass all three transport settings
+  explicitly: the library's own defaults differ (a JSON response in stateless mode, and no
+  Host check at all when `allowedHosts` is left out).
 - DNS-rebinding protection: `allowedHosts` from `MCP_ALLOWED_HOSTS` (comma-separated,
   trimmed). Unset → the library's `'localhost'` shorthand, which allows `localhost`,
   `127.0.0.1` and `[::1]`: a literal `['localhost']` refuses the test client, which

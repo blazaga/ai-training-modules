@@ -15,6 +15,10 @@ somewhere you cannot recover from in the time, and the next module is starting.*
 | `stretch-expires-at.patch`       | stretch  | `expiresAt` on device secrets, migration `0003` (lab 12)                              |
 | `capstone-notes-ownership.patch` | homework | device-scoped notes through REST and MCP, `my-notes` (lab 10)                         |
 
+The branch `modules-done` of the course repository has a second complete build: the six
+modules as an AI agent built them from the proctor's instructions, one commit per module.
+Use it to compare approaches, not to catch up: its code differs from these patches.
+
 ## Catch up to module N
 
 Never patch on top of your own work: the patches expect the exact checkpoint before them. Take a

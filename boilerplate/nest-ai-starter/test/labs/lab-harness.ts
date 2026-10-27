@@ -98,22 +98,29 @@ export async function login(
     .rest()
     .post('/api/v1/auth/login')
     .set('Authorization', basic(email, password));
-  if (res.status === 404) return '';
+  // No login route yet: before auth the routes ignore this header, and in auth step 1
+  // (Basic on every route, specs/auth.md) it is exactly what they need.
+  if (res.status === 404) return basic(email, password);
   if (res.status !== 200) {
     throw new Error(`login of ${email} answered ${res.status}`);
   }
   return `Bearer ${res.body.accessToken}`;
 }
 
-/** True once the app has authentication (module 3 on): a login route exists. */
+/**
+ * True once the app has authentication (module 3 on). Asked of a protected route, not of
+ * the login route: in auth step 1 there is no login route yet, but every route already
+ * needs credentials.
+ */
 export async function hasAuth(lab: LabApp): Promise<boolean> {
-  const res = await lab.rest().post('/api/v1/auth/login');
-  return res.status !== 404;
+  const res = await lab.rest().get('/api/v1/notes');
+  return res.status === 401;
 }
 
 /**
  * Signs up a user (public route), logs in with Basic, and returns its id and the
- * Authorization header every later request sends: `Bearer <token>`.
+ * Authorization header every later request sends: `Bearer <token>` once a login route
+ * exists, Basic credentials before that.
  */
 export async function signUp(
   lab: LabApp,
