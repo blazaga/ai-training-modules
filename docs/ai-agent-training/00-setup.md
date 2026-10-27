@@ -24,10 +24,11 @@ Copy-Item .env.example .env      # DATABASE_URL=file:./data/app.db, PORT=3000
 - **One command per line.** Windows PowerShell 5.1 (the one most machines open) does not
   accept `&&` between commands; PowerShell 7 does. The course writes one per line.
 - **`curl` in PowerShell** is an alias for `Invoke-WebRequest` in Windows PowerShell 5.1; write
-  `curl.exe` for the real curl (it ships with Windows 10 and 11), or use Postman.
+  `curl.exe` for the real curl (it ships with Windows 10 and 11), or use the playground page
+  (below).
 
 **Port 3000 already taken?** Set another port in `.env` (`PORT=3100`) before starting, and
-use that port wherever the course writes 3000 (the Postman `baseUrl`, curl).
+use that port wherever the course writes 3000 (the playground URL, curl).
 
 ## The data
 
@@ -76,7 +77,7 @@ JavaScript entry, because the `node_modules\.bin` shims are `.cmd` files on Wind
 program cannot start them directly; and the starter's `.gitattributes` keeps every text file
 LF on checkout, so the formatting check does not fail on Git for Windows' CRLF conversion.
 
-Measured on the base: exit 0, unit `Tests 20 passed`, e2e `Tests 2 passed`. **No test
+Measured on the base: exit 0, unit `Tests 20 passed`, e2e `Tests 5 passed`. **No test
 touches `data/app.db`:** under test the app ignores `.env` (the vitest configs set
 `NODE_ENV=test`), so the tests use an empty in-memory SQLite database, migrated from the same
 committed SQL. You can run `pnpm verify` while the app is running.
@@ -86,13 +87,24 @@ the same file as your running app. We measured that state on an earlier build:
 `SQLITE_BUSY: database is locked`, rows the tests expected to create already there, and a
 failing run.
 
-## Calling the API with Postman
+## Trying the API: the playground page
 
-The REST calls of module 1 are in a Postman collection:
-`boilerplate/nest-ai-starter/postman/nest-ai-starter.postman_collection.json`. Import it,
-keep `baseUrl` at `http://localhost:3000`, and run the folders in order (01 stores the ids
-02 uses). Each request has tests: read the Test Results tab, not only the status code. They
-write to your `data/app.db`; `pnpm db:seed` puts it back.
+With the app running, open **http://localhost:3000/playground**. The app serves a page that
+lists every request of module 1 (health, users, notes and sharing). Each **Send** button calls
+the real controller from your browser and shows the status, with a ✓ when it is the one the
+specs expect, the time and the response body. **Run all in order** sends them top to bottom
+and carries the ids along (the new user, the new note, a seeded friend); the variables are
+editable at the top.
+
+On the base only health is green: the users and notes routes answer 404, and the requests that
+need an id wait for it. Once module 1 is built, every row turns ✓. Measured in a headless
+Chromium against the module 1 + 2 build: 19 of 19 ✓, all four ids carried along, no script
+errors; against the base: health ✓, 4 × 404, 14 waiting for an id. The requests write to your
+`data/app.db`; `pnpm db:seed` puts it back.
+
+The page is served with the API docs (`SWAGGER_ENABLED`, on unless `NODE_ENV=production`). A
+Postman collection with the same requests also lives in the starter (`postman/`), for anyone
+who prefers Postman; the labs do not use it.
 
 ## Credentials
 

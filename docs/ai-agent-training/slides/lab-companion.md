@@ -76,14 +76,14 @@ The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does)
 
 ---
 
-## Calling the API with Postman
+## Try it in the browser: /playground
 
-- **Import one file**: In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000. Run the folders in order: 01 stores the ids 02 uses.
-- **Folders follow module 1**: Users, then notes and sharing. Every request has tests: read the Test Results tab, not just the status.
+- **One page, every request**: With the app running, open http://localhost:3000/playground. It lists every module 1 request: health, users, notes and sharing.
+- **Click to send**: Each Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.
 - **It writes to your data**: Requests create, change and delete rows in data/app.db. `pnpm db:seed` restores the seeded data.
 
 <!--
-Module 2 has no Postman folder: its client is Claude Desktop (or the MCP Inspector), over stdio.
+Before module 1 is built, health is the only green row: the rest answer 404 or wait for an id. Module 2 has no playground: its client is Claude Desktop, over stdio. The Postman collection stays in the starter (postman/) for anyone who prefers it; the labs do not use it.
 -->
 
 ---
@@ -144,12 +144,12 @@ database.
 **Watch its approach**
 
 - reads CLAUDE.md before running anything
-- counts: 20 unit, 2 e2e, a red lab 01
+- counts: 20 unit, 5 e2e, a red lab 01
 - data: 25 users, 200 notes, 120 shares
 - switches to corepack pnpm if pnpm is missing
 
 <!--
-Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e, lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).
+Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground's test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).
 -->
 
 ---
@@ -213,10 +213,14 @@ curl.exe "localhost:3000/api/v1/notes?status=done"
 pnpm lab 01   # the lab check: all green?
 ```
 
-**In Postman**
+**In the playground** (`localhost:3000/playground`)
 
-- **01 · Users (module 1)**: List users (seeded) · Create user
-- **02 · Notes and sharing (module 1)**: Create note · Edit a done note → 422 (R2) · Share with a friend
+1. Health
+2. List users (seeded)
+3. Create user
+4. Create note
+5. Edit a done note → 422 (R2)
+6. Share with a friend
 
 <!--
 The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then pnpm db:seed puts the data back.
@@ -229,9 +233,9 @@ The labs run on an empty in-memory database; this step proves the resources also
 _Output: captured_
 
 ```bash
-# pnpm verify (base: 20 unit, 2 e2e)
+# pnpm verify (base: 20 unit, 5 e2e)
 Tests  43 passed (43)
-Tests  46 passed (46)
+Tests  49 passed (49)
 # pnpm lab 01
 Tests  15 passed (15)
 # the app on the seeded file
@@ -322,7 +326,7 @@ _Output: captured_
 
 ```bash
 # pnpm verify; pnpm lab 01 02
-Tests  60 passed (60) · 55 passed (55)
+Tests  60 passed (60) · 58 passed (58)
 Tests  25 passed (25)
 # started as Claude Desktop does it
 server: notes-db

@@ -7,8 +7,8 @@
 // Rebuild (any machine with Node; see README.md in this folder):
 //   node build-lab-deck.mjs [outDir]
 // Requires the npm packages pptxgenjs, react, react-dom, react-icons and sharp.
-// Reads the Postman collection (POSTMAN_COLLECTION, default: the starter's postman/ folder)
-// and fails if a slide names a folder or request the collection does not have.
+// Reads the starter's playground request list (src/playground/requests.ts) and fails if a
+// slide names a request the playground does not have.
 // MD_ONLY=1 writes only the Markdown file.
 // Optional: APPLY_THEME_JS=/path/to/apply_theme.js also writes the colours into the
 // .pptx theme, so PowerPoint's theme picker shows them.
@@ -27,22 +27,17 @@ const Fi = require('react-icons/fi');
 
 const OUT = process.argv[2] ?? '.';
 
-// The Postman collection the labs use for every API call. Slides name its folders and
-// requests; every name is checked against the file below, so a renamed request fails
+// The playground page (GET /playground in the starter) lists the module 1 requests. Slides name
+// them; every name is checked against src/playground/requests.ts, so a renamed request fails
 // the build instead of leaving a slide that points at nothing.
-const COLLECTION =
-  process.env.POSTMAN_COLLECTION ??
-  join(dirname(fileURLToPath(import.meta.url)), '../../../boilerplate/nest-ai-starter/postman/nest-ai-starter.postman_collection.json');
-const PM = JSON.parse(readFileSync(COLLECTION, 'utf8'));
-// [folderPrefix, [requestName, ...]] -> [{ folder, requests }], verified against the collection.
-const postman = (...groups) =>
-  groups.map(([prefix, names]) => {
-    const f = PM.item.find((x) => x.name.startsWith(`${prefix} ·`));
-    if (!f) throw new Error(`Postman folder "${prefix} ·" is not in ${COLLECTION}`);
-    for (const n of names)
-      if (!f.item.some((x) => x.name === n)) throw new Error(`Postman request "${n}" is not in folder "${f.name}"`);
-    return { folder: f.name, requests: names };
-  });
+const PLAYGROUND_SRC =
+  process.env.PLAYGROUND_REQUESTS ??
+  join(dirname(fileURLToPath(import.meta.url)), '../../../boilerplate/nest-ai-starter/src/playground/requests.ts');
+const PLAYGROUND_NAMES = new Set([...readFileSync(PLAYGROUND_SRC, 'utf8').matchAll(/name:\s*'([^']+)'/g)].map((m) => m[1]));
+const playground = (...names) => {
+  for (const n of names) if (!PLAYGROUND_NAMES.has(n)) throw new Error(`Playground request "${n}" is not in ${PLAYGROUND_SRC}`);
+  return names;
+};
 const FOOTER = 'Lab companion · Building apps with AI agents · NestJS + MCP';
 
 // ---- palette (charcoal "terminal" + mint for checkpoints + amber for snags) ----
@@ -71,7 +66,7 @@ const THEME = {
   },
 };
 const CODE_FONT = 'Courier New';
-const POSTMAN = 'EF5B25'; // Postman orange, used only on the Postman panel
+const PLAYGROUND = '0E7490'; // the playground panel
 const INSPECTOR = '6D4AE8'; // the Inspector UI panel
 
 // ---- the content ----------------------------------------------------------------
@@ -112,7 +107,7 @@ const MODULE2_NOTES =
   'Measured: a fresh agent got lab 02 10/10 (lab 01 still 15/15) and verify 60 unit / 55 e2e. Its query guard has two layers, each proven by removing it: one SELECT/WITH statement (libSQL silently runs only the first of two), and a query_only connection (a delete hidden in a WITH emptied the copy without it). It also found that the default database path is relative to the working directory.';
 const MODULE2_OUTPUT = [
   '# pnpm verify; pnpm lab 01 02',
-  'Tests  60 passed (60) · 55 passed (55)',
+  'Tests  60 passed (60) · 58 passed (58)',
   'Tests  25 passed (25)',
   '# started as Claude Desktop does it',
   'server: notes-db',
@@ -180,14 +175,14 @@ const SLIDES = [
   },
   {
     type: 'rules',
-    title: 'Calling the API with Postman',
+    title: 'Try it in the browser: /playground',
     rows: [
-      ['FiDownload', 'Import one file', 'In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000. Run the folders in order: 01 stores the ids 02 uses.'],
-      ['FiPlay', 'Folders follow module 1', 'Users, then notes and sharing. Every request has tests: read the Test Results tab, not just the status.'],
+      ['FiGlobe', 'One page, every request', 'With the app running, open http://localhost:3000/playground. It lists every module 1 request: health, users, notes and sharing.'],
+      ['FiPlay', 'Click to send', 'Each Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.'],
       ['FiRefreshCw', 'It writes to your data', 'Requests create, change and delete rows in data/app.db. `pnpm db:seed` restores the seeded data.'],
     ],
     notes:
-      'Module 2 has no Postman folder: its client is Claude Desktop (or the MCP Inspector), over stdio.',
+      'Before module 1 is built, health is the only green row: the rest answer 404 or wait for an id. Module 2 has no playground: its client is Claude Desktop, over stdio. The Postman collection stays in the starter (postman/) for anyone who prefers it; the labs do not use it.',
   },  {
     type: 'rules',
     title: 'Lab checks: is my lab done?',
@@ -212,8 +207,8 @@ const SLIDES = [
     type: 'prompt', ch: '1', title: 'Instruction 1/3: set the project up',
     proctor: 'The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.',
     prompt: WRAP('Set this project up on this machine and prove it works: counts, not "it works". Then show me what is in the database.'),
-    expect: ['reads CLAUDE.md before running anything', 'counts: 20 unit, 2 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares', 'switches to corepack pnpm if pnpm is missing'],
-    notes: 'Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e, lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).',
+    expect: ['reads CLAUDE.md before running anything', 'counts: 20 unit, 5 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares', 'switches to corepack pnpm if pnpm is missing'],
+    notes: 'Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground\'s test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).',
   },
   {
     type: 'prompt', ch: '1', title: 'Instruction 2/3: the users resource',
@@ -238,16 +233,16 @@ const SLIDES = [
       '# second terminal: the seeded rows',
       'curl.exe "localhost:3000/api/v1/notes?status=done"',
     ],
-    postman: postman(['01', ['List users (seeded)', 'Create user']], ['02', ['Create note', 'Edit a done note → 422 (R2)', 'Share with a friend']]),
+    playground: playground('Health', 'List users (seeded)', 'Create user', 'Create note', 'Edit a done note → 422 (R2)', 'Share with a friend'),
     notes: 'The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then pnpm db:seed puts the data back.',
   },
   {
     type: 'checkpoint', ch: '1', title: 'Checkpoint: two MVCs on real data',
     outputSource: 'captured',
     output: [
-      '# pnpm verify (base: 20 unit, 2 e2e)',
+      '# pnpm verify (base: 20 unit, 5 e2e)',
       'Tests  43 passed (43)',
-      'Tests  46 passed (46)',
+      'Tests  49 passed (49)',
       '# pnpm lab 01',
       'Tests  15 passed (15)',
       '# the app on the seeded file',
@@ -396,6 +391,7 @@ async function buildPptx(file, track) {
     FiTool: await icon('FiTool'),
     FiShield: await icon('FiShield'),
     FiPlay: await icon('FiPlay'),
+    FiGlobe: await icon('FiGlobe'),
     FiDatabase: await icon('FiDatabase'),
     FiRefreshCw: await icon('FiRefreshCw'),
     pm: await icon('FiSend', COL.paper),
@@ -427,13 +423,13 @@ async function buildPptx(file, track) {
     if (!size) throw new Error(`code block does not fit ${w}" x ${h}" even at 10pt: ${lines.length} lines, longest ${long} chars (max ${Math.floor((w * 72) / 6)}): "${lines.find((l) => l.length === long)}"`);
     return size;
   }
-  // The Postman panel: which folder, which requests, in order.
-  function postmanCard(slide, x, y, w, h, groups, opts = {}) {
-    const color = opts.color ?? POSTMAN;
-    const title = opts.title ?? 'In Postman';
+  // A side panel listing steps: the playground's requests, or the Inspector UI's steps.
+  function panelCard(slide, x, y, w, h, groups, opts = {}) {
+    const color = opts.color ?? PLAYGROUND;
+    const title = opts.title ?? 'In the playground';
     const img = opts.icon ?? icons.pm;
     const wide = w > 5;
-    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color }, line: { color }, objectName: opts.title ? 'inspector-ui' : 'postman' });
+    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color }, line: { color }, objectName: opts.title ? 'inspector-ui' : 'playground' });
     slide.addImage({ data: img, x: x + 0.2, y: y + 0.17, w: 0.26, h: 0.26 });
     slide.addText(title, { x: x + 0.55, y: y + 0.12, w: w - 0.75, h: 0.36, fontSize: wide ? 18 : 16, bold: true, color: COL.paper, margin: 0, isTextBox: true });
     const fs = wide ? 16 : 13;
@@ -444,7 +440,7 @@ async function buildPptx(file, track) {
         runs.push({ text: `${ri + 1}. ${r}`, options: { fontSize: fs, color: COL.paper, breakLine: !(gi === groups.length - 1 && ri === g.requests.length - 1) } }),
       );
     });
-    slide.addText(runs, { x: x + 0.2, y: y + 0.6, w: w - 0.4, h: h - 0.75, valign: 'top', margin: 0, isTextBox: true, objectName: 'postman-requests' });
+    slide.addText(runs, { x: x + 0.2, y: y + 0.6, w: w - 0.4, h: h - 0.75, valign: 'top', margin: 0, isTextBox: true, objectName: 'panel-steps' });
   }
   function badge(slide, x, y, d, color, img) {
     slide.addShape(pres.shapes.OVAL, { x, y, w: d, h: d, fill: { color }, line: { color } });
@@ -475,14 +471,14 @@ async function buildPptx(file, track) {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
       const lines = s.code.flatMap((l) => l.split('\n'));
-      const panel = s.postman ?? (s.ui ? [{ folder: '', requests: s.ui.steps }] : undefined);
+      const panel = s.playground ? [{ folder: 'localhost:3000/playground', requests: s.playground }] : s.ui ? [{ folder: '', requests: s.ui.steps }] : undefined;
       const pmW = panel ? (lines.length ? 3.1 : 9.0) : 0;
       if (lines.length) {
         const termW = panel ? 9.0 - pmW - 0.2 : 9.0;
         terminal(slide, 0.5, 1.2, termW, 3.85, lines, { fontSize: fitCode(lines, termW - 0.65, 3.3), label: `${track.unit.toLowerCase()} ${s.ch} · run this` });
       }
-      if (s.postman) postmanCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, s.postman);
-      else if (s.ui) postmanCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, panel, { title: s.ui.title, color: INSPECTOR, icon: icons.ui });
+      if (s.playground) panelCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, panel);
+      else if (s.ui) panelCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, panel, { title: s.ui.title, color: INSPECTOR, icon: icons.ui });
     } else if (s.type === 'prompt') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
@@ -647,7 +643,7 @@ function buildMarkdown(track) {
     if (s.type === 'run') {
       p.push(`## ${s.title}`);
       if (s.code.length) p.push('', ...fence(s.code));
-      if (s.postman) p.push('', '**In Postman**', '', ...s.postman.map((g) => `- **${g.folder}**: ${g.requests.join(' · ')}`));
+      if (s.playground) p.push('', '**In the playground** (`localhost:3000/playground`)', '', ...s.playground.map((r, i) => `${i + 1}. ${r}`));
       if (s.ui) p.push('', `**${s.ui.title}**`, '', ...s.ui.steps.map((step, i) => `${i + 1}. ${step}`));
     }
     if (s.type === 'prompt') {

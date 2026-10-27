@@ -32,6 +32,6 @@ corepack enable            # refused? write `corepack pnpm` wherever the course 
 pnpm install
 cp .env.example .env       # port 3000 busy? set PORT= here
 pnpm build && pnpm start   # http://localhost:3000
-pnpm verify                # in a second terminal: 20 unit + 2 e2e tests on the base
+pnpm verify                # in a second terminal: 20 unit + 5 e2e tests on the base
 pnpm db:seed               # any time: rebuild data/app.db with the original data
 ```

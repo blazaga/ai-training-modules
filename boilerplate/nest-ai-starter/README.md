@@ -54,11 +54,15 @@ node scripts\claude-desktop-config.mjs   # prints the entry, with absolute paths
 Paste the entry into Claude Desktop's config file (the script prints its path), quit and reopen
 Claude Desktop, and ask it about the notes. Details: `specs/mcp.md`.
 
-## Call it from Postman
+## Try it in the browser
 
-`postman/nest-ai-starter.postman_collection.json` holds the REST calls of module 1. Import
-it; `baseUrl` is `http://localhost:3000`. Every request carries tests (the Test Results tab),
-and a folder works once your agent has built that resource.
+With the app running, open `http://localhost:3000/playground`: a page listing every module 1
+request (`src/playground/requests.ts`). Each **Send** calls the real controller and shows the
+status (✓ when it is the expected one) and the body; **Run all in order** carries the new ids
+along. It is served with the API docs (`SWAGGER_ENABLED`).
+
+`postman/nest-ai-starter.postman_collection.json` has the same requests for Postman users; the
+labs do not use it.
 
 ## Add a resource
 

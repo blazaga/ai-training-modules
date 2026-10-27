@@ -35,7 +35,8 @@ pnpm verify                                 # read the counts against the table 
 pnpm lab 01                                 # and `pnpm lab 02` after module 2
 ```
 
-The recipe was proven on Linux, where its bash form gives a copy byte-identical to checkpoint 2.
+The recipe was proven on Linux: both patches apply to a fresh copy of the base, and every
+checkpoint passes `pnpm verify` and its labs (table below).
 
 ⚠️ Inside this course repository, `git apply` resolves paths from the repository root, so run in
 the starter folder it prints `Skipped patch …` for every file and **still exits 0**: nothing
@@ -46,14 +47,15 @@ really changed.
 ## What each checkpoint was checked against
 
 Every checkpoint was exported clean and run through `pnpm verify` and both lab checks. A copy
-of the base with both patches applied is byte-identical to checkpoint 2, and no checkpoint
-changes `data/app.db`.
+of the base with both patches applied is identical to the `modules-done` branch apart from
+`WORKLOG.md`: the patches leave it out, so they keep applying as the base's log grows. No
+checkpoint changes `data/app.db`.
 
 | checkpoint | `verify`: unit | `verify`: e2e | lab checks green | lint warnings |
 | ---------- | -------------- | ------------- | ---------------- | ------------- |
-| base       | 20             | 2             | none             | 0             |
-| module 1   | 43             | 46            | 01               | 4             |
-| module 2   | 60             | 55            | 01, 02           | 4             |
+| base       | 20             | 5             | none             | 0             |
+| module 1   | 43             | 49            | 01               | 4             |
+| module 2   | 60             | 58            | 01, 02           | 4             |
 
 The four lint warnings (`no-misused-spread` in `src/notes/notes.service.spec.ts`) are in the
 agent's module 1 tests; `verify` does not fail on warnings. Fixing them is a good first

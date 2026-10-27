@@ -2,6 +2,31 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T12:06:35+08:00 - The playground page replaces Postman; the catch-up patches apply again
+
+- **Request (operator):** remove Postman from the labs; serve a page in the Nest app that lists
+  the requests, so a learner clicks one and sees the controller's answer. Keep the Postman
+  collection in the repo only.
+- **What:** `GET /playground` (mounted in `configure-app.ts` with the API docs, so it needs no
+  change to `AppModule` and every checkpoint has it), built from `src/playground/requests.ts`:
+  the 19 module 1 requests, each with Send, the status with a ✓ when it is the expected one,
+  the time and the body; **Run all in order** carries the new ids along; variables editable.
+  One self-contained page, no new dependency. `test/playground.e2e-spec.ts` (3 tests).
+- **Measured in a real browser** (Playwright Chromium in a sibling container on this
+  container's network): on the module 1 + 2 build, Run all → 19 of 19 ✓, all four ids set, 0
+  page errors; on the base → health ✓, 4 × 404, 14 waiting for an id, 0 page errors. The first
+  run found a gap (a request skipped for a missing id never got a state); fixed before commit.
+- **Docs and deck:** chapter 00 "Trying the API: the playground page"; chapters 02 and 04 labs,
+  READMEs, the labs README and the slides README point at `/playground`. The deck's check slide
+  has an "In the playground" panel, validated against `requests.ts` (the build fails on a name
+  the page does not have); the Postman rules slide is now "Try it in the browser". The
+  collection stays in `postman/`, named once as optional.
+- **A break found while re-measuring, already pushed:** both checkpoint patches carried the
+  agents' WORKLOG entries, so they stopped applying when the base's WORKLOG grew (the Claude
+  Desktop and Windows entries): `patch failed: WORKLOG.md:2`. The recipe in `main` 82f4eaa was
+  broken. The patches now leave `WORKLOG.md` out. Re-measured from a fresh base copy: base
+  20 / 5, module 1 43 / 49 (lab 01 15/15), module 2 60 / 58 (labs 25/25), seeded database intact.
+
 ## 2026-10-27T11:54:21+08:00 - The audience is on Windows
 
 - **Request (operator):** expect the audience on Windows.

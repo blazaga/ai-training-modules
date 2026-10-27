@@ -27,10 +27,10 @@ Each module has the same slides:
 5. **When the agent goes wrong:** what agents actually did wrong while we built the course,
    and what to tell yours.
 
-Where a lab calls the API, the _Run this_ slide has an orange **In Postman** panel: the
-folder and the requests to send, in order. The script reads the starter's Postman collection and **fails
-the build** if a slide names a folder or request that the collection does not have, so the
-deck cannot point at a request that was renamed.
+Where a lab calls the API, the _Check it_ slide has an **In the playground** panel: the
+requests to click on the app's `/playground` page. The script reads the starter's
+`src/playground/requests.ts` and **fails the build** if a slide names a request the playground
+does not have, so the deck cannot point at a request that was renamed.
 
 The commands run in `boilerplate/nest-ai-starter` with Node 24 and pnpm (slide 3), on the
 seeded `data/app.db`; `pnpm db:seed` restores it.

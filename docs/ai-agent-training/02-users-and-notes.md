@@ -52,7 +52,8 @@ A fresh agent built this module from the three proctor instructions alone (the
 - It found the procedure itself: `CLAUDE.md` → the `resource-spec` and
   `nest-resource-scaffold` skills → generate, template, fill. Users: 14 markers.
 - After users: `pnpm verify` unit 29, e2e 18; lab 01 still 12 of 15 red (the rest needs
-  notes). After notes: unit 43, e2e 46, **lab 01 15/15**.
+  notes). After notes: unit 43, e2e 46, **lab 01 15/15** (e2e 49 at the checkpoint, which
+  adds the playground's own test).
 - **Every rule was broken once on purpose and turned something red.** Deleting R3 (the
   `dueAt` transform) turned e2e and the lab red but no unit test: unit tests receive input
   that was already parsed, so a schema rule is invisible to them.
@@ -78,8 +79,8 @@ with sharing), checked with `pnpm lab 01`.
 2. **Break a rule yourself.** Delete the "done note can only be reopened" check, run
    `pnpm lab 01` and `pnpm verify`, put it back. Which layer's tests went red? Then delete the
    `dueAt` transform: why does no unit test notice?
-3. **Play with the data.** Start the app (`pnpm build && pnpm start`) and use the Postman
-   folders or `curl.exe` on the seeded rows: `GET /api/v1/notes?sharedWith=<a user id>`. Then
-   `pnpm db:seed` to put the data back.
+3. **Play with the data.** Start the app (`pnpm build`, then `pnpm start`), open
+   `http://localhost:3000/playground` and click **Run all in order**: every row should turn ✓.
+   Then break a rule again and watch which row turns ✗. `pnpm db:seed` puts the data back.
 
 Principles behind this chapter: P1 (orientation), P5 (verification).

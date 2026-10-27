@@ -46,7 +46,8 @@ Bad input needs no code: with a zod `inputSchema`, the SDK itself answers a tool
 
 ## What we measured building it
 
-- **Module 2 checks:** `pnpm verify` unit 60, e2e 55; `pnpm lab 01` and `pnpm lab 02` together
+- **Module 2 checks:** `pnpm verify` unit 60, e2e 55 in the agent's run (58 at the checkpoint,
+  with the playground's test); `pnpm lab 01` and `pnpm lab 02` together
   25/25; `data/app.db` byte-identical afterwards (every test works on a copy).
 - **A trap it found: the working directory.** The default `file:./data/app.db` is relative to
   where the process starts, and your client starts it from its own folder. The shared connect
@@ -131,7 +132,8 @@ Module 2, built by your agent from the proctor's instruction, checked with `pnpm
    `query`.
 2. **Try to break `query`.** Ask Claude Desktop to delete a note through `query`, then to do it
    with a `WITH` clause. Both must answer `READ_ONLY`, and the row count must not move.
-3. **Change data through the tools, then check over REST.** Share a note from Claude Desktop, then
-   `GET /api/v1/notes/:id/shares` (module 1's app). Same database, two front doors.
+3. **Change data through the tools, then check over REST.** Share a note from Claude Desktop,
+   then look it up in the playground (`/playground`, **Who it is shared with**, with that note's
+   id as `noteId`). Same database, two front doors.
 
 Principles behind this chapter: P5 (verification), P8 (shipping safely).

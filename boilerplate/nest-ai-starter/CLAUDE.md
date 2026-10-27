@@ -61,6 +61,7 @@ src/
 │   ├── zod/                        createZodDto + ZodValidationPipe (+ OpenAPI from the schema)
 │   └── schemas/                    PageQuery (?limit&offset), patchSchema (PATCH without defaults)
 ├── health/                     GET /api/health (unversioned)
+├── playground/                 GET /playground: a page that sends every module 1 request with one click
 └── <resource>/                 one folder per resource, generated - see below
 templates/resource/             the house templates (step 2)
 scripts/                        apply-resource-template.mjs, check-ai-fill.mjs, seed.mjs (rebuilds data/app.db),
