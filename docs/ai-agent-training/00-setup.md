@@ -17,6 +17,10 @@ npm install                      # installs what package-lock.json lists
 Copy-Item .env.example .env      # DATABASE_URL=file:./data/app.db, PORT=3000
 ```
 
+- **Copy `.env.example` to `.env` before you start Claude Code.** `.env` holds your local
+  settings (`PORT`, `DATABASE_URL`); git ignores it, so it never leaves your machine. The app,
+  `npm run db:migrate` and the module 2 server read it, so you and your agent run them with
+  the same settings. The tests never read it: they use an empty in-memory database.
 - **Scripts run as `npm run <name>`** (`npm run verify`, `npm run lab 01`). A flag meant for
   the script goes after `--`, or npm keeps it for itself:
   `npm run resource:template -- --name note --plural notes`. `npm start` and `npm test` work
@@ -60,7 +64,7 @@ JavaScript entry, because the `node_modules\.bin` shims are `.cmd` files on Wind
 program cannot start them directly; and the starter's `.gitattributes` keeps every text file
 LF on checkout, so the formatting check does not fail on Git for Windows' CRLF conversion.
 
-Measured on the base: exit 0, unit `Tests 20 passed`, e2e `Tests 5 passed`. **No test
+Measured on the base: exit 0, unit `Tests 21 passed`, e2e `Tests 5 passed`. **No test
 touches `data/app.db`:** under test the app ignores `.env` (the vitest configs set
 `NODE_ENV=test`), so the tests use an empty in-memory SQLite database, migrated from the same
 committed SQL. You can run `npm run verify` while the app is running.

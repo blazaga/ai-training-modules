@@ -33,6 +33,6 @@ npm install
 Copy-Item .env.example .env    # port 3000 busy? set PORT= here
 npm run build
 npm start                      # http://localhost:3000, try http://localhost:3000/playground
-npm run verify                 # in a second terminal: 20 unit + 5 e2e tests on the base
+npm run verify                 # in a second terminal: 21 unit + 5 e2e tests on the base
 npm run db:seed                # any time: rebuild data/app.db with the original data
 ```

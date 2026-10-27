@@ -67,7 +67,7 @@ Bad input needs no code: with a zod `inputSchema`, the SDK itself answers a tool
 
 ## What we measured building it
 
-- **Module 2 checks:** `npm run verify` unit 46, e2e 58; `npm run lab` (labs 01 and 02)
+- **Module 2 checks:** `npm run verify` unit 47, e2e 58 at the checkpoint (46 in the agent's run, before the base gained one test); `npm run lab` (labs 01 and 02)
   31/31; `data/app.db` byte-identical afterwards (every test works on a copy).
 - **Two driver facts it measured** (`@libsql/client` 0.18): a read-only _transaction_ did not
   stop a `delete`, which is why `query` sets `PRAGMA query_only` instead; and an `UPDATE …

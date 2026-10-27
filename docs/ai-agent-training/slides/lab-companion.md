@@ -129,6 +129,25 @@ Covers chapters 00 + 01 + 02. Left out for time: nothing: the two stretch exerci
 
 ---
 
+## Before you start: your local .env
+
+```bash
+# in boilerplate\nest-ai-starter, BEFORE you start Claude Code
+Copy-Item .env.example .env
+
+# .env = your local settings: PORT, DATABASE_URL
+# git ignores it, so it stays on your machine
+# the app reads it on start: you and your agent
+#   run it with the same settings (tests never do)
+# port 3000 taken? change PORT in .env
+```
+
+<!--
+The repository ships .env.example: the variable names and safe defaults, never a secret. Each learner copies it to .env, which git ignores, so local changes such as a different PORT never get committed. Do it before starting Claude Code, so the agent finds it already in place: npm start, npm run db:migrate and the module 2 server (npm run mcp) read .env, whichever of you runs them. The tests and lab checks deliberately never read it: they use an empty in-memory database, so they cannot touch data/app.db. Without .env the app still serves data/app.db in development, but a changed port has nowhere to live.
+-->
+
+---
+
 ## Instruction 1/3: set the project up
 
 > **Proctor:** The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.
@@ -144,7 +163,7 @@ database.
 **Watch its approach**
 
 - reads CLAUDE.md before running anything
-- counts: 20 unit, 5 e2e, a red lab 01
+- counts: 21 unit, 5 e2e, a red lab 01
 - data: 25 users, 200 notes, 120 shares
 - passes script flags after --
 
@@ -253,8 +272,8 @@ Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus 
 _Output: captured_
 
 ```bash
-# npm run verify (base: 20 unit, 5 e2e)
-Tests  43 passed (43)
+# npm run verify (base: 21 unit, 5 e2e)
+Tests  44 passed (44)
 Tests  49 passed (49)
 # npm run lab 01
 Tests  15 passed (15)
@@ -371,7 +390,7 @@ _Output: captured_
 
 ```bash
 # npm run verify; npm run lab
-Tests  46 passed (46) · 58 passed (58)
+Tests  47 passed (47) · 58 passed (58)
 Tests  31 passed (31)
 # started as Claude Desktop does it
 create-user · create-note · share-note

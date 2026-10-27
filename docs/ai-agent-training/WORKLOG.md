@@ -2,6 +2,22 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T14:54:17+08:00 - A slide for the local .env, and the counts after the settings test
+
+- **Request (operator):** an instruction to copy `.env.example` to a local `.env` so their
+  local Claude Code picks it up.
+- **What:** new slide 10 "Before you start: your local .env" right after the module 1 divider:
+  `Copy-Item .env.example .env` before starting Claude Code, what `.env` is, that git ignores
+  it, and that the tests never read it. Chapter 00 gained the same bullet. Checked: the
+  starter's own `.gitignore` excludes `.env`; `.env` is read by the app, `npm run db:migrate`
+  and the module 2 `mcp` script, never by the tests (`ignoreEnvFile` under `NODE_ENV=test`).
+  A first draft of the slide note said the lab checks read it too; corrected before commit.
+- **Counts re-measured** after the base gained one settings test (clean copy, `npm ci`): base
+  21/5, module 1 44/49 (lab 01 15/15), module 2 47/58 (labs 31/31), seed unchanged. Updated
+  in chapter 00, 02, 04, the checkpoint table, the deck and the training repo README; records
+  of what an agent reported at the time were left as they were.
+- Deck: 24 slides, validator passed; slides 10 and 11 rendered and checked.
+
 ## 2026-10-27T14:46:55+08:00 - Dry run 2 of the module 1 check: the fixes hold
 
 - **Request (operator):** fix the issues the dry run found and run it again.
