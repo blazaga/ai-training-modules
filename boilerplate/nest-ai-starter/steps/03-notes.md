@@ -7,4 +7,5 @@
 
 Now the notes resource, with sharing: specs/notes.md. Done when npm run lab 01 and npm run
 verify are green and, with the app rebuilt and restarted, `npm run playground:check` passes
-against it (every request of the playground page). Then stop and wait for my next instruction.
+against it (every request of the playground page). Then open the playground in my browser so I
+can review it. Then stop and wait for my next instruction.

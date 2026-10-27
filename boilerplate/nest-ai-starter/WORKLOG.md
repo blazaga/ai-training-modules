@@ -2,6 +2,11 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T17:02:30+08:00 - steps/01–03: open the playground for the learner
+
+- **What:** each step, once its checks pass, opens the playground in the learner's browser
+  (`start <url>` on Windows). Text only; no code changed.
+
 ## 2026-10-27T16:57:09+08:00 - Playground = lab 01, case by case; playground:check for the running app
 
 - **Why:** a learner's playground showed 404 for the users routes after step 02 while verify

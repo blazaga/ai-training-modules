@@ -2,6 +2,17 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T17:02:30+08:00 - Steps 01–03 open the playground for the learner
+
+- **Request (operator):** for slides 10, 11 and 12, add to the step instructions to open the
+  playground after each.
+- **What:** `steps/01-set-up.md`, `02-users.md` and `03-notes.md` now end, once their checks
+  pass, with "open the playground in my browser so I can review it" (step 01 names the URL and
+  `start <url>` on Windows). Slides 10–12 read the text from those files; slide 10's checklist
+  says "leaves the app running, opens the playground". Deck 23 slides, validator passed;
+  slides 10 and 12 checked. Not run by an agent: opening a browser cannot be tested in this
+  container.
+
 ## 2026-10-27T16:57:09+08:00 - The playground mirrors lab 01, and a check that sees the running app
 
 - **Reported (operator):** after the users step the playground showed `404 Cannot GET

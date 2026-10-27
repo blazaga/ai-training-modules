@@ -147,10 +147,11 @@ create your local .env by copying .env.example (on Windows
 PowerShell: Copy-Item .env.example .env). Then prove it
 works: counts, not "it works" (lab 01 is red until module
 1 is built: that is expected). Once npm run verify passes,
-start the app, leave it running, and give me the
-playground link (http://localhost:3000/playground, or my
-port) so I can review it. Then show me what is in the
-database. Then stop and wait for my next instruction.
+start the app, leave it running, and open the playground
+in my browser (http://localhost:3000/playground, or my
+port; on Windows start <url>) so I can review it. Then
+show me what is in the database. Then stop and wait for my
+next instruction.
 ```
 
 **Watch its approach**
@@ -158,7 +159,7 @@ database. Then stop and wait for my next instruction.
 - reads CLAUDE.md before running anything
 - copies .env.example to .env (git ignores it)
 - counts: 21 unit, 6 e2e, a red lab 01
-- leaves the app running: the /playground link
+- leaves the app running, opens the playground
 - data: 25 users, 200 notes, 120 shares
 
 <!--
@@ -184,7 +185,8 @@ Build the users resource on the provided users table:
 specs/users.md. Done when npm run verify is green and,
 with the app rebuilt and restarted, npm run
 playground:check -- users passes against it (the same
-requests as the playground page). Then stop and wait for
+requests as the playground page). Then open the playground
+in my browser so I can review it. Then stop and wait for
 my next instruction.
 ```
 
@@ -218,6 +220,7 @@ Now the notes resource, with sharing: specs/notes.md. Done
 when npm run lab 01 and npm run verify are green and, with
 the app rebuilt and restarted, npm run playground:check
 passes against it (every request of the playground page).
+Then open the playground in my browser so I can review it.
 Then stop and wait for my next instruction.
 ```
 

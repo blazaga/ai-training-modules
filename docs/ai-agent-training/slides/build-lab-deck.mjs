@@ -237,7 +237,7 @@ const SLIDES = [
     type: 'prompt', ch: '1', title: 'Instruction 1/3: set the project up',
     proctor: 'The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.',
     step: STEP('01-set-up.md'),
-    expect: ['reads CLAUDE.md before running anything', 'copies .env.example to .env (git ignores it)', 'counts: 21 unit, 6 e2e, a red lab 01', 'leaves the app running: the /playground link', 'data: 25 users, 200 notes, 120 shares'],
+    expect: ['reads CLAUDE.md before running anything', 'copies .env.example to .env (git ignores it)', 'counts: 21 unit, 6 e2e, a red lab 01', 'leaves the app running, opens the playground', 'data: 25 users, 200 notes, 120 shares'],
     notes: 'Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground\'s test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).',
   },
   {

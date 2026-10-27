@@ -7,5 +7,5 @@
 
 Build the users resource on the provided users table: specs/users.md. Done when npm run
 verify is green and, with the app rebuilt and restarted, `npm run playground:check -- users`
-passes against it (the same requests as the playground page). Then stop and wait for my next
-instruction.
+passes against it (the same requests as the playground page). Then open the playground in my
+browser so I can review it. Then stop and wait for my next instruction.
