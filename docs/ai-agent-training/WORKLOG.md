@@ -2,6 +2,14 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T17:20:30+08:00 - CLAUDE.md: always pause after a step for the instructor
+
+- **Request (operator):** add to CLAUDE.md to always pause after a step and wait for the
+  instructor to move along.
+- **What:** the starter's `CLAUDE.md` "Guided run" section now opens with that rule: report,
+  stop, do not start, suggest or prepare the next step; continue only when pointed at the next
+  step file or instruction. Text only.
+
 ## 2026-10-27T17:02:30+08:00 - Steps 01–03 open the playground for the learner
 
 - **Request (operator):** for slides 10, 11 and 12, add to the step instructions to open the

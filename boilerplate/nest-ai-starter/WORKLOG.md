@@ -2,6 +2,11 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T17:20:30+08:00 - CLAUDE.md: always pause after a step
+
+- **What:** first bullet of "Guided run": pause after every step and wait for the instructor
+  to move the room along; never start, suggest or prepare the next step. Text only.
+
 ## 2026-10-27T17:02:30+08:00 - steps/01–03: open the playground for the learner
 
 - **What:** each step, once its checks pass, opens the playground in the learner's browser

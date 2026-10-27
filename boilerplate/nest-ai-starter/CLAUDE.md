@@ -37,6 +37,10 @@ it off.
 This repository is used in a guided workshop. A proctor gives one instruction at a time,
 and everyone checks the result together before the next one.
 
+- **Always pause after a step and wait for the instructor to move the room along.** When a
+  step is done, report and stop: do not start, suggest or prepare the next step, even when it
+  looks obvious or you have time left. The instructor decides when the room moves on; you
+  continue only when you are pointed at the next step file or given the next instruction.
 - Do what the **current** instruction asks, until its done-condition holds (the checks it
   names), then add your `WORKLOG.md` entry (skill `worklog-handoff`), report the counts and
   **stop**. Wait for the next instruction. The entry is part of finishing, not extra work.
