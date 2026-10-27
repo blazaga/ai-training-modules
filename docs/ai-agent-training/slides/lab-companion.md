@@ -209,6 +209,7 @@ Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first 
 npm run verify       # read both Tests lines
 npm run lab 01       # the lab check: all green?
 # 2. then the app on the seeded data
+#    (.env from setup; port busy? PORT=)
 npm run build
 npm start
 # 3. open localhost:3000/playground
@@ -221,11 +222,27 @@ npm start
 2. List users (seeded)
 3. Create user
 4. Create note
-5. Edit a done note → 422 (R2)
-6. Share with a friend
+5. Mark done
+6. Edit a done note → 422 (R2)
+7. Share with a friend
 
 <!--
 Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then start the app and open the playground: it sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.
+-->
+
+---
+
+## What to expect: the playground after Run all
+
+![The playground after Run all in order: the four variables filled, Health and List users answered 200 with a check mark.](img/playground-run-all.png)
+
+- Every card has a ✓: 19 of 19 in our dry run
+- Variables filled: each id is carried to the next request
+- The 409 and 422 cards get a ✓ too: the rule refused, as the spec says
+- List users shows the seeded rows from data/app.db
+
+<!--
+Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint, verify 43 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green in about 3 seconds, no page errors. With DevTools open the 409 and 422 requests show in red as failed loads; that is expected, they are the rule checks. If List users comes back empty, the app is on the in-memory database: .env is missing (copy .env.example, chapter 00). npm run db:seed puts the data back afterwards.
 -->
 
 ---

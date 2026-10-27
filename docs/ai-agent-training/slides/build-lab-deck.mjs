@@ -26,6 +26,8 @@ const sharp = require('sharp');
 const Fi = require('react-icons/fi');
 
 const OUT = process.argv[2] ?? '.';
+// Screenshots live next to this script (img/), so the .md and the .pptx use the same files.
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 // The playground page (GET /playground in the starter) lists the module 1 requests. Slides name
 // them; every name is checked against src/playground/requests.ts, so a renamed request fails
@@ -96,6 +98,17 @@ function WRAP(text, n = 58) {
   if (cur) out.push(cur);
   return out;
 }
+// The playground screenshot slide, from a dry run of "Check it: module 1" (see the WORKLOG):
+// base + module 1 checkpoint, Run all in order in Chromium at 1280x720.
+const SHOT_ALT = 'The playground after Run all in order: the four variables filled, Health and List users answered 200 with a check mark.';
+const SHOT_POINTS = [
+  'Every card has a ✓: 19 of 19 in our dry run',
+  'Variables filled: each id is carried to the next request',
+  'The 409 and 422 cards get a ✓ too: the rule refused, as the spec says',
+  'List users shows the seeded rows from data/app.db',
+];
+const SHOT_NOTES =
+  'Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint, verify 43 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green in about 3 seconds, no page errors. With DevTools open the 409 and 422 requests show in red as failed loads; that is expected, they are the rule checks. If List users comes back empty, the app is on the in-memory database: .env is missing (copy .env.example, chapter 00). npm run db:seed puts the data back afterwards.';
 // Module 2 slide content, from the measured dry run (see the WORKLOG).
 const MODULE2_EXPECT = [
   'reads the installed SDK, not its memory',
@@ -231,13 +244,21 @@ const SLIDES = [
       'npm run verify       # read both Tests lines',
       'npm run lab 01       # the lab check: all green?',
       '# 2. then the app on the seeded data',
+      '#    (.env from setup; port busy? PORT=)',
       'npm run build',
       'npm start',
       '# 3. open localhost:3000/playground',
       '#    and click Run all in order',
     ],
-    playground: playground('Health', 'List users (seeded)', 'Create user', 'Create note', 'Edit a done note → 422 (R2)', 'Share with a friend'),
+    playground: playground('Health', 'List users (seeded)', 'Create user', 'Create note', 'Mark done', 'Edit a done note → 422 (R2)', 'Share with a friend'),
     notes: 'Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then start the app and open the playground: it sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.',
+  },
+  {
+    type: 'screenshot', ch: '1', title: 'What to expect: the playground after Run all',
+    image: 'img/playground-run-all.png',
+    alt: SHOT_ALT,
+    points: SHOT_POINTS,
+    notes: SHOT_NOTES,
   },
   {
     type: 'checkpoint', ch: '1', title: 'Checkpoint: two MVCs on real data',
@@ -573,6 +594,19 @@ async function buildPptx(file, track) {
       slide.addShape(pres.shapes.LINE, { x: 3.33, y: 2.03, w: 1.09, h: 0, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
       block(8.0, 3.91, 1.5, 0.75, 'Database', COL.ink, 'database');
       slide.addShape(pres.shapes.LINE, { x: 6.98, y: 4.29, w: 0.99, h: 0, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
+    } else if (s.type === 'screenshot') {
+      // A real screenshot (1280x720) on the left, what to look for on the right.
+      slide = pres.addSlide({ masterName: 'CONTENT' });
+      slide.addText(s.title, { placeholder: 'title' });
+      const h = 3.75, w = (h * 16) / 9;
+      slide.addShape(pres.shapes.RECTANGLE, { x: 0.47, y: 1.17, w: w + 0.06, h: h + 0.06, fill: { color: COL.soft }, line: { color: COL.soft } });
+      slide.addImage({ path: join(HERE, s.image), x: 0.5, y: 1.2, w, h, altText: s.alt });
+      slide.addText('Look for', { x: 0.5 + w + 0.3, y: 1.2, w: 9.5 - (0.5 + w + 0.3), h: 0.4, fontSize: 16, bold: true, color: COL.text, margin: 0, isTextBox: true });
+      s.points.forEach((pt, i) => {
+        const y = 1.7 + i * 0.85;
+        badge(slide, 0.5 + w + 0.3, y + 0.02, 0.3, COL.mint, icons.check);
+        slide.addText(pt, { x: 0.5 + w + 0.7, y: y - 0.05, w: 9.5 - (0.5 + w + 0.7), h: 0.75, fontSize: 12, color: COL.slate, valign: 'top', margin: 0, isTextBox: true });
+      });
     } else if (s.type === 'restmcp') {
       // Two front doors (REST controller, MCP tools) over the same services and database.
       slide = pres.addSlide({ masterName: 'CONTENT' });
@@ -705,6 +739,7 @@ function buildMarkdown(track) {
     if (s.type === 'stuck') p.push(`## ${s.title}`, '', ...s.rows.map(([h, b]) => `- **${h}**: ${b}`));
     if (s.type === 'flow') p.push(`## ${s.title}`, '', ...s.steps.map(([h, b], i) => `${i + 1}. **${h}**: ${b}`), '', '_Repeatable work → tools. Judgement → the agent, fenced in._');
     if (s.type === 'blockflow') p.push(`## ${s.title}`, '', '```text', s.blocks.map(([h]) => `[${h}]`).join(' → '), '```', '', s.blocks.map(([h, sub]) => `**${h}**: ${sub}`).join(' · '));
+    if (s.type === 'screenshot') p.push(`## ${s.title}`, '', `![${s.alt}](${s.image})`, '', ...s.points.map((pt) => `- ${pt}`));
     if (s.type === 'restmcp') p.push(`## ${s.title}`, '', '```text', 'REST · module 1                     MCP · module 2', '[Browser · /playground]            [Claude Desktop]', '   │ HTTP: GET /api/v1/notes           │ JSON-RPC over stdio: tools/call', '   ▼                                  ▼', '[Controller (routes)]              [MCP server (tools)] ┄┄┐ query · execute:', '          ╲                          ╱                  ┆ raw SQL, guarded', '           ▶ [Services: the rules] ◀                    ┆', '                    ▼                                   ┆', '         [Repository → data/app.db] ◀┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘', '```', '', 'Same services, same rules: MCP replaces the controller, not the app. MCP messages are JSON-RPC; the transport is stdio here (Claude Desktop starts the server) or Streamable HTTP for a remote server.');
     if (s.type === 'blockstack') p.push(`## ${s.title}`, '', '```text', '               ┌──────── Module ────────┐', '[Middleware] ──▶ │   [Controller]         │', '               │        ▼               │', '               │    [Service]           │', '               │        ▼               │', '               │   [Repository] ────────┼──▶ [Database]', '               └────────────────────────┘', '```');
     if (s.type === 'rules') p.push(`## ${s.title}`, '', ...s.rows.map(([, h, b]) => `- **${h}**: ${b}`));

@@ -2,6 +2,22 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T14:13:10+08:00 - Dry run of the module 1 check; a playground screenshot slide
+
+- **Request (operator):** dry-run with a thread, screenshot the playground part (Playwright,
+  720p), put the screenshot in the repo and on a slide showing what to expect.
+- **How:** peer threads are not available from this thread, so a background agent did the dry
+  run from a written brief: base + module 1 checkpoint, the "Check it: module 1" slide in its
+  order. verify unit 43 / e2e 49, lab 01 15/15, Run all in order 19/19 ✓, no page errors.
+  Screenshots at 1280x720 in `slides/img/playground-dry-run/` with its README (the run, the
+  files, the findings); `slides/img/playground-run-all.png` on the new slide 14 "What to
+  expect: the playground after Run all".
+- **Fixed from the dry run:** the check slide now says `.env from setup; port busy? PORT=`
+  (without `.env` the app is on an empty in-memory database; a taken port fails after
+  start-up-looking output) and the playground panel lists "Mark done".
+- Deck: new `screenshot` slide type; 23 slides, validator passed; slides 13 and 14 rendered
+  and checked.
+
 ## 2026-10-27T13:59:22+08:00 - Tests first, then the playground; no curl
 
 - **Request (operator):** learners will not have curl on Windows: check through the playground
