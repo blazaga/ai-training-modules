@@ -55,13 +55,15 @@ answer.
 **Worktree.** A separate working directory on its own branch (`git worktree add`), used to
 isolate one agent's batch from everyone else's.
 
-**Device key and secret.** What `POST /devices/provision` returns: a `deviceKey` (an
-identifier, safe to show) and a secret (shown once, stored only as a hash). A device sends
-them as `X-Device-Key` and `X-Device-Secret` to authenticate MCP calls over HTTP (chapter 09).
+**Provided table.** A drizzle table the base already ships, with migrated and seeded rows
+(`users`, `notes`, `note_shares`). The resource template keeps it and builds the rest around
+it; the drift test holds the agent's schema to it.
 
-**JWT (access token).** What `POST /auth/login` returns after a Basic login: a signed token
-the client sends as `Authorization: Bearer <token>` on every other REST request until it
-expires (chapter 03).
+**Read-only query tool.** An MCP tool that runs SQL a model writes, so it must refuse
+anything that is not a single read, and prove the data is unchanged afterwards (chapter 04).
+
+**Seeded database.** `data/app.db`, committed with generated data (`scripts/seed.mjs`,
+faker with a fixed seed). `pnpm db:seed` rebuilds it byte for byte.
 
 **JSON-RPC 2.0.** The message envelope MCP uses: requests (`id`, `method`, `params`),
 responses (the same `id`, `result` or `error`) and notifications (no `id`).

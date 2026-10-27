@@ -1,0 +1,1587 @@
+diff --git a/WORKLOG.md b/WORKLOG.md
+index 754c96d..d0f5ede 100644
+--- a/WORKLOG.md
++++ b/WORKLOG.md
+@@ -2,6 +2,28 @@
+ 
+ Newest first. Stamps from a clock, with offset.
+ 
++## 2026-10-27T11:01:00+08:00 - Module 1: users and notes (with sharing) resources built
++
++- **Changed:** `src/users/` and `src/notes/` generated (nest g resource → `resource:template
++  --storage drizzle`, provided tables kept) and every AI-FILL filled from `specs/users.md` /
++  `specs/notes.md`. Users: email `z.email().max(254).toLowerCase()`, name trimmed 1–100; R1
++  (409) is the unique index, R2 (409) the RESTRICT foreign key, both surfaced by
++  `DrizzleRepository`. Notes: ownerId create-only (omitted from `UpdateNoteSchema`), R1/R2/R4
++  in `NotesService` (422), R3 `dueAt` normalised by `.overwrite(toISOString)` behind an
++  `abort: true` parse guard (without it an unparseable string threw a RangeError → 500,
++  measured). Outside the markers, because the template has no slot for them: list filters
++  (`NoteListQuerySchema`, `findFiltered`), the three `/:id/shares` routes, and the notes
++  repository's `findUser` / `findSharedUsers` / `share` / `unshare`. No migration (provided tables).
++- **Verified:** `pnpm verify` exit 0: AI-FILL markers 0, stub bodies 0, check-migrations no
++  changes; unit `Test Files 10 passed (10)` / `Tests 43 passed (43)`; e2e `Test Files 3 passed
++  (3)` / `Tests 46 passed (46)`. `pnpm lab 01`: `Test Files 1 passed (1)` / `Tests 15 passed (15)`.
++  Mutations (rule removed → red): users R1 lower-case (e2e 3 failed), R2 FK mapping (unit 1
++  failed); notes R1, R2, R4 (unit, e2e and lab each red), R3 (e2e 1 failed, lab 1 failed; unit
++  cannot see a schema rule). Controls: planted TS2322 caught by tsc, floating promise caught by oxlint.
++- **Not done / open:** `data/app.db` untouched. Interpretation recorded: on a done note,
++  `{ status: 'open', title }` and `{ status: 'done' }` are both refused (R2 read literally:
++  "may only set `status: 'open'`").
++
+ ## 2026-10-27T11:03:06+08:00 - Two modules, no auth: users and notes on a seeded SQLite file, then MCP
+ 
+ - **Request (operator):** drop auth; module 1 builds two MVCs, users and notes; module 2 an
+diff --git a/src/app.module.ts b/src/app.module.ts
+index 589b27d..c06902f 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -6,6 +6,8 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter.
+ import { validateEnv } from './config/env.schema.js';
+ import { DatabaseModule } from './database/database.module.js';
+ import { HealthModule } from './health/health.module.js';
++import { UsersModule } from './users/users.module.js';
++import { NotesModule } from './notes/notes.module.js';
+ 
+ @Module({
+   imports: [
+@@ -19,6 +21,8 @@ import { HealthModule } from './health/health.module.js';
+     }),
+     DatabaseModule,
+     HealthModule,
++    UsersModule,
++    NotesModule,
+     // Feature modules. `nest g resource <name>` appends new ones here.
+   ],
+   providers: [
+diff --git a/src/notes/dto/create-note.dto.ts b/src/notes/dto/create-note.dto.ts
+new file mode 100644
+index 0000000..860ccfb
+--- /dev/null
++++ b/src/notes/dto/create-note.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { CreateNoteSchema } from '../note.schema.js';
++
++export class CreateNoteDto extends createZodDto(CreateNoteSchema) {}
+diff --git a/src/notes/dto/update-note.dto.ts b/src/notes/dto/update-note.dto.ts
+new file mode 100644
+index 0000000..f089a31
+--- /dev/null
++++ b/src/notes/dto/update-note.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { UpdateNoteSchema } from '../note.schema.js';
++
++export class UpdateNoteDto extends createZodDto(UpdateNoteSchema) {}
+diff --git a/src/notes/entities/note.entity.ts b/src/notes/entities/note.entity.ts
+new file mode 100644
+index 0000000..57ab4b8
+--- /dev/null
++++ b/src/notes/entities/note.entity.ts
+@@ -0,0 +1,8 @@
++import type { z } from 'zod';
++import type { NoteResponseSchema, NoteSchema } from '../note.schema.js';
++
++/** Derived from the schemas: never hand-write fields here. */
++export type Note = z.infer<typeof NoteSchema>;
++
++/** A Note without its private fields: the only shape that leaves the API. */
++export type NoteResponse = z.infer<typeof NoteResponseSchema>;
+diff --git a/src/notes/note.schema.ts b/src/notes/note.schema.ts
+new file mode 100644
+index 0000000..4d90030
+--- /dev/null
++++ b/src/notes/note.schema.ts
+@@ -0,0 +1,77 @@
++import { z } from 'zod';
++import { PageQuerySchema } from '../common/schemas/page-query.schema.js';
++import { patchSchema } from '../common/schemas/patch-schema.js';
++import { createZodDto } from '../common/zod/zod-dto.js';
++
++/**
++ * Single source of truth for a Note AS STORED: validation, TypeScript types
++ * and the OpenAPI schema all derive from these definitions. Change fields HERE only.
++ */
++export const NoteSchema = z.object({
++  id: z.string().uuid(),
++  // Settable on create only: UpdateNoteSchema omits it, so a PATCH has it stripped.
++  ownerId: z.string().uuid(),
++  title: z.string().trim().min(1).max(200),
++  body: z.string().max(10_000).default(''),
++  status: z.enum(['open', 'done']).default('open'),
++  // R3: any offset accepted, stored as UTC toISOString() so SQLite sorts the text.
++  // zod runs every check even after the format fails, so the abort guard keeps
++  // toISOString() from throwing (a 500, measured) on a string Date cannot parse.
++  dueAt: z.iso
++    .datetime({ offset: true })
++    .refine((value) => !Number.isNaN(Date.parse(value)), {
++      message: 'Invalid date',
++      abort: true,
++    })
++    .overwrite((value) => new Date(value).toISOString())
++    .nullable()
++    .default(null),
++  createdAt: z.string().datetime(),
++  updatedAt: z.string().datetime(),
++});
++
++/**
++ * Stored but never RETURNED and never ACCEPTED from a client (a password or
++ * secret hash). Responses are parsed through NoteResponseSchema, which
++ * strips these. A test checks that no response carries them.
++ */
++const PRIVATE = {} as const;
++
++/**
++ * Returned to clients but never ACCEPTED from them: the server sets these, usually
++ * through actions (e.g. `status` only changes via POST /:id/activate).
++ */
++const SERVER_OWNED = {} as const;
++
++/** What every endpoint returns. */
++export const NoteResponseSchema = NoteSchema.omit(PRIVATE);
++
++/**
++ * Client-settable fields, UNREFINED. Zod 4 throws on .omit()/.partial() of a
++ * refined object, so derive from this and attach .refine() last.
++ */
++const NoteFields = NoteSchema.omit({
++  id: true,
++  createdAt: true,
++  updatedAt: true,
++  ...PRIVATE,
++  ...SERVER_OWNED,
++});
++
++/** POST body. */
++export const CreateNoteSchema = NoteFields;
++
++/**
++ * PATCH body: any subset of the create fields, never empty, and WITHOUT defaults
++ * (see patchSchema: .partial() would overwrite stored values with defaults).
++ */
++export const UpdateNoteSchema = patchSchema(NoteFields.omit({ ownerId: true }));
++
++/** GET /notes: the house paging plus optional filters, combined with AND. */
++export const NoteListQuerySchema = PageQuerySchema.extend({
++  ownerId: z.string().uuid().optional(),
++  sharedWith: z.string().uuid().optional(),
++  status: z.enum(['open', 'done']).optional(),
++});
++export type NoteListQuery = z.infer<typeof NoteListQuerySchema>;
++export class NoteListQueryDto extends createZodDto(NoteListQuerySchema) {}
+diff --git a/src/notes/notes.controller.ts b/src/notes/notes.controller.ts
+new file mode 100644
+index 0000000..8e56d2d
+--- /dev/null
++++ b/src/notes/notes.controller.ts
+@@ -0,0 +1,97 @@
++import {
++  Body,
++  Controller,
++  Delete,
++  Get,
++  HttpCode,
++  HttpStatus,
++  Param,
++  ParseUUIDPipe,
++  Patch,
++  Post,
++  Put,
++  Query,
++} from '@nestjs/common';
++import { ApiTags } from '@nestjs/swagger';
++import type { Page } from '../common/persistence/repository.js';
++import { UserResponseSchema } from '../users/user.schema.js';
++import type { UserResponse } from '../users/entities/user.entity.js';
++import { NoteListQueryDto, NoteResponseSchema } from './note.schema.js';
++import { NotesService } from './notes.service.js';
++import { CreateNoteDto } from './dto/create-note.dto.js';
++import { UpdateNoteDto } from './dto/update-note.dto.js';
++import type { Note, NoteResponse } from './entities/note.entity.js';
++
++/** Strip private fields. Every value this controller returns passes through here. */
++const toResponse = (entity: Note): NoteResponse =>
++  NoteResponseSchema.parse(entity);
++
++/**
++ * HTTP only: parse, delegate, return. No business logic here (it goes in the
++ * service) and no try/catch (DomainExceptionFilter maps errors).
++ * Routes: /api/v1/notes, and /api/v1/notes/:id/shares[/:userId] for sharing
++ */
++@ApiTags('notes')
++@Controller('notes')
++export class NotesController {
++  constructor(private readonly service: NotesService) {}
++
++  @Post()
++  async create(@Body() body: CreateNoteDto): Promise<NoteResponse> {
++    return toResponse(await this.service.create(body));
++  }
++
++  @Get()
++  async findPage(
++    @Query() query: NoteListQueryDto,
++  ): Promise<Page<NoteResponse>> {
++    const { limit, offset, ...filter } = query;
++    const page = await this.service.findPage(filter, limit, offset);
++    return { ...page, items: page.items.map(toResponse) };
++  }
++
++  @Get(':id')
++  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<NoteResponse> {
++    return toResponse(await this.service.findOne(id));
++  }
++
++  @Patch(':id')
++  async update(
++    @Param('id', ParseUUIDPipe) id: string,
++    @Body() body: UpdateNoteDto,
++  ): Promise<NoteResponse> {
++    return toResponse(await this.service.update(id, body));
++  }
++
++  @Delete(':id')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
++    return this.service.remove(id);
++  }
++
++  @Get(':id/shares')
++  async sharedWith(
++    @Param('id', ParseUUIDPipe) id: string,
++  ): Promise<{ items: UserResponse[] }> {
++    const users = await this.service.sharedWith(id);
++    return { items: users.map((u) => UserResponseSchema.parse(u)) };
++  }
++
++  @Put(':id/shares/:userId')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  share(
++    @Param('id', ParseUUIDPipe) id: string,
++    @Param('userId', ParseUUIDPipe) userId: string,
++  ): Promise<void> {
++    return this.service.share(id, userId);
++  }
++
++  @Delete(':id/shares/:userId')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  unshare(
++    @Param('id', ParseUUIDPipe) id: string,
++    @Param('userId', ParseUUIDPipe) userId: string,
++  ): Promise<void> {
++    return this.service.unshare(id, userId);
++  }
++}
+diff --git a/src/notes/notes.drizzle-repository.ts b/src/notes/notes.drizzle-repository.ts
+new file mode 100644
+index 0000000..92295f9
+--- /dev/null
++++ b/src/notes/notes.drizzle-repository.ts
+@@ -0,0 +1,89 @@
++import { Inject, Injectable } from '@nestjs/common';
++import { and, asc, count, eq, inArray, type SQL } from 'drizzle-orm';
++import type { Page } from '../common/persistence/repository.js';
++import type { User } from '../users/entities/user.entity.js';
++import { users } from '../users/users.table.js';
++import { noteShares } from './note-shares.table.js';
++import { DrizzleRepository } from '../common/persistence/drizzle-repository.js';
++import { DB, type Db } from '../database/database.types.js';
++import type { NoteFilter, NotesRepository } from './notes.repository.js';
++import { notes } from './notes.table.js';
++import type { Note } from './entities/note.entity.js';
++
++/** SQLite storage for notes (drizzle). CRUD comes from DrizzleRepository. */
++@Injectable()
++export class DrizzleNotesRepository
++  extends DrizzleRepository<Note>
++  implements NotesRepository
++{
++  constructor(@Inject(DB) db: Db) {
++    super(db, notes, 'Note');
++  }
++
++  async findFiltered(
++    filter: NoteFilter,
++    limit: number,
++    offset: number,
++  ): Promise<Page<Note>> {
++    const conditions: SQL[] = [];
++    if (filter.ownerId) conditions.push(eq(notes.ownerId, filter.ownerId));
++    if (filter.status) conditions.push(eq(notes.status, filter.status));
++    if (filter.sharedWith) {
++      conditions.push(
++        inArray(
++          notes.id,
++          this.db
++            .select({ noteId: noteShares.noteId })
++            .from(noteShares)
++            .where(eq(noteShares.userId, filter.sharedWith)),
++        ),
++      );
++    }
++    const where = and(...conditions);
++    const [rows, [{ total }]] = await Promise.all([
++      this.db
++        .select()
++        .from(notes)
++        .where(where)
++        .orderBy(asc(notes.createdAt), asc(notes.id))
++        .limit(limit)
++        .offset(offset),
++      this.db.select({ total: count() }).from(notes).where(where),
++    ]);
++    return { items: rows.map((r) => this.toEntity(r)), total, limit, offset };
++  }
++
++  async findUser(id: string): Promise<User | undefined> {
++    const [row] = await this.db
++      .select()
++      .from(users)
++      .where(eq(users.id, id))
++      .limit(1);
++    return row;
++  }
++
++  async findSharedUsers(noteId: string): Promise<User[]> {
++    const rows = await this.db
++      .select({ user: users })
++      .from(noteShares)
++      .innerJoin(users, eq(users.id, noteShares.userId))
++      .where(eq(noteShares.noteId, noteId))
++      .orderBy(asc(noteShares.createdAt), asc(users.id));
++    return rows.map((r) => r.user);
++  }
++
++  async share(noteId: string, userId: string): Promise<void> {
++    await this.db
++      .insert(noteShares)
++      .values({ noteId, userId })
++      .onConflictDoNothing();
++  }
++
++  async unshare(noteId: string, userId: string): Promise<boolean> {
++    const rows = await this.db
++      .delete(noteShares)
++      .where(and(eq(noteShares.noteId, noteId), eq(noteShares.userId, userId)))
++      .returning({ noteId: noteShares.noteId });
++    return rows.length > 0;
++  }
++}
+diff --git a/src/notes/notes.module.ts b/src/notes/notes.module.ts
+new file mode 100644
+index 0000000..c9e34b4
+--- /dev/null
++++ b/src/notes/notes.module.ts
+@@ -0,0 +1,16 @@
++import { Module } from '@nestjs/common';
++import { NotesController } from './notes.controller.js';
++import { DrizzleNotesRepository } from './notes.drizzle-repository.js';
++import { NOTES_REPOSITORY } from './notes.repository.js';
++import { NotesService } from './notes.service.js';
++
++@Module({
++  controllers: [NotesController],
++  providers: [
++    NotesService,
++    // SQLite via drizzle (DB is provided globally by DatabaseModule).
++    { provide: NOTES_REPOSITORY, useClass: DrizzleNotesRepository },
++  ],
++  exports: [NotesService],
++})
++export class NotesModule {}
+diff --git a/src/notes/notes.repository.ts b/src/notes/notes.repository.ts
+new file mode 100644
+index 0000000..a965fc5
+--- /dev/null
++++ b/src/notes/notes.repository.ts
+@@ -0,0 +1,31 @@
++import type { Page, Repository } from '../common/persistence/repository.js';
++import type { User } from '../users/entities/user.entity.js';
++import type { Note } from './entities/note.entity.js';
++
++/** Injection token: services depend on the port, never on a storage class. */
++export const NOTES_REPOSITORY = Symbol('NOTES_REPOSITORY');
++
++/** List filters (specs/notes.md, Listing); absent ones do not filter. */
++export interface NoteFilter {
++  ownerId?: string;
++  sharedWith?: string;
++  status?: Note['status'];
++}
++
++/** The generic CRUD port plus the lookups this resource needs. */
++export interface NotesRepository extends Repository<Note> {
++  /** A page of notes matching every given filter. */
++  findFiltered(
++    filter: NoteFilter,
++    limit: number,
++    offset: number,
++  ): Promise<Page<Note>>;
++  /** A user by id (owner check R1, share target). */
++  findUser(id: string): Promise<User | undefined>;
++  /** The users a note is shared with, oldest share first. */
++  findSharedUsers(noteId: string): Promise<User[]>;
++  /** Share a note with a user; sharing twice is a no-op. */
++  share(noteId: string, userId: string): Promise<void>;
++  /** Unshare; false if it was not shared with that user. */
++  unshare(noteId: string, userId: string): Promise<boolean>;
++}
+diff --git a/src/notes/notes.service.spec.ts b/src/notes/notes.service.spec.ts
+new file mode 100644
+index 0000000..f395409
+--- /dev/null
++++ b/src/notes/notes.service.spec.ts
+@@ -0,0 +1,170 @@
++import {
++  NotFoundError,
++  RuleViolationError,
++} from '../common/errors/domain-error.js';
++import { users } from '../users/users.table.js';
++import type { CreateNoteDto } from './dto/create-note.dto.js';
++import { connectInMemory, type Connection } from '../database/connect.js';
++import { DrizzleNotesRepository } from './notes.drizzle-repository.js';
++import { NotesService } from './notes.service.js';
++import { notes } from './notes.table.js';
++
++/**
++ * Unit tests against a REAL database (SQLite in memory, migrated): the
++ * repository's SQL is exercised, not mocked. One database per file.
++ */
++describe('NotesService', () => {
++  let connection: Connection;
++  let service: NotesService;
++
++  const missing = '00000000-0000-4000-8000-000000000000';
++  let ownerId: string;
++  let friendId: string;
++  /** A minimal valid payload, as the validation pipe would hand it over. */
++  let valid: CreateNoteDto;
++
++  beforeAll(async () => {
++    connection = await connectInMemory();
++  });
++
++  afterAll(async () => {
++    await connection.close();
++  });
++
++  beforeEach(async () => {
++    await connection.db.delete(notes);
++    await connection.db.delete(users);
++    const [owner, friend] = await connection.db
++      .insert(users)
++      .values([
++        { email: 'owner@example.com', name: 'Owner' },
++        { email: 'friend@example.com', name: 'Friend' },
++      ])
++      .returning();
++    ownerId = owner.id;
++    friendId = friend.id;
++    valid = {
++      ownerId,
++      title: 'Buy milk',
++      body: '',
++      status: 'open',
++      dueAt: null,
++    };
++    service = new NotesService(new DrizzleNotesRepository(connection.db));
++  });
++
++  it('creates and reads back one note', async () => {
++    const created = await service.create(valid);
++    await expect(service.findOne(created.id)).resolves.toEqual(created);
++  });
++
++  it('throws NotFoundError for an unknown id', async () => {
++    await expect(
++      service.findOne('00000000-0000-4000-8000-000000000000'),
++    ).rejects.toBeInstanceOf(NotFoundError);
++  });
++
++  it('removes one note', async () => {
++    const created = await service.create(valid);
++    await service.remove(created.id);
++    await expect(service.findOne(created.id)).rejects.toBeInstanceOf(
++      NotFoundError,
++    );
++  });
++
++  describe('R1: the owner must be an existing user', () => {
++    it('creates a note for an existing owner', async () => {
++      await expect(service.create(valid)).resolves.toMatchObject({ ownerId });
++    });
++
++    it('refuses an unknown owner with RuleViolationError', async () => {
++      await expect(
++        service.create({ ...valid, ownerId: missing }),
++      ).rejects.toBeInstanceOf(RuleViolationError);
++    });
++  });
++
++  describe('R2: a done note can only be reopened', () => {
++    it('allows editing an open note', async () => {
++      const note = await service.create(valid);
++      await expect(
++        service.update(note.id, { title: 'Changed' }),
++      ).resolves.toMatchObject({ title: 'Changed' });
++    });
++
++    it('refuses editing a done note with RuleViolationError', async () => {
++      const note = await service.create({ ...valid, status: 'done' });
++      await expect(
++        service.update(note.id, { title: 'Changed' }),
++      ).rejects.toBeInstanceOf(RuleViolationError);
++      await expect(
++        service.update(note.id, { status: 'open', title: 'Changed' }),
++      ).rejects.toBeInstanceOf(RuleViolationError);
++      await expect(service.findOne(note.id)).resolves.toEqual(note);
++    });
++
++    it('allows reopening a done note, then editing it', async () => {
++      const note = await service.create({ ...valid, status: 'done' });
++      await expect(
++        service.update(note.id, { status: 'open' }),
++      ).resolves.toMatchObject({ status: 'open' });
++      await expect(
++        service.update(note.id, { title: 'Changed' }),
++      ).resolves.toMatchObject({ title: 'Changed' });
++    });
++  });
++
++  describe('sharing', () => {
++    it('shares idempotently and lists the users', async () => {
++      const note = await service.create(valid);
++      await service.share(note.id, friendId);
++      await service.share(note.id, friendId);
++      const shared = await service.sharedWith(note.id);
++      expect(shared.map((u) => u.id)).toEqual([friendId]);
++    });
++
++    it('R4: refuses sharing with the owner (RuleViolationError)', async () => {
++      const note = await service.create(valid);
++      await expect(service.share(note.id, ownerId)).rejects.toBeInstanceOf(
++        RuleViolationError,
++      );
++      await expect(service.sharedWith(note.id)).resolves.toEqual([]);
++    });
++
++    it('404s an unknown user or note', async () => {
++      const note = await service.create(valid);
++      await expect(service.share(note.id, missing)).rejects.toBeInstanceOf(
++        NotFoundError,
++      );
++      await expect(service.share(missing, friendId)).rejects.toBeInstanceOf(
++        NotFoundError,
++      );
++    });
++
++    it('unshares once, then 404s', async () => {
++      const note = await service.create(valid);
++      await service.share(note.id, friendId);
++      await service.unshare(note.id, friendId);
++      await expect(service.unshare(note.id, friendId)).rejects.toBeInstanceOf(
++        NotFoundError,
++      );
++    });
++
++    it('filters the list by ownerId, sharedWith and status (AND)', async () => {
++      const open = await service.create(valid);
++      const done = await service.create({ ...valid, status: 'done' });
++      await service.share(open.id, friendId);
++      await service.share(done.id, friendId);
++      // Order-agnostic on purpose: both notes can share a created_at, and the tiebreak is the
++      // random id, so creation order is not list order (measured: 3 of 20 runs failed).
++      const ids = async (filter: object) =>
++        (await service.findPage(filter, 20, 0)).items.map((n) => n.id).sort();
++      expect(await ids({ ownerId })).toEqual([open.id, done.id].sort());
++      expect(await ids({ ownerId: friendId })).toEqual([]);
++      expect(await ids({ sharedWith: friendId, status: 'done' })).toEqual([
++        done.id,
++      ]);
++      expect((await service.findPage({ status: 'open' }, 20, 0)).total).toBe(1);
++    });
++  });
++});
+diff --git a/src/notes/notes.service.ts b/src/notes/notes.service.ts
+new file mode 100644
+index 0000000..8e0fe49
+--- /dev/null
++++ b/src/notes/notes.service.ts
+@@ -0,0 +1,114 @@
++import { Inject, Injectable } from '@nestjs/common';
++import {
++  NotFoundError,
++  RuleViolationError,
++} from '../common/errors/domain-error.js';
++import type { User } from '../users/entities/user.entity.js';
++import type { Entity, Page } from '../common/persistence/repository.js';
++import {
++  NOTES_REPOSITORY,
++  type NoteFilter,
++  type NotesRepository,
++} from './notes.repository.js';
++import type { CreateNoteDto } from './dto/create-note.dto.js';
++import type { UpdateNoteDto } from './dto/update-note.dto.js';
++import type { Note } from './entities/note.entity.js';
++
++/**
++ * Business logic for notes. Shape rules (types, lengths, enums) live in the
++ * schema. Only rules that need state or more than one field belong here, and
++ * they fail by throwing a DomainError, never by returning a flag.
++ */
++@Injectable()
++export class NotesService {
++  constructor(
++    @Inject(NOTES_REPOSITORY) private readonly repo: NotesRepository,
++  ) {}
++
++  async create(input: CreateNoteDto): Promise<Note> {
++    // R1: the owner must be an existing user (422, not 404: the note is what is created).
++    if (!(await this.repo.findUser(input.ownerId))) {
++      throw new RuleViolationError(`Owner ${input.ownerId} does not exist`, {
++        ownerId: input.ownerId,
++      });
++    }
++    return this.repo.create(await this.toStored(input));
++  }
++
++  /** The create payload in its STORED shape: write-only inputs become private fields. */
++  private toStored(
++    input: CreateNoteDto,
++  ): Promise<Omit<Note, keyof Entity>> | Omit<Note, keyof Entity> {
++    // No write-only inputs.
++    return input;
++  }
++
++  findPage(
++    filter: NoteFilter,
++    limit: number,
++    offset: number,
++  ): Promise<Page<Note>> {
++    return this.repo.findFiltered(filter, limit, offset);
++  }
++
++  async findOne(id: string): Promise<Note> {
++    const found = await this.repo.findById(id);
++    if (!found) throw new NotFoundError('Note', id);
++    return found;
++  }
++
++  async update(id: string, patch: UpdateNoteDto): Promise<Note> {
++    const current = await this.findOne(id);
++    // R2: a done note is read-only; the one PATCH it accepts is { status: 'open' }.
++    // ownerId never reaches here: UpdateNoteSchema does not declare it.
++    const reopensOnly =
++      Object.keys(patch).length === 1 && patch.status === 'open';
++    if (current.status === 'done' && !reopensOnly) {
++      throw new RuleViolationError(
++        'A done note cannot be edited; it can only be reopened with { status: "open" }',
++        { id },
++      );
++    }
++    const updated = await this.repo.update(id, patch);
++    if (!updated) throw new NotFoundError('Note', id);
++    return updated;
++  }
++
++  async remove(id: string): Promise<void> {
++    const current = await this.findOne(id);
++    // No remove-time rules. Its shares go with it (note_shares cascades).
++    void current;
++    const deleted = await this.repo.delete(id);
++    if (!deleted) throw new NotFoundError('Note', id);
++  }
++
++  /** The users this note is shared with. */
++  async sharedWith(id: string): Promise<User[]> {
++    await this.findOne(id);
++    return this.repo.findSharedUsers(id);
++  }
++
++  /** Share with a user; idempotent. */
++  async share(id: string, userId: string): Promise<void> {
++    const note = await this.findOne(id);
++    if (!(await this.repo.findUser(userId))) {
++      throw new NotFoundError('User', userId);
++    }
++    // R4: never with its own owner.
++    if (note.ownerId === userId) {
++      throw new RuleViolationError('A note cannot be shared with its owner', {
++        id,
++        userId,
++      });
++    }
++    await this.repo.share(id, userId);
++  }
++
++  /** Unshare; 404 if the note was not shared with that user. */
++  async unshare(id: string, userId: string): Promise<void> {
++    await this.findOne(id);
++    if (!(await this.repo.unshare(id, userId))) {
++      throw new NotFoundError('Share', `${id}/${userId}`);
++    }
++  }
++}
+diff --git a/src/notes/notes.table.spec.ts b/src/notes/notes.table.spec.ts
+new file mode 100644
+index 0000000..12230b8
+--- /dev/null
++++ b/src/notes/notes.table.spec.ts
+@@ -0,0 +1,16 @@
++import { getTableColumns } from 'drizzle-orm';
++import { NoteSchema } from './note.schema.js';
++import { notes } from './notes.table.js';
++
++/**
++ * Drift guard: the zod schema (API contract) and the drizzle table (storage)
++ * are written separately, so nothing else stops them disagreeing. A field
++ * added to one and forgotten in the other fails here, not in production.
++ */
++describe('notes table vs NoteSchema', () => {
++  it('declare exactly the same fields', () => {
++    const columns = Object.keys(getTableColumns(notes)).sort();
++    const fields = Object.keys(NoteSchema.shape).sort();
++    expect(columns).toEqual(fields);
++  });
++});
+diff --git a/src/users/dto/create-user.dto.ts b/src/users/dto/create-user.dto.ts
+new file mode 100644
+index 0000000..dfe6c66
+--- /dev/null
++++ b/src/users/dto/create-user.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { CreateUserSchema } from '../user.schema.js';
++
++export class CreateUserDto extends createZodDto(CreateUserSchema) {}
+diff --git a/src/users/dto/update-user.dto.ts b/src/users/dto/update-user.dto.ts
+new file mode 100644
+index 0000000..42239d0
+--- /dev/null
++++ b/src/users/dto/update-user.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { UpdateUserSchema } from '../user.schema.js';
++
++export class UpdateUserDto extends createZodDto(UpdateUserSchema) {}
+diff --git a/src/users/entities/user.entity.ts b/src/users/entities/user.entity.ts
+new file mode 100644
+index 0000000..d0689f0
+--- /dev/null
++++ b/src/users/entities/user.entity.ts
+@@ -0,0 +1,8 @@
++import type { z } from 'zod';
++import type { UserResponseSchema, UserSchema } from '../user.schema.js';
++
++/** Derived from the schemas: never hand-write fields here. */
++export type User = z.infer<typeof UserSchema>;
++
++/** A User without its private fields: the only shape that leaves the API. */
++export type UserResponse = z.infer<typeof UserResponseSchema>;
+diff --git a/src/users/user.schema.ts b/src/users/user.schema.ts
+new file mode 100644
+index 0000000..9c9a551
+--- /dev/null
++++ b/src/users/user.schema.ts
+@@ -0,0 +1,53 @@
++import { z } from 'zod';
++import { patchSchema } from '../common/schemas/patch-schema.js';
++
++/**
++ * Single source of truth for a User AS STORED: validation, TypeScript types
++ * and the OpenAPI schema all derive from these definitions. Change fields HERE only.
++ */
++export const UserSchema = z.object({
++  id: z.string().uuid(),
++  // Lower-cased before storage, so the table's unique index is case-insensitive (R1).
++  email: z.email().max(254).toLowerCase(),
++  // Trimmed before the length check, so "   " is rejected.
++  name: z.string().trim().min(1).max(100),
++  createdAt: z.string().datetime(),
++  updatedAt: z.string().datetime(),
++});
++
++/**
++ * Stored but never RETURNED and never ACCEPTED from a client (a password or
++ * secret hash). Responses are parsed through UserResponseSchema, which
++ * strips these. A test checks that no response carries them.
++ */
++const PRIVATE = {} as const;
++
++/**
++ * Returned to clients but never ACCEPTED from them: the server sets these, usually
++ * through actions (e.g. `status` only changes via POST /:id/activate).
++ */
++const SERVER_OWNED = {} as const;
++
++/** What every endpoint returns. */
++export const UserResponseSchema = UserSchema.omit(PRIVATE);
++
++/**
++ * Client-settable fields, UNREFINED. Zod 4 throws on .omit()/.partial() of a
++ * refined object, so derive from this and attach .refine() last.
++ */
++const UserFields = UserSchema.omit({
++  id: true,
++  createdAt: true,
++  updatedAt: true,
++  ...PRIVATE,
++  ...SERVER_OWNED,
++});
++
++/** POST body. */
++export const CreateUserSchema = UserFields;
++
++/**
++ * PATCH body: any subset of the create fields, never empty, and WITHOUT defaults
++ * (see patchSchema: .partial() would overwrite stored values with defaults).
++ */
++export const UpdateUserSchema = patchSchema(UserFields);
+diff --git a/src/users/users.controller.ts b/src/users/users.controller.ts
+new file mode 100644
+index 0000000..b4f786c
+--- /dev/null
++++ b/src/users/users.controller.ts
+@@ -0,0 +1,66 @@
++import {
++  Body,
++  Controller,
++  Delete,
++  Get,
++  HttpCode,
++  HttpStatus,
++  Param,
++  ParseUUIDPipe,
++  Patch,
++  Post,
++  Query,
++} from '@nestjs/common';
++import { ApiTags } from '@nestjs/swagger';
++import type { Page } from '../common/persistence/repository.js';
++import { PageQueryDto } from '../common/schemas/page-query.schema.js';
++import { UserResponseSchema } from './user.schema.js';
++import { UsersService } from './users.service.js';
++import { CreateUserDto } from './dto/create-user.dto.js';
++import { UpdateUserDto } from './dto/update-user.dto.js';
++import type { User, UserResponse } from './entities/user.entity.js';
++
++/** Strip private fields. Every value this controller returns passes through here. */
++const toResponse = (entity: User): UserResponse =>
++  UserResponseSchema.parse(entity);
++
++/**
++ * HTTP only: parse, delegate, return. No business logic here (it goes in the
++ * service) and no try/catch (DomainExceptionFilter maps errors).
++ * Routes: /api/v1/users
++ */
++@ApiTags('users')
++@Controller('users')
++export class UsersController {
++  constructor(private readonly service: UsersService) {}
++
++  @Post()
++  async create(@Body() body: CreateUserDto): Promise<UserResponse> {
++    return toResponse(await this.service.create(body));
++  }
++
++  @Get()
++  async findPage(@Query() query: PageQueryDto): Promise<Page<UserResponse>> {
++    const page = await this.service.findPage(query.limit, query.offset);
++    return { ...page, items: page.items.map(toResponse) };
++  }
++
++  @Get(':id')
++  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponse> {
++    return toResponse(await this.service.findOne(id));
++  }
++
++  @Patch(':id')
++  async update(
++    @Param('id', ParseUUIDPipe) id: string,
++    @Body() body: UpdateUserDto,
++  ): Promise<UserResponse> {
++    return toResponse(await this.service.update(id, body));
++  }
++
++  @Delete(':id')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
++    return this.service.remove(id);
++  }
++}
+diff --git a/src/users/users.drizzle-repository.ts b/src/users/users.drizzle-repository.ts
+new file mode 100644
+index 0000000..f416d46
+--- /dev/null
++++ b/src/users/users.drizzle-repository.ts
+@@ -0,0 +1,17 @@
++import { Inject, Injectable } from '@nestjs/common';
++import { DrizzleRepository } from '../common/persistence/drizzle-repository.js';
++import { DB, type Db } from '../database/database.types.js';
++import type { UsersRepository } from './users.repository.js';
++import { users } from './users.table.js';
++import type { User } from './entities/user.entity.js';
++
++/** SQLite storage for users (drizzle). CRUD comes from DrizzleRepository. */
++@Injectable()
++export class DrizzleUsersRepository
++  extends DrizzleRepository<User>
++  implements UsersRepository
++{
++  constructor(@Inject(DB) db: Db) {
++    super(db, users, 'User');
++  }
++}
+diff --git a/src/users/users.module.ts b/src/users/users.module.ts
+new file mode 100644
+index 0000000..2dad225
+--- /dev/null
++++ b/src/users/users.module.ts
+@@ -0,0 +1,16 @@
++import { Module } from '@nestjs/common';
++import { UsersController } from './users.controller.js';
++import { DrizzleUsersRepository } from './users.drizzle-repository.js';
++import { USERS_REPOSITORY } from './users.repository.js';
++import { UsersService } from './users.service.js';
++
++@Module({
++  controllers: [UsersController],
++  providers: [
++    UsersService,
++    // SQLite via drizzle (DB is provided globally by DatabaseModule).
++    { provide: USERS_REPOSITORY, useClass: DrizzleUsersRepository },
++  ],
++  exports: [UsersService],
++})
++export class UsersModule {}
+diff --git a/src/users/users.repository.ts b/src/users/users.repository.ts
+new file mode 100644
+index 0000000..ee93844
+--- /dev/null
++++ b/src/users/users.repository.ts
+@@ -0,0 +1,10 @@
++import type { Repository } from '../common/persistence/repository.js';
++import type { User } from './entities/user.entity.js';
++
++/** Injection token: services depend on the port, never on a storage class. */
++export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
++
++/** The generic CRUD port plus the lookups this resource needs. */
++// No extra lookups: email uniqueness (R1) is the table's unique index, surfaced by the
++// adapter as ConflictError.
++export type UsersRepository = Repository<User>;
+diff --git a/src/users/users.service.spec.ts b/src/users/users.service.spec.ts
+new file mode 100644
+index 0000000..6490314
+--- /dev/null
++++ b/src/users/users.service.spec.ts
+@@ -0,0 +1,93 @@
++import { ConflictError, NotFoundError } from '../common/errors/domain-error.js';
++import { notes } from '../notes/notes.table.js';
++import { connectInMemory, type Connection } from '../database/connect.js';
++import { DrizzleUsersRepository } from './users.drizzle-repository.js';
++import { UsersService } from './users.service.js';
++import { users } from './users.table.js';
++
++/**
++ * Unit tests against a REAL database (SQLite in memory, migrated): the
++ * repository's SQL is exercised, not mocked. One database per file.
++ */
++describe('UsersService', () => {
++  let connection: Connection;
++  let service: UsersService;
++
++  const valid = { email: 'ada@example.com', name: 'Ada' };
++
++  beforeAll(async () => {
++    connection = await connectInMemory();
++  });
++
++  afterAll(async () => {
++    await connection.close();
++  });
++
++  beforeEach(async () => {
++    await connection.db.delete(notes);
++    await connection.db.delete(users);
++    service = new UsersService(new DrizzleUsersRepository(connection.db));
++  });
++
++  it('creates and reads back one user', async () => {
++    const created = await service.create(valid);
++    await expect(service.findOne(created.id)).resolves.toEqual(created);
++  });
++
++  it('throws NotFoundError for an unknown id', async () => {
++    await expect(
++      service.findOne('00000000-0000-4000-8000-000000000000'),
++    ).rejects.toBeInstanceOf(NotFoundError);
++  });
++
++  it('removes one user', async () => {
++    const created = await service.create(valid);
++    await service.remove(created.id);
++    await expect(service.findOne(created.id)).rejects.toBeInstanceOf(
++      NotFoundError,
++    );
++  });
++
++  describe('R1: email is unique', () => {
++    it('allows a different email', async () => {
++      await service.create(valid);
++      await expect(
++        service.create({ ...valid, email: 'grace@example.com' }),
++      ).resolves.toMatchObject({ email: 'grace@example.com' });
++    });
++
++    it('refuses a taken email on create with ConflictError', async () => {
++      await service.create(valid);
++      await expect(service.create(valid)).rejects.toBeInstanceOf(ConflictError);
++    });
++
++    it('refuses renaming onto a taken email with ConflictError', async () => {
++      await service.create(valid);
++      const other = await service.create({
++        ...valid,
++        email: 'grace@example.com',
++      });
++      await expect(
++        service.update(other.id, { email: valid.email }),
++      ).rejects.toBeInstanceOf(ConflictError);
++    });
++  });
++
++  describe('R2: a user who owns notes cannot be deleted', () => {
++    it('refuses with ConflictError and keeps the user', async () => {
++      const owner = await service.create(valid);
++      await connection.db
++        .insert(notes)
++        .values({ ownerId: owner.id, title: 'Mine' });
++      await expect(service.remove(owner.id)).rejects.toBeInstanceOf(
++        ConflictError,
++      );
++      await expect(service.findOne(owner.id)).resolves.toEqual(owner);
++    });
++
++    it('allows deleting a user who owns none', async () => {
++      const free = await service.create(valid);
++      await expect(service.remove(free.id)).resolves.toBeUndefined();
++    });
++  });
++});
+diff --git a/src/users/users.service.ts b/src/users/users.service.ts
+new file mode 100644
+index 0000000..429c14d
+--- /dev/null
++++ b/src/users/users.service.ts
+@@ -0,0 +1,62 @@
++import { Inject, Injectable } from '@nestjs/common';
++import { NotFoundError } from '../common/errors/domain-error.js';
++import type { Entity, Page } from '../common/persistence/repository.js';
++import { USERS_REPOSITORY, type UsersRepository } from './users.repository.js';
++import type { CreateUserDto } from './dto/create-user.dto.js';
++import type { UpdateUserDto } from './dto/update-user.dto.js';
++import type { User } from './entities/user.entity.js';
++
++/**
++ * Business logic for users. Shape rules (types, lengths, enums) live in the
++ * schema. Only rules that need state or more than one field belong here, and
++ * they fail by throwing a DomainError, never by returning a flag.
++ */
++@Injectable()
++export class UsersService {
++  constructor(
++    @Inject(USERS_REPOSITORY) private readonly repo: UsersRepository,
++  ) {}
++
++  async create(input: CreateUserDto): Promise<User> {
++    // No create-time rules here. R1 (unique email): the schema lower-cases it and the
++    // table's unique index refuses a duplicate, which the adapter throws as ConflictError.
++    return this.repo.create(await this.toStored(input));
++  }
++
++  /** The create payload in its STORED shape: write-only inputs become private fields. */
++  private toStored(
++    input: CreateUserDto,
++  ): Promise<Omit<User, keyof Entity>> | Omit<User, keyof Entity> {
++    // No write-only inputs.
++    return input;
++  }
++
++  findPage(limit: number, offset: number): Promise<Page<User>> {
++    return this.repo.findPage(limit, offset);
++  }
++
++  async findOne(id: string): Promise<User> {
++    const found = await this.repo.findById(id);
++    if (!found) throw new NotFoundError('User', id);
++    return found;
++  }
++
++  async update(id: string, patch: UpdateUserDto): Promise<User> {
++    const current = await this.findOne(id);
++    // No update-time rules (a rename onto a taken email is R1, refused by the index).
++    void current;
++    const updated = await this.repo.update(id, patch);
++    if (!updated) throw new NotFoundError('User', id);
++    return updated;
++  }
++
++  async remove(id: string): Promise<void> {
++    const current = await this.findOne(id);
++    // No remove-time rules here. R2 (a user who owns notes cannot be deleted) is the
++    // notes.owner_id foreign key (RESTRICT); the adapter throws it as ConflictError.
++    // Shares WITH this user cascade away.
++    void current;
++    const deleted = await this.repo.delete(id);
++    if (!deleted) throw new NotFoundError('User', id);
++  }
++}
+diff --git a/src/users/users.table.spec.ts b/src/users/users.table.spec.ts
+new file mode 100644
+index 0000000..3e8725e
+--- /dev/null
++++ b/src/users/users.table.spec.ts
+@@ -0,0 +1,16 @@
++import { getTableColumns } from 'drizzle-orm';
++import { UserSchema } from './user.schema.js';
++import { users } from './users.table.js';
++
++/**
++ * Drift guard: the zod schema (API contract) and the drizzle table (storage)
++ * are written separately, so nothing else stops them disagreeing. A field
++ * added to one and forgotten in the other fails here, not in production.
++ */
++describe('users table vs UserSchema', () => {
++  it('declare exactly the same fields', () => {
++    const columns = Object.keys(getTableColumns(users)).sort();
++    const fields = Object.keys(UserSchema.shape).sort();
++    expect(columns).toEqual(fields);
++  });
++});
+diff --git a/test/notes.e2e-spec.ts b/test/notes.e2e-spec.ts
+new file mode 100644
+index 0000000..c98a5b8
+--- /dev/null
++++ b/test/notes.e2e-spec.ts
+@@ -0,0 +1,268 @@
++import { INestApplication } from '@nestjs/common';
++import { Test } from '@nestjs/testing';
++import request from 'supertest';
++import type { App } from 'supertest/types.js';
++import { AppModule } from '../src/app.module.js';
++import { configureApp } from '../src/bootstrap/configure-app.js';
++import { NoteResponseSchema } from '../src/notes/note.schema.js';
++
++/** Through the real HTTP stack: routing, validation pipe, error filter. */
++describe('notes (e2e)', () => {
++  let app: INestApplication<App>;
++  const base = '/api/v1/notes';
++  const missing = '00000000-0000-4000-8000-000000000000';
++
++  let n = 0;
++  let ownerId: string;
++  const valid = () => ({ ownerId, title: `Note ${++n}` });
++  /** A fresh user through the users API (the owner of every note here). */
++  const newUser = async () =>
++    (
++      await http
++        .post('/api/v1/users')
++        .send({ email: `notes-e2e-${++n}@example.com`, name: 'User' })
++        .expect(201)
++    ).body.id as string;
++
++  /** Shorthand for requests through the real HTTP server. */
++  const http = {
++    get: (url: string) => request(app.getHttpServer()).get(url),
++    post: (url: string) => request(app.getHttpServer()).post(url),
++    patch: (url: string) => request(app.getHttpServer()).patch(url),
++    put: (url: string) => request(app.getHttpServer()).put(url),
++    delete: (url: string) => request(app.getHttpServer()).delete(url),
++  };
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++    app = moduleRef.createNestApplication();
++    configureApp(app);
++    await app.init();
++    ownerId = await newUser();
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  it('POST creates (201) and GET reads it back (200)', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http
++      .get(`${base}/${created.body.id}`)
++      .expect(200)
++      .expect((res) => expect(res.body).toEqual(created.body));
++  });
++
++  it('responses carry only public fields (no private field ever leaves)', async () => {
++    const publicKeys = new Set(Object.keys(NoteResponseSchema.shape));
++    const leaked = (body: object) =>
++      Object.keys(body).filter((key) => !publicKeys.has(key));
++    const created = await http.post(base).send(valid()).expect(201);
++    expect(leaked(created.body)).toEqual([]);
++    const list = await http.get(base).expect(200);
++    expect(list.body.items.length).toBeGreaterThan(0);
++    for (const item of list.body.items) expect(leaked(item)).toEqual([]);
++  });
++
++  it('POST stores the PARSED body: unknown keys are stripped', async () => {
++    // Guards the validation pipe's contract over HTTP. A pipe that validated but
++    // passed the raw input through would store this key; unit tests cannot see it.
++    const created = await http
++      .post(base)
++      .send({ ...valid(), notAField: 'x' })
++      .expect(201);
++    expect(created.body).not.toHaveProperty('notAField');
++  });
++
++  it('POST rejects an invalid body (400)', () =>
++    http.post(base).send({ unexpected: 'shape' }).expect(400));
++
++  it('GET unknown id is 404 with the DomainError body', () =>
++    http
++      .get(`${base}/${missing}`)
++      .expect(404)
++      .expect((res) => expect(res.body.code).toBe('NOT_FOUND')));
++
++  it('GET a non-uuid id is 400', () =>
++    http.get(`${base}/not-a-uuid`).expect(400));
++
++  it('PATCH with an empty body is 400', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http.patch(`${base}/${created.body.id}`).send({}).expect(400);
++  });
++
++  it('DELETE is 204, then GET is 404', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http.delete(`${base}/${created.body.id}`).expect(204);
++    await http.get(`${base}/${created.body.id}`).expect(404);
++  });
++
++  it('POST applies the defaults and trims the title', async () => {
++    const created = await http
++      .post(base)
++      .send({ ownerId, title: '  Trimmed  ' })
++      .expect(201);
++    expect(created.body).toMatchObject({
++      ownerId,
++      title: 'Trimmed',
++      body: '',
++      status: 'open',
++      dueAt: null,
++    });
++  });
++
++  it.each([
++    ['a blank title', { title: '   ' }],
++    ['a title over 200 chars', { title: 'a'.repeat(201) }],
++    ['a body over 10,000 chars', { body: 'a'.repeat(10_001) }],
++    ['an unknown status', { status: 'archived' }],
++    ['a non-uuid ownerId', { ownerId: 'nope' }],
++    ['R3: a dueAt that is not a datetime', { dueAt: 'next tuesday' }],
++    ['R3: a dueAt with no offset', { dueAt: '2026-11-01T09:00:00' }],
++    ['R3: an impossible dueAt', { dueAt: '2026-02-31T09:00:00Z' }],
++  ])('POST rejects %s (400)', async (_label, extra) => {
++    await http
++      .post(base)
++      .send({ ...valid(), ...extra })
++      .expect(400);
++  });
++
++  it('R3: dueAt with an offset is stored and returned as UTC toISOString()', async () => {
++    const created = await http
++      .post(base)
++      .send({ ...valid(), dueAt: '2026-11-01T09:00:00+08:00' })
++      .expect(201);
++    expect(created.body.dueAt).toBe('2026-11-01T01:00:00.000Z');
++    const patched = await http
++      .patch(`${base}/${created.body.id}`)
++      .send({ dueAt: '2026-11-02T00:00:00-05:00' })
++      .expect(200);
++    expect(patched.body.dueAt).toBe('2026-11-02T05:00:00.000Z');
++    const cleared = await http
++      .patch(`${base}/${created.body.id}`)
++      .send({ dueAt: null })
++      .expect(200);
++    expect(cleared.body.dueAt).toBeNull();
++  });
++
++  it('R1: an owner that does not exist is 422', () =>
++    http
++      .post(base)
++      .send({ ...valid(), ownerId: missing })
++      .expect(422)
++      .expect((res) => expect(res.body.code).toBe('RULE_VIOLATION')));
++
++  it('PATCH ignores ownerId and keeps the other fields', async () => {
++    const other = await newUser();
++    const created = await http
++      .post(base)
++      .send({ ...valid(), body: 'keep me' })
++      .expect(201);
++    const res = await http
++      .patch(`${base}/${created.body.id}`)
++      .send({ ownerId: other, title: 'Still mine' })
++      .expect(200);
++    expect(res.body).toMatchObject({ ownerId, body: 'keep me' });
++  });
++
++  it('R2: a done note can only be reopened (422 otherwise)', async () => {
++    const created = await http
++      .post(base)
++      .send({ ...valid(), status: 'done' })
++      .expect(201);
++    const url = `${base}/${created.body.id}`;
++    await http
++      .patch(url)
++      .send({ title: 'Changed' })
++      .expect(422)
++      .expect((res) => expect(res.body.code).toBe('RULE_VIOLATION'));
++    await http.patch(url).send({ status: 'open' }).expect(200);
++    await http.patch(url).send({ title: 'Changed' }).expect(200);
++  });
++
++  it('GET filters by ownerId, status and sharedWith (AND); bad filters are 400', async () => {
++    const owner = await newUser();
++    const friend = await newUser();
++    const open = await http.post(base).send({ ownerId: owner, title: 'o' });
++    const done = await http
++      .post(base)
++      .send({ ownerId: owner, title: 'd', status: 'done' });
++    await http.put(`${base}/${done.body.id}/shares/${friend}`).expect(204);
++    const ids = async (query: object) =>
++      (await http.get(base).query(query).expect(200)).body.items.map(
++        (x: { id: string }) => x.id,
++      );
++    expect(await ids({ ownerId: owner })).toEqual([open.body.id, done.body.id]);
++    expect(await ids({ ownerId: owner, status: 'done' })).toEqual([
++      done.body.id,
++    ]);
++    expect(await ids({ sharedWith: friend })).toEqual([done.body.id]);
++    expect(await ids({ sharedWith: friend, status: 'open' })).toEqual([]);
++    await http.get(base).query({ ownerId: 'nope' }).expect(400);
++    await http.get(base).query({ status: 'archived' }).expect(400);
++  });
++
++  describe('sharing', () => {
++    it('PUT is 204 and idempotent; GET lists the users without private fields', async () => {
++      const friend = await newUser();
++      const note = await http.post(base).send(valid()).expect(201);
++      const url = `${base}/${note.body.id}/shares`;
++      await http.put(`${url}/${friend}`).expect(204);
++      await http.put(`${url}/${friend}`).expect(204);
++      const res = await http.get(url).expect(200);
++      expect(res.body.items.map((u: { id: string }) => u.id)).toEqual([friend]);
++      expect(Object.keys(res.body.items[0]).sort()).toEqual(
++        ['createdAt', 'email', 'id', 'name', 'updatedAt'].sort(),
++      );
++    });
++
++    it('R4: sharing with the owner is 422', async () => {
++      const note = await http.post(base).send(valid()).expect(201);
++      await http
++        .put(`${base}/${note.body.id}/shares/${ownerId}`)
++        .expect(422)
++        .expect((res) => expect(res.body.code).toBe('RULE_VIOLATION'));
++    });
++
++    it('unknown note or user is 404; non-uuid ids are 400', async () => {
++      const note = await http.post(base).send(valid()).expect(201);
++      await http.put(`${base}/${note.body.id}/shares/${missing}`).expect(404);
++      await http.put(`${base}/${missing}/shares/${ownerId}`).expect(404);
++      await http.get(`${base}/${missing}/shares`).expect(404);
++      await http.put(`${base}/${note.body.id}/shares/nope`).expect(400);
++    });
++
++    it('DELETE unshares (204), then 404', async () => {
++      const friend = await newUser();
++      const note = await http.post(base).send(valid()).expect(201);
++      const url = `${base}/${note.body.id}/shares/${friend}`;
++      await http.put(url).expect(204);
++      await http.delete(url).expect(204);
++      await http.delete(url).expect(404);
++    });
++
++    it('deleting the friend removes the share and keeps the note', async () => {
++      const friend = await newUser();
++      const note = await http.post(base).send(valid()).expect(201);
++      await http.put(`${base}/${note.body.id}/shares/${friend}`).expect(204);
++      await http.delete(`/api/v1/users/${friend}`).expect(204);
++      const res = await http.get(`${base}/${note.body.id}/shares`).expect(200);
++      expect(res.body.items).toEqual([]);
++      await http.get(`${base}/${note.body.id}`).expect(200);
++    });
++
++    it('deleting the note removes its shares (the friend can then be deleted)', async () => {
++      const friend = await newUser();
++      const note = await http.post(base).send(valid()).expect(201);
++      await http.put(`${base}/${note.body.id}/shares/${friend}`).expect(204);
++      await http.delete(`${base}/${note.body.id}`).expect(204);
++      await http.get(`${base}/${note.body.id}/shares`).expect(404);
++      expect(
++        (await http.get(base).query({ sharedWith: friend }).expect(200)).body
++          .items,
++      ).toEqual([]);
++    });
++  });
++});
+diff --git a/test/users.e2e-spec.ts b/test/users.e2e-spec.ts
+new file mode 100644
+index 0000000..c8ae670
+--- /dev/null
++++ b/test/users.e2e-spec.ts
+@@ -0,0 +1,145 @@
++import { INestApplication } from '@nestjs/common';
++import { Test } from '@nestjs/testing';
++import request from 'supertest';
++import type { App } from 'supertest/types.js';
++import { AppModule } from '../src/app.module.js';
++import { configureApp } from '../src/bootstrap/configure-app.js';
++import { DB, type Db } from '../src/database/database.types.js';
++import { notes } from '../src/notes/notes.table.js';
++import { UserResponseSchema } from '../src/users/user.schema.js';
++
++/** Through the real HTTP stack: routing, validation pipe, error filter. */
++describe('users (e2e)', () => {
++  let app: INestApplication<App>;
++  const base = '/api/v1/users';
++  const missing = '00000000-0000-4000-8000-000000000000';
++
++  let n = 0;
++  const valid = () => ({ email: `user-${++n}@example.com`, name: 'Ada' });
++
++  /** Shorthand for requests through the real HTTP server. */
++  const http = {
++    get: (url: string) => request(app.getHttpServer()).get(url),
++    post: (url: string) => request(app.getHttpServer()).post(url),
++    patch: (url: string) => request(app.getHttpServer()).patch(url),
++    delete: (url: string) => request(app.getHttpServer()).delete(url),
++  };
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++    app = moduleRef.createNestApplication();
++    configureApp(app);
++    await app.init();
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  it('POST creates (201) and GET reads it back (200)', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http
++      .get(`${base}/${created.body.id}`)
++      .expect(200)
++      .expect((res) => expect(res.body).toEqual(created.body));
++  });
++
++  it('responses carry only public fields (no private field ever leaves)', async () => {
++    const publicKeys = new Set(Object.keys(UserResponseSchema.shape));
++    const leaked = (body: object) =>
++      Object.keys(body).filter((key) => !publicKeys.has(key));
++    const created = await http.post(base).send(valid()).expect(201);
++    expect(leaked(created.body)).toEqual([]);
++    const list = await http.get(base).expect(200);
++    expect(list.body.items.length).toBeGreaterThan(0);
++    for (const item of list.body.items) expect(leaked(item)).toEqual([]);
++  });
++
++  it('POST stores the PARSED body: unknown keys are stripped', async () => {
++    // Guards the validation pipe's contract over HTTP. A pipe that validated but
++    // passed the raw input through would store this key; unit tests cannot see it.
++    const created = await http
++      .post(base)
++      .send({ ...valid(), notAField: 'x' })
++      .expect(201);
++    expect(created.body).not.toHaveProperty('notAField');
++  });
++
++  it('POST rejects an invalid body (400)', () =>
++    http.post(base).send({ unexpected: 'shape' }).expect(400));
++
++  it('GET unknown id is 404 with the DomainError body', () =>
++    http
++      .get(`${base}/${missing}`)
++      .expect(404)
++      .expect((res) => expect(res.body.code).toBe('NOT_FOUND')));
++
++  it('GET a non-uuid id is 400', () =>
++    http.get(`${base}/not-a-uuid`).expect(400));
++
++  it('PATCH with an empty body is 400', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http.patch(`${base}/${created.body.id}`).send({}).expect(400);
++  });
++
++  it('DELETE is 204, then GET is 404', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http.delete(`${base}/${created.body.id}`).expect(204);
++    await http.get(`${base}/${created.body.id}`).expect(404);
++  });
++
++  it('POST lower-cases the email and trims the name', async () => {
++    const created = await http
++      .post(base)
++      .send({ email: `Mixed-${++n}@Example.COM`, name: '  Ada  ' })
++      .expect(201);
++    expect(created.body.email).toBe(`mixed-${n}@example.com`);
++    expect(created.body.name).toBe('Ada');
++  });
++
++  it.each([
++    ['an invalid email', { email: 'not-an-email', name: 'Ada' }],
++    [
++      'an email over 254 chars',
++      { email: `${'a'.repeat(250)}@example.com`, name: 'A' },
++    ],
++    ['a blank name', { email: 'blank@example.com', name: '   ' }],
++    [
++      'a name over 100 chars',
++      { email: 'long@example.com', name: 'a'.repeat(101) },
++    ],
++  ])('POST rejects %s (400)', async (_label, body) => {
++    await http.post(base).send(body).expect(400);
++  });
++
++  it('R1: the same email in another case is 409', async () => {
++    const created = await http.post(base).send(valid()).expect(201);
++    await http
++      .post(base)
++      .send({ email: created.body.email.toUpperCase(), name: 'Twin' })
++      .expect(409)
++      .expect((res) => expect(res.body.code).toBe('CONFLICT'));
++  });
++
++  it('R1: PATCH onto a taken email (any case) is 409', async () => {
++    const a = await http.post(base).send(valid()).expect(201);
++    const b = await http.post(base).send(valid()).expect(201);
++    await http
++      .patch(`${base}/${b.body.id}`)
++      .send({ email: a.body.email.toUpperCase() })
++      .expect(409);
++  });
++
++  it('R2: a user who owns notes cannot be deleted (409)', async () => {
++    const owner = await http.post(base).send(valid()).expect(201);
++    const db = app.get<Db>(DB);
++    await db.insert(notes).values({ ownerId: owner.body.id, title: 'Mine' });
++    await http
++      .delete(`${base}/${owner.body.id}`)
++      .expect(409)
++      .expect((res) => expect(res.body.code).toBe('CONFLICT'));
++    await http.get(`${base}/${owner.body.id}`).expect(200);
++  });
++});

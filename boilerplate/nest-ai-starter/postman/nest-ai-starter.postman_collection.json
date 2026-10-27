@@ -1,58 +1,10 @@
 {
   "info": {
     "_postman_id": "c74dabb4-902e-5f8a-a4c6-401f45cc8254",
-    "name": "nest-ai-starter labs",
-    "description": "Every REST and MCP call the course labs make.\n\n1. In boilerplate/nest-ai-starter: `pnpm build && pnpm db:migrate && pnpm start`.\n2. Import this file into Postman. `baseUrl` is http://localhost:3000.\n3. Run the folders in order (or the whole collection with the Runner).\n\nFolders are numbered by chapter; each name also says its module.\n\nAuth: \"Log in\" (folder 03) trades {{email}} / {{password}} (a local demo user) for a token; the collection then sends `Authorization: Bearer {{token}}`. Requests that must not send it override it. MCP requests authenticate as a device with X-Device-Key / X-Device-Secret.\n\nSECRETS. Provisioning stores the device secret in the `secret` variable (current value). Never export, share or commit the collection after running it. Re-import the clean file instead.",
+    "name": "nest-ai-starter",
+    "description": "The REST calls of module 1: users, notes and sharing, on the seeded data/app.db. Folders work once your agent has built that resource. Run the folders in order: later requests use ids the earlier ones store.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{token}}",
-        "type": "string"
-      }
-    ]
-  },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:3000"
-    },
-    {
-      "key": "email",
-      "value": "demo@example.com"
-    },
-    {
-      "key": "password",
-      "value": "demo passphrase for labs"
-    },
-    {
-      "key": "token",
-      "value": ""
-    },
-    {
-      "key": "deviceId",
-      "value": ""
-    },
-    {
-      "key": "deviceKey",
-      "value": ""
-    },
-    {
-      "key": "secret",
-      "value": ""
-    },
-    {
-      "key": "rotatedSecret",
-      "value": ""
-    },
-    {
-      "key": "noteId",
-      "value": ""
-    }
-  ],
   "item": [
     {
       "id": "b06f2ece-5d26-5cfb-8384-858826298676",
@@ -70,10 +22,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "health"]
             },
-            "description": "Unversioned and public. 200 `{\"status\":\"ok\"}` once migrate has run and the app has started.",
-            "auth": {
-              "type": "noauth"
-            }
+            "description": "The unversioned health route."
           },
           "event": [
             {
@@ -81,7 +30,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 ok', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('ok'); });"
+                  "pm.test('200 {status: ok}', () => pm.response.to.have.status(200));",
+                  "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
                 ]
               }
             }
@@ -90,13 +40,46 @@
       ]
     },
     {
-      "id": "99629e77-1f64-53bf-b4ff-59aa5d589d19",
-      "name": "03 · Auth (module 3)",
-      "description": "Sign up, log in with Basic to get a token, then use the token. Every failure is the same 401. Chapter 03 lab: give unknown emails a different message at login and re-run this folder: the \"same body\" test fails, and so does the e2e test that pins the rule.",
+      "id": "48a13dc5-9bf6-5fab-9f54-2e0fe662e306",
+      "name": "01 · Users (module 1)",
+      "description": "The users resource on the seeded data/app.db (25 users). These requests write to your database; `pnpm db:seed` rebuilds it from scratch.",
       "item": [
         {
-          "id": "ee807d98-a9ce-5d7a-8fd0-d9c7fb2302a8",
-          "name": "Sign up (public)",
+          "id": "ffb363cb-db31-5652-a323-741a476e1230",
+          "name": "List users (seeded)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Paged list: { items, total, limit, offset }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('seeded users are there', () => pm.expect(pm.response.json().total).to.be.above(0));",
+                  "pm.collectionVariables.set('friendId', pm.response.json().items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "07534845-99a7-50e1-bc2f-b39c22acd792",
+          "name": "Create user",
           "request": {
             "method": "POST",
             "header": [
@@ -110,18 +93,15 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users"]
             },
-            "description": "The one public write. 201 creates the user; 409 means it already exists, which is fine for a re-run. Chapter 02 lab: once you add `phone`, add it to this body.",
+            "description": "Email stored lower-case; name trimmed.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"name\": \"Demo\",\n  \"password\": \"{{password}}\"\n}",
+              "raw": "{\n  \"email\": \"Postman.{{$timestamp}}@Example.com\",\n  \"name\": \"  Postman User  \"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "event": [
@@ -130,227 +110,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201 created, or 409 already exists', () => { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
-                  "if (pm.response.code === 201) {",
-                  "  const u = pm.response.json();",
-                  "  pm.test('no password or hash in the response', () => { pm.expect(u).to.not.have.any.keys('password', 'passwordHash'); });",
-                  "}"
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('email lower-cased', () => pm.expect(pm.response.json().email).to.eql(pm.response.json().email.toLowerCase()));",
+                  "pm.collectionVariables.set('userId', pm.response.json().id);",
+                  "pm.collectionVariables.set('userEmail', pm.response.json().email);"
                 ]
               }
             }
           ]
         },
         {
-          "id": "c445ba1d-6aac-5790-848e-7dc6869aeb7f",
-          "name": "Log in: wrong password → 401",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
-            },
-            "description": "A known email with a wrong password.",
-            "auth": {
-              "type": "basic",
-              "basic": [
-                {
-                  "key": "username",
-                  "value": "{{email}}",
-                  "type": "string"
-                },
-                {
-                  "key": "password",
-                  "value": "not-the-password",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('401 with a Basic challenge', () => {",
-                  "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic');",
-                  "});",
-                  "pm.test('the same body as every other auth failure', () => {",
-                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "fb8ad5f9-81bd-50fc-be9f-9f5496d7c284",
-          "name": "Log in: unknown email → the same 401",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
-            },
-            "description": "An email nobody registered. Same 401 again, so emails cannot be probed.",
-            "auth": {
-              "type": "basic",
-              "basic": [
-                {
-                  "key": "username",
-                  "value": "nobody@example.com",
-                  "type": "string"
-                },
-                {
-                  "key": "password",
-                  "value": "{{password}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('401 with a Basic challenge', () => {",
-                  "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic');",
-                  "});",
-                  "pm.test('the same body as every other auth failure', () => {",
-                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "ffe1b2bb-a44a-509a-9b7d-b991606873f9",
-          "name": "Log in (Basic) → token",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
-            },
-            "description": "Basic with {{email}} / {{password}}. The test stores the access token in the `token` variable; every later request sends it as `Authorization: Bearer {{token}}` (the collection auth).",
-            "auth": {
-              "type": "basic",
-              "basic": [
-                {
-                  "key": "username",
-                  "value": "{{email}}",
-                  "type": "string"
-                },
-                {
-                  "key": "password",
-                  "value": "{{password}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 with a bearer token', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const t = pm.response.json();",
-                  "  pm.expect(t.tokenType).to.eql('Bearer');",
-                  "  pm.collectionVariables.set('token', t.accessToken);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "39b12d57-57a0-52fc-8b0e-97200f3d5c26",
-          "name": "Me: no token → 401",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "me"]
-            },
-            "description": "No Authorization header at all.",
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('401 with a Bearer challenge', () => {",
-                  "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Bearer');",
-                  "});",
-                  "pm.test('the same body as every other auth failure', () => {",
-                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "a22968c4-80cc-5206-a4d0-acde800f5cfc",
-          "name": "Me (Bearer token)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "me"]
-            },
-            "description": "Uses the collection auth: Bearer {{token}}."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, the public user', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const u = pm.response.json();",
-                  "  pm.expect(u.email).to.eql(pm.collectionVariables.get('email'));",
-                  "  pm.expect(u).to.not.have.any.keys('password', 'passwordHash');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "9bc82436-4612-520f-8d4c-ec49aa84ede0",
-      "name": "04 · Devices (module 3)",
-      "description": "Provision a device: one call creates it and returns its key and secret (the secret is shown ONCE and stored in the `secret` variable). Then read it back: the secret never appears again.",
-      "item": [
-        {
-          "id": "6432d43c-a84a-57d4-b5b7-69c66e8ae84f",
-          "name": "Provision device (key + secret shown once)",
+          "id": "51597639-743d-53a7-ba7d-e8920f0d3481",
+          "name": "Duplicate email → 409 (R1)",
           "request": {
             "method": "POST",
             "header": [
@@ -360,14 +131,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/devices/provision",
+              "raw": "{{baseUrl}}/api/v1/users",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices", "provision"]
+              "path": ["api", "v1", "users"]
             },
-            "description": "Owned by the signed-in user, active at once. Returns `deviceKey` and the plaintext `secret`, ONCE. The test stores both in collection variables. Never paste the secret anywhere, and never share or export the collection with its current values.",
+            "description": "The same email again collides (emails are compared lower-case).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"postman device\",\n  \"description\": \"created from the Postman collection\"\n}",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"name\": \"Twin\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -381,64 +152,24 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201, an active device with a key and a one-time secret', () => {",
-                  "  pm.response.to.have.status(201);",
-                  "  const d = pm.response.json();",
-                  "  pm.expect(d.status).to.eql('active');",
-                  "  pm.expect(d.deviceKey).to.match(/^DK[A-Z2-7]{16}$/);",
-                  "  pm.expect(d.secret).to.match(/^dsk_/);",
-                  "  pm.collectionVariables.set('deviceId', d.id);",
-                  "  pm.collectionVariables.set('deviceKey', d.deviceKey);",
-                  "  pm.collectionVariables.set('secret', d.secret);",
-                  "});"
+                  "pm.test('409', () => pm.response.to.have.status(409));"
                 ]
               }
             }
           ]
         },
         {
-          "id": "184c39d7-67fa-5b1d-bb60-b2e07b1c4f01",
-          "name": "Get device (no secret, no hash)",
+          "id": "cb0a5cea-dbde-5a43-b709-c67ebda53225",
+          "name": "Get user",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}",
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices", "{{deviceId}}"]
+              "path": ["api", "v1", "users", "{{userId}}"]
             },
-            "description": "Chapter 04 checkpoint: only provision and rotate ever show a secret."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, secret and hash never returned', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const d = pm.response.json();",
-                  "  pm.expect(d).to.not.have.any.keys('secret', 'secretHash');",
-                  "  pm.expect(d.deviceKey).to.eql(pm.collectionVariables.get('deviceKey'));",
-                  "  pm.expect(d.secretLast4).to.eql(pm.collectionVariables.get('secret').slice(-4));",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "e371eb20-7431-57f0-8c5b-a65d25b9ced4",
-          "name": "List my devices",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/devices",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices"]
-            },
-            "description": "Only the signed-in user's devices. Another user's device id answers 404, never 403."
+            "description": "One user by id."
           },
           "event": [
             {
@@ -451,115 +182,32 @@
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "47719d02-1eb8-57a8-8de2-d75fedf39b69",
-      "name": "05 · MCP over HTTP (module 5)",
-      "description": "Raw JSON-RPC to /mcp (the device headers matter from module 6 on). The server is stateless: every POST stands alone, and the answer is one SSE `message` event. Read the Body tab: `event: message` then `data: {...}`.",
-      "item": [
-        {
-          "id": "d0b32d19-d0cd-5f81-9ad0-999df3f36a69",
-          "name": "initialize",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{secret}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "Chapter 05: match the response `id` to the request `id`.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-06-18\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1\"\n    }\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('200 SSE with the matching id', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('text/event-stream');",
-                  "  const m = rpc();",
-                  "  pm.expect(m.id).to.eql(1);",
-                  "  pm.expect(m.result.serverInfo.name).to.eql('nest-ai-starter');",
-                  "});"
-                ]
-              }
-            }
-          ]
         },
         {
-          "id": "b4d59d99-1227-5a89-a9d4-b44119e1f9b1",
-          "name": "tools/list",
+          "id": "3380a612-c80e-5571-aef1-40773920520b",
+          "name": "Rename user",
           "request": {
-            "method": "POST",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{secret}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/mcp",
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
+              "path": ["api", "v1", "users", "{{userId}}"]
             },
-            "description": "The tools this server exposes. Chapter 06 lab: after you add publish-note, it appears here.",
+            "description": "PATCH changes only what you send.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\"\n}",
+              "raw": "{\n  \"name\": \"Renamed\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "event": [
@@ -568,232 +216,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('lists the tools', () => {",
-                  "  const names = rpc().result.tools.map((t) => t.name);",
-                  "  pm.expect(names).to.include.members(['create-note', 'get-note', 'list-notes', 'whoami']);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "c0e06eb5-7ae2-581a-a3e0-a54869c671fb",
-          "name": "tools/call whoami",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{secret}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "Who is calling: the device and its owner, resolved from the X-Device-Key / X-Device-Secret headers.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('the active device and its owner', () => {",
-                  "  const r = rpc().result;",
-                  "  pm.expect(r.isError).to.not.eql(true);",
-                  "  const text = r.content[0].text;",
-                  "  pm.expect(text).to.include(pm.collectionVariables.get('email'));",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "aaf2cecd-fc0b-5ba6-8822-54179254de29",
-          "name": "tools/call create-note (empty published → tool error)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{secret}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "A rule violation comes back as a TOOL error (`isError: true`, readable by the model), not a protocol error. Chapter 07 lab: this is the input your CI check must reject.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"create-note\",\n    \"arguments\": {\n      \"title\": \"from postman\",\n      \"status\": \"published\"\n    }\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('isError, not a JSON-RPC error', () => {",
-                  "  const m = rpc();",
-                  "  pm.expect(m.error).to.be.undefined;",
-                  "  pm.expect(m.result.isError).to.eql(true);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "350cf546-ecf0-5b89-8fb4-1c70759eeda5",
-          "name": "tools/call create-note",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{secret}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "A valid note. The result text carries the note as JSON.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"create-note\",\n    \"arguments\": {\n      \"title\": \"from postman\",\n      \"body\": \"created over MCP\"\n    }\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('created', () => { pm.expect(rpc().result.isError).to.not.eql(true); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "924e9bef-441e-5a84-ae10-d319f6d75571",
-          "name": "No device headers → 401",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "Device auth runs BEFORE the MCP transport. Missing, wrong, archived or rotated: all the same 401.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"ping\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('401', () => pm.response.to.have.status(401));"
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('renamed', () => pm.expect(pm.response.json().name).to.eql('Renamed'));"
                 ]
               }
             }
@@ -802,13 +226,49 @@
       ]
     },
     {
-      "id": "0d11c25c-281e-5481-84bc-9cd065be4360",
-      "name": "06 · Notes over REST (module 4)",
-      "description": "The same rule as the MCP tool, at the HTTP boundary: a published note needs a non-empty body.",
+      "id": "83dae31d-3ca0-5dc7-9cf1-cc208344a408",
+      "name": "02 · Notes and sharing (module 1)",
+      "description": "The notes (TODO items) and who they are shared with. Run 01 first: it sets userId and friendId. These requests write to your database; `pnpm db:seed` rebuilds it.",
       "item": [
         {
-          "id": "48a07907-501c-5e7d-962a-1bf09b74a686",
-          "name": "Create note (draft, empty body)",
+          "id": "16de6fbb-8ede-5ecb-be1d-3257cccf435e",
+          "name": "List open notes (seeded)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes?status=open&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "open"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Filters combine with AND: ownerId, sharedWith, status."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('all open', () => pm.response.json().items.forEach((n) => pm.expect(n.status).to.eql('open')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "fc16e72f-5974-52c8-a274-7eb0c35a6267",
+          "name": "Create note",
           "request": {
             "method": "POST",
             "header": [
@@ -822,10 +282,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "notes"]
             },
-            "description": "Defaults: status `draft`, body empty.",
+            "description": "dueAt with an offset is stored as UTC toISOString().",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"from postman\"\n}",
+              "raw": "{\n  \"ownerId\": \"{{userId}}\",\n  \"title\": \"Buy milk\",\n  \"dueAt\": \"2026-11-01T09:00:00+08:00\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -839,7 +299,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201 draft', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('draft'); });",
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('defaults and UTC dueAt', () => { const n = pm.response.json(); pm.expect(n.status).to.eql('open'); pm.expect(n.dueAt).to.eql('2026-11-01T01:00:00.000Z'); });",
                   "pm.collectionVariables.set('noteId', pm.response.json().id);"
                 ]
               }
@@ -847,8 +308,47 @@
           ]
         },
         {
-          "id": "f05b20a3-9f7e-5d86-89fc-0d5a7044d009",
-          "name": "Publish it → 422 RULE_VIOLATION",
+          "id": "d55784ea-8928-58de-910e-4891ba3d40a3",
+          "name": "Unknown owner → 422 (R1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes"]
+            },
+            "description": "The owner must exist.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"00000000-0000-4000-8000-000000000000\",\n  \"title\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "7680ed96-2504-5fdc-9b77-6fc19c167706",
+          "name": "Mark done",
           "request": {
             "method": "PATCH",
             "header": [
@@ -862,10 +362,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "notes", "{{noteId}}"]
             },
-            "description": "A rule that needs stored state lives in the service and answers 422. Delete the rule in the service and this test goes red: that is the chapter 01 mutation check.",
+            "description": "Status open → done.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"published\"\n}",
+              "raw": "{\n  \"status\": \"done\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -879,24 +379,281 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('422 rule violation', () => { pm.response.to.have.status(422); });"
+                  "pm.test('200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
           ]
         },
         {
-          "id": "51e63642-2352-580e-be76-ab42e5eba3e2",
-          "name": "Get note",
+          "id": "ec5dfeeb-e60e-5257-bef0-c6935b7cc4d8",
+          "name": "Edit a done note → 422 (R2)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes", "{{noteId}}"]
+            },
+            "description": "A done note can only be reopened.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Changed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "ed878efd-4f33-59c2-bc5c-a3c0bf7cdb3e",
+          "name": "Reopen",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes", "{{noteId}}"]
+            },
+            "description": "Reopening is the one edit a done note allows.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"open\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "9c8b07a0-98c3-52c3-be1a-77fa15321fe4",
+          "name": "Share with a friend",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}/shares/{{friendId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "notes",
+                "{{noteId}}",
+                "shares",
+                "{{friendId}}"
+              ]
+            },
+            "description": "Idempotent: sharing twice is still 204."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "697bced4-0a43-532f-af6f-85c54d70ca1d",
+          "name": "Who it is shared with",
           "request": {
             "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}/shares",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes", "{{noteId}}", "shares"]
+            },
+            "description": "{ items: User[] }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('the friend is listed', () => pm.expect(pm.response.json().items.map((u) => u.id)).to.include(pm.collectionVariables.get('friendId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "4a91df7f-3395-532d-af25-a505601cc9da",
+          "name": "Notes shared with the friend",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes?sharedWith={{friendId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notes"],
+              "query": [
+                {
+                  "key": "sharedWith",
+                  "value": "{{friendId}}"
+                }
+              ]
+            },
+            "description": "The sharedWith filter."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('includes the note', () => pm.expect(pm.response.json().items.map((n) => n.id)).to.include(pm.collectionVariables.get('noteId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "057677bf-08d6-54ee-a564-e3a4a4bbbc9f",
+          "name": "Share with the owner → 422 (R4)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}/shares/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "notes",
+                "{{noteId}}",
+                "shares",
+                "{{userId}}"
+              ]
+            },
+            "description": "Never shared with its own owner."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "75253735-e3ff-54aa-8fb2-80cb57ecc7d4",
+          "name": "Unshare",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}/shares/{{friendId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "notes",
+                "{{noteId}}",
+                "shares",
+                "{{friendId}}"
+              ]
+            },
+            "description": "Unsharing again is 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "3d83ae91-b897-5594-ae65-18ce110e28e8",
+          "name": "Delete a user who owns notes → 409 (R2 of users)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "RESTRICT: the owner still has a note."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "39986d3b-7d52-5ac8-8adc-2634de2fb4f8",
+          "name": "Delete the note",
+          "request": {
+            "method": "DELETE",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/notes/{{noteId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "notes", "{{noteId}}"]
             },
-            "description": "Still a draft."
+            "description": "Its shares go with it."
           },
           "event": [
             {
@@ -904,230 +661,35 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 still draft', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('draft'); });"
+                  "pm.test('204', () => pm.response.to.have.status(204));"
                 ]
               }
             }
           ]
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
     },
     {
-      "id": "acfab4f9-73c0-5c58-8e49-1b45fa8efb69",
-      "name": "08 · Host check (module 5)",
-      "description": "DNS-rebinding protection: a Host that is not in MCP_ALLOWED_HOSTS gets 403 even with valid credentials. Postman lets you override Host; fetch() in a test silently does not.",
-      "item": [
-        {
-          "id": "15562283-2a1b-5ffe-8bad-2ac3c5b9fcaa",
-          "name": "Foreign Host → 403",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{secret}}"
-              },
-              {
-                "key": "Host",
-                "value": "evil.example"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "Valid device headers, Host set to evil.example.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 7,\n  \"method\": \"ping\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('403', () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
+      "key": "userId",
+      "value": ""
     },
     {
-      "id": "97b69aca-d1e1-50fe-9a35-4e6427e8e991",
-      "name": "09 · Rotate mid-session (module 6)",
-      "description": "Rotate the secret, then call whoami with the OLD one: it fails at once. The new one works.",
-      "item": [
-        {
-          "id": "21d50adf-351e-5d32-adca-6e24cadbf021",
-          "name": "Rotate secret",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/rotate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices", "{{deviceId}}", "rotate"]
-            },
-            "description": "Same deviceKey, new secret. The OLD secret stays in `secret` for the next request; the new one goes to `rotatedSecret`."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('same key, new secret', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const c = pm.response.json();",
-                  "  pm.expect(c.deviceKey).to.eql(pm.collectionVariables.get('deviceKey'));",
-                  "  pm.expect(c.secret).to.not.eql(pm.collectionVariables.get('secret'));",
-                  "  pm.collectionVariables.set('rotatedSecret', c.secret);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "6cba0e96-f95b-5112-9371-b236e292bd2e",
-          "name": "whoami with the OLD secret → 401",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{secret}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "The rotation took effect on the very next call. The test first checks that a rotation really happened: with no device at all this call is 401 too, and a check that passes by doing nothing proves nothing.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 8,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('a rotation ran first (Rotate credentials stored a new secret)', () => pm.expect(pm.collectionVariables.get('rotatedSecret')).to.be.a('string').and.not.empty);",
-                  "pm.test('401', () => pm.response.to.have.status(401));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "64bcbdca-36bc-5e89-b1d2-80c16825c883",
-          "name": "whoami with the NEW secret",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "X-Device-Key",
-                "value": "{{deviceKey}}"
-              },
-              {
-                "key": "X-Device-Secret",
-                "value": "{{rotatedSecret}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/mcp",
-              "host": ["{{baseUrl}}"],
-              "path": ["mcp"]
-            },
-            "description": "Uses `rotatedSecret`, then promotes it to `secret`.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 9,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const rpc = () => { const t = pm.response.text(); const d = t.split('\\n').find((l) => l.startsWith('data: ')); return JSON.parse(d ? d.slice(6) : t); };",
-                  "pm.test('200 and not a tool error', () => { pm.response.to.have.status(200); pm.expect(rpc().result.isError).to.not.eql(true); });",
-                  "pm.collectionVariables.set('secret', pm.collectionVariables.get('rotatedSecret'));",
-                  "pm.collectionVariables.set('rotatedSecret', '');"
-                ]
-              }
-            }
-          ]
-        }
-      ]
+      "key": "userEmail",
+      "value": ""
+    },
+    {
+      "key": "friendId",
+      "value": ""
+    },
+    {
+      "key": "noteId",
+      "value": ""
     }
   ]
 }

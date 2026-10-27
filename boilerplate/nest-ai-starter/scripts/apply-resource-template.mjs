@@ -114,9 +114,17 @@ if (storage === 'drizzle') {
 }
 
 const written = [];
+const kept = [];
 let markers = 0;
 for (const [rel, tpl] of sources) {
   const target = join(root, render(rel).replace(/\.tpl$/, ''));
+  // A provided table (the base ships users and notes with seeded data) is the source of truth:
+  // keep it, never overwrite it with the empty template. The drift test still compares it with
+  // the schema the agent writes.
+  if (target.endsWith(`${plural}.table.ts`) && existsSync(target)) {
+    kept.push(relative(root, target));
+    continue;
+  }
   const body = render(readFileSync(tpl, 'utf8'));
   if (/__[A-Za-z]+__/.test(body))
     fail(`unrendered placeholder left in ${relative(root, target)}`);
@@ -181,6 +189,7 @@ console.log(
   `apply-resource-template: ${tokens.__Names__} (${name} / ${plural}, storage: ${storage})`,
 );
 for (const f of written) console.log(`  wrote   ${f}`);
+for (const f of kept) console.log(`  kept    ${f} (provided table)`);
 for (const f of removed) console.log(`  removed ${f}`);
 if (droppedDep)
   console.log(`  package.json: removed unused "${MAPPED}" added by nest g`);
@@ -190,7 +199,9 @@ console.log(
   `files written: ${written.length}; AI-FILL markers to complete: ${markers}`,
 );
 console.log(
-  storage === 'drizzle'
+  storage === 'drizzle' && kept.length === 0
     ? 'next: fill every AI-FILL marker, run `pnpm db:generate`, then `pnpm verify`'
-    : 'next: fill every AI-FILL marker, then run `pnpm verify`',
+    : storage === 'drizzle'
+      ? 'next: fill every AI-FILL marker, then run `pnpm verify` (the table was provided: no migration)'
+      : 'next: fill every AI-FILL marker, then run `pnpm verify`',
 );

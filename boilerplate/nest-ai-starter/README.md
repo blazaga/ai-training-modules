@@ -2,9 +2,9 @@
 
 A NestJS 12 REST starter for building services **with AI agents, skills and templated
 code**. It is the hands-on companion to the course in the course repository's
-`docs/ai-agent-training/`: in each
-module your AI agent, following the proctor's instructions, adds the next layer (a
-resource, a column, authentication, devices, an MCP server), and the lab checks prove it.
+`docs/ai-agent-training/`. In two modules your AI agent, following the proctor's
+instructions, builds the users and notes resources (module 1) and then an MCP server on the
+SQLite database (module 2); the lab checks prove each one.
 
 The idea: split every piece of work by who does it best.
 
@@ -20,40 +20,41 @@ The idea: split every piece of work by who does it best.
 ```bash
 corepack enable && pnpm install
 cp .env.example .env                        # DATABASE_URL=file:./data/app.db
-pnpm build && pnpm db:migrate               # create the SQLite file, apply drizzle/, print the ledger
-pnpm start                                  # app on :3000 (pnpm start:dev to watch)
+pnpm build && pnpm start                    # app on :3000 (pnpm start:dev to watch)
 curl localhost:3000/api/health              # {"status":"ok"}
 open http://localhost:3000/api/docs         # OpenAPI, generated from the zod schemas
 pnpm verify                                 # the full gate
 pnpm lab 01                                 # a module's lab check (red until it is built)
 ```
 
-See the course's Chapter 00 for details. The MCP Inspector (`pnpm mcp:inspect:ui`) is used
-from module 5, once the app serves MCP.
+See the course's Chapter 00 for details.
+
+## The data
+
+`data/app.db` is committed and already seeded: 25 users, 200 notes (the TODO items, each
+owned by a user) and 120 shares (a note shared with other users), generated with faker by
+`scripts/seed.mjs`. The tables are provided (`src/users/users.table.ts`,
+`src/notes/notes.table.ts`, `src/notes/note-shares.table.ts`); the resources on top of them
+are what you build. `pnpm db:seed` rebuilds the file from scratch, and two runs write the
+same rows. Tests never touch it: they use an empty in-memory database.
 
 ## Call it from Postman
 
-`postman/nest-ai-starter.postman_collection.json` holds every REST and MCP call the course
-labs make. Import it; `baseUrl` is `http://localhost:3000`.
-Folders are numbered by chapter and named by module, and every request carries tests (the
-Test Results tab). A folder works once its module is built. From module 3 on, 03 signs up
-the demo user and logs in (the token goes to the `token` variable), and 04 provisions the
-device whose key and secret the MCP folders use.
-
-**Provisioning stores a live device secret in a collection
-variable: never export or share the collection after a run.**
+`postman/nest-ai-starter.postman_collection.json` holds the REST calls of module 1. Import
+it; `baseUrl` is `http://localhost:3000`. Every request carries tests (the Test Results tab),
+and a folder works once your agent has built that resource.
 
 ## Add a resource
 
 ```bash
-pnpm exec nest g resource orders --type rest --crud     # 1. nest-cli
-pnpm resource:template --name order --plural orders     # 2. templates
-# 3. ask your agent: "fill the AI-FILL markers for orders from specs/orders.md"
-pnpm verify                                             # 4. proof
+pnpm exec nest g resource users --type rest --crud                     # 1. nest-cli
+pnpm resource:template --name user --plural users --storage drizzle    # 2. templates (keeps the provided table)
+# 3. your agent fills the AI-FILL markers from specs/users.md
+pnpm verify                                                            # 4. proof
 ```
 
 See `CLAUDE.md` for conventions and `.claude/skills/nest-resource-scaffold/SKILL.md` for
-the full procedure. `src/notes` + `specs/notes.md` is a finished example.
+the full procedure.
 
 ## What is in the box
 

@@ -2,6 +2,32 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T11:03:06+08:00 - Two modules, no auth: users and notes on a seeded SQLite file, then MCP
+
+- **Request (operator):** drop auth; module 1 builds two MVCs, users and notes; module 2 an
+  MCP server that reads and writes the SQLite database directly; data generated in advance
+  with faker and committed.
+- **The base now:** setup, health, the database layer, the templates and skills, and three
+  **provided** tables (`users`; `notes` with an owner; `note_shares`, many users per note) in
+  migration `0000`. `data/app.db` is committed and seeded by `scripts/seed.mjs`
+  (`pnpm db:seed`): 25 users, 200 notes (115 open, 85 done), 120 shares, every email at
+  `example.com`; two runs write byte-identical files. The template script keeps a provided
+  table. **Entries below this one describe earlier course stages; their counts are not this
+  base's.**
+- **Measured on the base:** `pnpm verify` exit 0, unit 20, e2e 2; `pnpm lab` red (both labs),
+  as designed.
+- **Fixed after a dry run of module 1** (a fresh agent, instructions only): `db:generate`
+  advice is no longer given for a provided table; the scaffold skill gains three traps (a
+  provided table; zod 4 running a transform after a failed format check, which answered 500
+  for a bad `dueAt`; routes beyond CRUD live outside the markers); notes R2 now says
+  reopening and editing in one request is 422 too; the skill shows vitest's real summary
+  format.
+- **Fixed after a dry run of module 2:** `specs/mcp.md` now says the default database path is
+  relative to the working directory and the server must exit 1 when the file is missing (the
+  connect code would otherwise create an empty database: measured by the agent); `rowCount`
+  is the number of rows returned; unexpected errors reach the client as untyped tool errors
+  (the SDK catches them), so no named case may throw; the client command uses absolute paths.
+
 ## 2026-10-27T10:30:38+08:00 - Lab helper works in auth step 1; MCP spec says what to pass
 
 - **Found by:** a chained dry run, one agent per module in one project, each building on the

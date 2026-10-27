@@ -27,11 +27,11 @@ describe('health (e2e)', () => {
       .expect(200)
       .expect({ status: 'ok' }));
 
-  it('serves OpenAPI JSON with the notes routes', () =>
+  it('serves OpenAPI JSON, listing the health route', () =>
     request(app.getHttpServer())
       .get('/api/docs-json')
       .expect(200)
       .expect((res) =>
-        expect(Object.keys(res.body.paths)).toContain('/api/v1/notes'),
+        expect(Object.keys(res.body.paths)).toContain('/api/health'),
       ));
 });

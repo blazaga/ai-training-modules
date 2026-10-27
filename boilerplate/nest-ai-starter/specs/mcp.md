@@ -1,64 +1,71 @@
-# Spec: the MCP server
+# Spec: an MCP server on the SQLite database
 
-- **Library (already installed):** `@rekog/mcp-nest` (tools as `@McpController` classes,
-  transports for stdio and Streamable HTTP) and `zod` for tool parameters.
-- **Server identity** (what clients see in `initialize`): `{ name: 'nest-ai-starter',
-version: '0.1.0' }`.
+An MCP server your own AI client (Claude Code, the MCP Inspector) can use to read and change
+the data in `data/app.db`: the users, notes and shares the users and notes resources serve
+over REST. It talks to the database **directly**, not through the REST API.
 
-## Module 4: tools over stdio
+- **Libraries (already installed):** `@modelcontextprotocol/server` 2.x (`McpServer`;
+  `StdioServerTransport` from `@modelcontextprotocol/server/stdio`), `@libsql/client` and
+  `drizzle-orm` (the provided tables in `src/database/schema.ts`), `zod`.
+- **Entrypoint:** `src/mcp-server.ts`, built to `dist/mcp-server.js`; add the script
+  `"mcp": "node --env-file-if-exists=.env dist/mcp-server.js"`. It is **not** a Nest app.
+- **Transport:** stdio. **Stdout belongs to the protocol**: nothing else may be written to
+  it. Diagnostics go to stderr (`mcp-server: ready (<database>)`; the database file path is
+  not a secret, unlike other config values).
+- **Database:** `DATABASE_URL` (a `file:` URL), else `file:./data/app.db`, which is relative
+  to the **working directory**. If the file does not exist, exit 1 with a message on stderr:
+  the shared connect code would otherwise create an **empty** database and serve no data,
+  which is what a client started from the wrong folder gets (measured by a dry-run agent).
+  Foreign keys on (`PRAGMA foreign_keys = ON`).
+- **Server identity** (what clients see in `initialize`): `{ name: 'notes-db', version:
+'0.1.0' }`.
 
-- `src/mcp/notes.tools.ts`, an `@McpController()` using `NotesService` (no logic of its own):
+## Tools
 
-  | tool          | parameters                                          | result                            |
-  | ------------- | --------------------------------------------------- | --------------------------------- |
-  | `list-notes`  | `limit` 1–50 (default 10), `offset` ≥ 0 (default 0) | `{ items, total, limit, offset }` |
-  | `get-note`    | `id` (UUID)                                         | the note                          |
-  | `create-note` | the notes CREATE schema, reused (no second copy)    | the created note                  |
+| tool             | parameters                                                                           | result                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `list-tables`    | none                                                                                 | `[{ table, rows }]` for `users`, `notes`, `note_shares`                       |
+| `describe-table` | `table`: one of those three                                                          | its columns: `[{ name, type, notNull, primaryKey }]`                          |
+| `query`          | `sql`: one read-only statement; `limit` 1–200 (default 50)                           | `{ rows, rowCount }`: at most `limit` rows; `rowCount` is the number returned |
+| `notes-for-user` | `userId`; `include`: `owned` \| `shared` \| `all` (default `all`); optional `status` | the notes, each with `access: 'owner' \| 'shared'`                            |
+| `create-note`    | `ownerId`, `title`, optional `body`, `dueAt`                                         | the created note                                                              |
+| `update-note`    | `id`, and at least one of `title`, `body`, `status`, `dueAt`                         | the updated note                                                              |
+| `share-note`     | `noteId`, `userId`                                                                   | `{ noteId, userId, shared: true }` (sharing twice is fine)                    |
+| `unshare-note`   | `noteId`, `userId`                                                                   | `{ noteId, userId, shared: false }`                                           |
 
-- `src/mcp/tool-result.ts`: a tool returns `{ content: [{ type: 'text', text: JSON }] }`. A
-  `DomainError` (not found, rule violation) becomes a **tool error**: `isError: true`, text
-  `"<CODE>: <message>"` (for example `RULE_VIOLATION: A published note needs a non-empty
-body`), which the model can read. Any other error is a real failure and propagates.
-- `src/mcp/mcp-tools.module.ts` holds every `@McpController`, so every transport serves the
-  same tools.
-- `src/mcp-stdio.ts`: a separate entrypoint (`pnpm mcp:stdio` = `node dist/mcp-stdio.js`).
-  **Stdout belongs to the protocol**: Nest's logger is off, diagnostics go to stderr
-  (`mcp-stdio: ready`). It boots only what the tools need (config, database,
-  `McpToolsModule`), not `AppModule`: the app's global JWT guard would also run on tool
-  calls and refuse every one (measured).
-- `test/mcp-stdio.e2e-spec.ts` spawns the built entrypoint and reads raw stdout: identity,
-  the exact tool list, schemas generated from zod, a rule violation as a tool error, and no
-  non-protocol line on stdout.
+- Every result is `{ content: [{ type: 'text', text: <JSON> }] }`.
+- **The write tools enforce the same rules as the REST API** (`specs/notes.md`): an existing
+  owner (R1), a done note can only be reopened (R2), `dueAt` stored as `toISOString()` (R3),
+  never shared with its owner (R4). Validate inputs with zod; reuse the notes and users
+  schemas from module 1 where they fit rather than writing a second copy.
+- **`query` is read-only.** Anything that is not a single read statement (`SELECT`, or a
+  `WITH … SELECT`) is refused, and the database is unchanged afterwards. Do not rely on
+  string checks alone: a statement can hide a write.
+- **Errors the model can read:** a broken rule or a missing row is a **tool error**:
+  `isError: true`, text `"<CODE>: <message>"`, codes `NOT_FOUND`, `RULE_VIOLATION`,
+  `READ_ONLY` (a write sent to `query`). Bad input needs no code of yours: give each tool a
+  zod `inputSchema` and the SDK answers a tool error itself (`Input validation error: …`,
+  naming the field; measured on `@modelcontextprotocol/server` 2.4.0). Anything else is a bug:
+  the SDK catches it and returns it as a tool error with its raw message and no code, so never
+  throw for a case the spec names.
 
-## Module 5: Streamable HTTP
+## Tests
 
-- `src/bootstrap/attach-mcp.ts` mounts the same tools at **`/mcp`**, outside the `/api`
-  prefix, on the app's own HTTP server; `main.ts` calls it before `listen`.
-- Stateless (`statefulMode: false`), answers as Server-Sent Events (`enableJsonResponse:
-false`): one `event: message` with `data: <JSON-RPC>`. Pass all three transport settings
-  explicitly: the library's own defaults differ (a JSON response in stateless mode, and no
-  Host check at all when `allowedHosts` is left out).
-- DNS-rebinding protection: `allowedHosts` from `MCP_ALLOWED_HOSTS` (comma-separated,
-  trimmed). Unset → the library's `'localhost'` shorthand, which allows `localhost`,
-  `127.0.0.1` and `[::1]`: a literal `['localhost']` refuses the test client, which
-  sends `Host: 127.0.0.1:<port>`. A request whose `Host` is not allowed gets 403.
-- At this point `/mcp` has no authentication: an e2e test names that state, and module 6
-  closes it (that test, and any `/mcp` test without device headers, then changes on
-  purpose).
+`test/mcp-server.e2e-spec.ts` spawns the built entrypoint against a **copy** of the seeded
+database (never `data/app.db` itself), reads raw stdout, and covers: the identity, the exact
+tool list, a read, each write and its rule violations, and a write sent to `query`.
 
-## Module 6: device authentication on `/mcp`
+## Using it from your own client
 
-- Express middleware on `/mcp`, registered **before** the transport mounts its routes, so a
-  failure is HTTP 401 before any JSON-RPC is read.
-- Reads `X-Device-Key` and `X-Device-Secret` and calls `DevicesService.verifyDeviceKey`
-  (`specs/devices.md`). Every failure (missing header, unknown key, wrong secret, archived
-  device, rotated-away secret, a user's token instead) is the same 401 body,
-  `{ "statusCode": 401, "error": "Unauthorized", "message": "Invalid device credentials" }`.
-- On success the device is attached to the request. A tool reads it through
-  `McpContext.getRawRequest()` (`@Ctx()`), which is `undefined` over stdio. A `whoami` tool
-  returns `{ device, owner }` (public fields only). Over stdio there is no device:
-  `whoami` is the tool error `RULE_VIOLATION: No device identity: …`.
-- Known limit, on purpose: only the device's own status is checked, so a disabled
-  user's devices keep working until they are archived. Record it; deciding it is a
-  discussion point.
-- Never log the device headers.
+Your client starts the server itself, from its own working directory, so give it absolute
+paths. From the starter folder:
+
+```bash
+pnpm build
+claude mcp add notes-db -e DATABASE_URL="file:$PWD/data/app.db" -- node "$PWD/dist/mcp-server.js"
+pnpm mcp:inspect:ui      # or the MCP Inspector: transport stdio, the same command and variable
+```
+
+The `claude mcp add` form (`-e` for an environment variable, `--` before the command) follows
+Claude Code's documented syntax; in Claude Code, `/mcp` lists the server and its tools. The
+tools change your real `data/app.db`: `pnpm db:seed` rebuilds it.

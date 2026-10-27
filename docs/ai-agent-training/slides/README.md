@@ -1,6 +1,6 @@
 # Lab companion deck (proctor)
 
-Put this deck on screen while the audience's AI agents build each module. It follows the course's six
+Put this deck on screen while the audience's AI agents build each module. It follows the course's two
 modules (see `../00-OUTLINE.md`). It is a **draft**: the lab times
 are estimates, and nobody has run the labs with an audience yet.
 
@@ -16,8 +16,8 @@ Each module has the same slides:
    what is left for stretch.
 2. **Instruction** (one or more): what the proctor says, the instruction the audience gives
    their agent (a goal, where the requirements are, and when it is done; never the steps), and
-   what to watch for in the approach the agent works out. Module 3 has three: Basic, JWT,
-   devices.
+   what to watch for in the approach the agent works out. Module 1 has three: setup,
+   users, notes with sharing.
 3. **Check it:** the commands the audience runs to check the agent's work, in the terminal
    card.
 4. **Checkpoint:** what correct output looks like, and when the module counts as done. The
@@ -32,9 +32,8 @@ folder and the requests to send, in order. The script reads the starter's Postma
 the build** if a slide names a folder or request that the collection does not have, so the
 deck cannot point at a request that was renamed.
 
-The commands run in `boilerplate/nest-ai-starter` with Node 24 and pnpm (slide 3). From
-module 3 on they use the starter's `scripts/demo-device.mjs` helper, which creates a demo
-user and an active device and prints `export` lines for `eval`.
+The commands run in `boilerplate/nest-ai-starter` with Node 24 and pnpm (slide 3), on the
+seeded `data/app.db`; `pnpm db:seed` restores it.
 
 ## Rebuild
 

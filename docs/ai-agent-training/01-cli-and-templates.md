@@ -1,9 +1,9 @@
 # Chapter 01 — Starting from the CLI and templates
 
-**You will:** create a NestJS 12 service with nest-cli, then add a REST resource in three
-steps: generate → template → fill. The fill step is the agent's job, and a gate proves the
-result. **Code:** `boilerplate/nest-ai-starter/`, worked example `src/notes/` +
-`specs/notes.md`.
+**You will:** see how a REST resource is added in three steps: generate → template → fill.
+The fill step is the agent's job, and a gate proves the result. This is the procedure your
+agent follows in module 1 for users and notes (chapter 02). **Code:**
+`boilerplate/nest-ai-starter/`.
 
 ## Why this shape
 
@@ -55,14 +55,14 @@ Things we hit on the way, all reproducible:
 ## The three steps, for real
 
 ```bash
-# 0. spec first: copy specs/notes.md (skill: resource-spec)
+# 0. spec first: specs/users.md (skill: resource-spec)
 # 1. structure
-pnpm exec nest g resource notes --type rest --crud
-# 2. conventions (+ --storage drizzle in chapter 02)
-pnpm resource:template --name note --plural notes
-#   → at the ch01 commit: files written: 10; AI-FILL markers to complete: 8
-#   → with the final templates (after ch02–ch04): 11 files, 16 markers
-# 3. the agent fills every marker from specs/notes.md  (skill: nest-resource-scaffold)
+pnpm exec nest g resource users --type rest --crud
+# 2. conventions; drizzle storage, because the users table is provided
+pnpm resource:template --name user --plural users --storage drizzle
+#   → measured on the base: files written: 12; AI-FILL markers to complete: 14
+#   →   kept src/users/users.table.ts (provided table)
+# 3. the agent fills every marker from specs/users.md  (skill: nest-resource-scaffold)
 # 4. proof
 pnpm verify
 ```
@@ -88,7 +88,6 @@ response schema that strips private fields, and unit + e2e test skeletons. At th
 | `queries` / `queries-impl`                           | repository | extra lookups (`findByEmail`)                                         |
 | `create-rules` / `update-rules` / `remove-rules`     | service    | rules needing stored state (→ 422/409)                                |
 | `create-mapping`                                     | service    | write-only inputs → private fields (fails to compile until done)      |
-| `access-create`                                      | controller | `@Public()` only if creation is public (chapter 03)                   |
 | `valid-input`, `e2e-setup`, `rule-tests`, `rule-e2e` | specs      | payloads, auth setup, one allowed + one refused case per rule         |
 
 `scripts/check-ai-fill.mjs` fails while any marker or nest-cli stub body remains, and it
@@ -120,18 +119,12 @@ exactly one test go red (skill `nest-verify`).
 
 ## Labs
 
-Lab 1 is module 1, and your agent builds it from the proctor's instruction. The exact contract
-(fields, rules O1 and O2, status codes) is in `boilerplate/nest-ai-starter/test/labs/README.md`:
-the agent writes it into `specs/orders.md` first, then generates, templates and fills. You check
-with `pnpm lab 01` until every test passes.
+Module 1's lab, where your agent runs these steps for users and notes, is in chapter 02.
+Two stretch exercises for this chapter:
 
-1. **Your agent adds `orders`** from the spec (two rules, one needing stored state). You check
-   and hand in: the spec, the template output (file count + marker count), `verify` output with
-   both `Tests` lines, and one mutation result per rule. The mutations are yours, not the
-   agent's: delete a rule and see which test goes red.
-2. **Change a convention once, everywhere:** add `?sort=` to every list via
+1. **Change a convention once, everywhere:** add `?sort=` to every list via
    `templates/resource/` + `src/common/`, then re-render a scratch resource.
-3. **Break the gate:** make `verify` pass while the work is not done. (Hint: what does
+2. **Break the gate:** make `verify` pass while the work is not done. (Hint: what does
    `check-ai-fill` not look for?) Then close the hole.
 
 Principles behind this chapter: P2 (context files), P3 (skills), P5 (verification).

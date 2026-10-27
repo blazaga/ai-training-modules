@@ -2,6 +2,32 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T11:14:05+08:00 - Two modules: users and notes, then an MCP server on a seeded SQLite file
+
+- **Request (operator):** drop auth; module 1 builds two MVCs (users, notes); module 2 has the
+  learner's Claude build an MCP server that queries and writes the SQLite database directly;
+  users and notes generated in advance with faker and committed. Decisions (operator): the
+  base ships the tables and the seeded file; a user owns many notes and a note can be shared
+  with many users; the MCP server reads and writes. Earlier: notes as the TODO items.
+- **Course:** chapters 00 setup, 01 CLI and templates, 02 users and notes, 03 MCP concepts,
+  04 the MCP server on the database. The auth, devices, HTTP-transport, device-auth and
+  capstone chapters are removed. Outline, README, glossary, answers and slides README follow.
+  Deck: two modules, plus two NestJS diagram slides (the path of one request; how a module
+  wires controller, service, repository and middleware), names checked against the build.
+- **Build:** both modules built by fresh agents from the proctor's instructions only, chained
+  in one project, each verified independently before commit; that build is the
+  `modules-done` branch and the two checkpoint patches. Measured, clean exports: base 20 unit /
+  2 e2e; module 1 43 / 46, lab 01 15/15; module 2 60 / 55, labs 01 + 02 25/25; the seeded
+  database byte-identical at every checkpoint; base + both patches identical to module 2.
+- **Found by checking, not by the agents' own runs:** a flaky module 1 test (creation order
+  assumed; 3 of 20 runs failed; a reviewer commit fixed it, then 20 of 20 passed), and a real,
+  registered domain in an e2e fixture, caught by `scan-sensitive.sh` and changed to
+  `example.com` in the same reviewer commit. Found by
+  the agents and fixed in the base: no `db:generate` for a provided table; zod 4 runs a
+  transform after a failed format check (500 for a bad `dueAt`); routes beyond CRUD live
+  outside the markers; the MCP server's default database path is relative to the working
+  directory, and a missing file must stop it rather than create an empty database.
+
 ## 2026-10-27T10:30:38+08:00 - Branch `modules-done`: the six modules as an agent built them
 
 - **Request (operator):** keep a branch separate from `main` that already has the modules

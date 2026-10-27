@@ -55,22 +55,20 @@ pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]
 
 List them with `pnpm check:ai-fill`. Each marker names its topic:
 
-| marker                          | file                          | fill with                                                                                                                |
-| ------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `fields`                        | `<name>.schema.ts`            | one zod line per spec field, with constraints and defaults (private fields included)                                     |
-| `private-fields`                | `<name>.schema.ts`            | `fieldName: true` for each field that is stored but never returned or client-set (hashes)                                |
-| `server-fields`                 | `<name>.schema.ts`            | `fieldName: true` for each field returned but never accepted (e.g. `status`, changed only by an action)                  |
-| `payload-rules`                 | `<name>.schema.ts`            | `.extend()` for write-only inputs (a plain `password`), `.refine()` for payload-only rules                               |
-| `queries`                       | `<plural>.repository.ts`      | extra lookups the spec lists (e.g. `findByEmail`)                                                                        |
-| `queries-impl`                  | memory or drizzle repository  | the same lookups, implemented for that storage                                                                           |
-| `columns`                       | `<plural>.table.ts` (drizzle) | one column per schema field: same TS name, snake_case SQL name                                                           |
-| `create-rules` / `update-rules` | `<plural>.service.ts`         | rules that need **stored state**, each throwing a `DomainError` subclass                                                 |
-| `remove-rules`                  | `<plural>.service.ts`         | rules on WHETHER a row may be deleted (e.g. only drafts); none → `// No remove-time rules.`                              |
-| `create-mapping`                | `<plural>.service.ts`         | write-only inputs → private fields (hash the password). It fails to compile until done                                   |
-| `access-create`                 | `<plural>.controller.ts`      | only once the app has `src/auth/`: `@Public()` above `@Post()` if the spec makes creation public (sign-up); else delete  |
-| `e2e-setup`                     | e2e spec                      | only once the app has `src/auth/`: `signUpAndLogin(app, …)` from `test/support/auth.js` → `authHeaders` (a Bearer token) |
-| `valid-input`                   | unit + e2e spec               | a minimal valid payload. In e2e, a **factory** returning a fresh value if any field is unique                            |
-| `rule-tests` / `rule-e2e`       | specs                         | for each rule, the allowed case **and** the refused case                                                                 |
+| marker                          | file                          | fill with                                                                                               |
+| ------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `fields`                        | `<name>.schema.ts`            | one zod line per spec field, with constraints and defaults (private fields included)                    |
+| `private-fields`                | `<name>.schema.ts`            | `fieldName: true` for each field that is stored but never returned or client-set (hashes)               |
+| `server-fields`                 | `<name>.schema.ts`            | `fieldName: true` for each field returned but never accepted (e.g. `status`, changed only by an action) |
+| `payload-rules`                 | `<name>.schema.ts`            | `.extend()` for write-only inputs (a plain `password`), `.refine()` for payload-only rules              |
+| `queries`                       | `<plural>.repository.ts`      | extra lookups the spec lists (e.g. `findByEmail`)                                                       |
+| `queries-impl`                  | memory or drizzle repository  | the same lookups, implemented for that storage                                                          |
+| `columns`                       | `<plural>.table.ts` (drizzle) | one column per schema field: same TS name, snake_case SQL name                                          |
+| `create-rules` / `update-rules` | `<plural>.service.ts`         | rules that need **stored state**, each throwing a `DomainError` subclass                                |
+| `remove-rules`                  | `<plural>.service.ts`         | rules on WHETHER a row may be deleted (e.g. only drafts); none → `// No remove-time rules.`             |
+| `create-mapping`                | `<plural>.service.ts`         | write-only inputs → private fields (hash the password). It fails to compile until done                  |
+| `valid-input`                   | unit + e2e spec               | a minimal valid payload. In e2e, a **factory** returning a fresh value if any field is unique           |
+| `rule-tests` / `rule-e2e`       | specs                         | for each rule, the allowed case **and** the refused case                                                |
 
 Placement rule: **payload-only → schema (400). Needs stored state → service (422/409).**
 
@@ -83,7 +81,7 @@ next reader knows it was considered and not forgotten.
 - Adds `<plural>.table.ts`, a drizzle repository, a module wired to it, a service spec that
   runs on **real SQLite (in memory)**, and a **drift test** (table columns == schema fields).
 - Registers the table in `src/database/schema.ts` automatically.
-- After filling `columns`, run `pnpm db:generate` and commit the **whole** `drizzle/`
+- For a **new** table, after filling `columns`, run `pnpm db:generate` and commit the **whole** `drizzle/`
   folder. `verify` runs `check:migrations`, which fails if a table changed without a
   migration. Tests cannot catch that by themselves, because the in-memory database is built
   from the migration SQL, not from the TypeScript table.
@@ -103,12 +101,26 @@ Then prove the rule tests can fail. For **each** service rule:
 
 A rule whose deletion leaves the tests green is not tested.
 
-- Read the counts, not the exit code: `Tests: N passed`, where N went up by the number of
+- Read the counts, not the exit code: vitest prints `Tests  N passed (N)`, where N went up by the number of
   tests you added.
 - A bug at the HTTP boundary (validation, defaults, status codes) can only be caught by
   the **e2e** spec. Service unit tests receive already-parsed objects.
 
 ## Known traps (measured in this repo)
+
+- **A provided table:** when the table already exists (users, notes), the template keeps it
+  and writes no `columns` work for you. Do not run `db:generate` for it: `check:migrations`
+  in `verify` confirms there is nothing to generate.
+- **Zod 4 keeps going after a failed check:** `z.string().datetime({ offset: true })
+.transform((s) => new Date(s).toISOString())` answers **500, not 400**, for
+  `"next tuesday"`: the format check fails, but the transform still runs and throws
+  (`RangeError: Invalid time value`). Measured by a dry-run agent. Guard the transform (or
+  parse with `z.coerce.date()` and check `isNaN`) so a bad value stays a 400, and test a
+  value without an offset and an impossible date (`2026-02-31`).
+- **Routes beyond CRUD:** the markers cover the house CRUD. Extra routes (list filters,
+  sub-resources such as `/notes/:id/shares`) are added in the generated controller, service
+  and repository, outside the markers, and need their own e2e tests. That is expected, not a
+  breach of "only inside markers".
 
 - **PATCH and defaults:** `.partial()` of fields with `.default()` re-applies the defaults,
   so `PATCH {title}` would wipe other fields. The template uses `patchSchema()` for this.

@@ -6,8 +6,6 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter.
 import { validateEnv } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
-import { NotesModule } from './notes/notes.module.js';
-import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
@@ -22,8 +20,6 @@ import { UsersModule } from './users/users.module.js';
     DatabaseModule,
     HealthModule,
     // Feature modules. `nest g resource <name>` appends new ones here.
-    NotesModule,
-    UsersModule,
   ],
   providers: [
     // Every @Body/@Query/@Param typed with a createZodDto class is validated.

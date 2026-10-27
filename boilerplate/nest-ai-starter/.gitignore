@@ -23,9 +23,11 @@ coverage/
 # TypeScript incremental build cache
 *.tsbuildinfo
 
-# a local SQLite database (DATABASE_URL=file:./data/app.db) is data, never source
-data/
+# local SQLite databases are data, never source
+data/*
 *.db
+# ...except the seeded database the course ships (rebuild it with `pnpm db:seed`)
+!data/app.db
 *.db-journal
 *.db-wal
 *.db-shm

@@ -1,0 +1,715 @@
+diff --git a/WORKLOG.md b/WORKLOG.md
+index d0f5ede..a696c59 100644
+--- a/WORKLOG.md
++++ b/WORKLOG.md
+@@ -2,6 +2,34 @@
+ 
+ Newest first. Stamps from a clock, with offset.
+ 
++## 2026-10-27T11:07:33+08:00 - Module 2: notes-db MCP server (stdio) on the SQLite database
++
++- **Changed:** `src/mcp-server.ts` (entrypoint, not a Nest app; `pnpm mcp` script added),
++  `src/mcp/notes-db.server.ts` (the eight tools of `specs/mcp.md`), `src/mcp/read-only-sql.ts`
++  (+ spec), `test/mcp-server.e2e-spec.ts` (raw newline-delimited JSON-RPC over the child's
++  stdout, on a copy under `data/mcp-e2e-*`, git-ignored, removed after). The write tools call
++  `NotesService` over `DrizzleNotesRepository`, so R1/R2/R4 and NOT_FOUND are the REST code,
++  not a copy; inputs reuse `CreateNoteSchema`, `UpdateNoteSchema`, `NoteSchema` (R3 transform).
++- **`query` read-only, two layers:** a lexical check (one statement, starts SELECT/WITH,
++  literals and comments stripped) and a SECOND libSQL connection with `PRAGMA query_only = ON`,
++  which refuses `WITH … DELETE` (SQLITE_READONLY → `READ_ONLY`). The lexical layer is needed
++  because libSQL `execute('select 1; delete from notes')` silently runs only the first
++  statement (measured, @libsql/client 0.18.0).
++- **Guard added:** the entrypoint exits 1 if the database file does not exist, because
++  `connectSqlite` would otherwise create an empty file and serve a database with no tables
++  (the likely result of starting it from the wrong working directory).
++- **Verified:** `pnpm verify` exit 0: tsc 0; oxlint 0 errors (4 pre-existing warnings in
++  `notes.service.spec.ts`, none new); AI-FILL markers 0, stubs 0; check-migrations no changes;
++  unit `Test Files 11 passed (11)` / `Tests 60 passed (60)`; e2e `Test Files 4 passed (4)` /
++  `Tests 55 passed (55)`. `pnpm lab 01`: `Tests 15 passed (15)`; `pnpm lab 02`:
++  `Tests 10 passed (10)`. Mutations on the MCP e2e file: no `query_only` → 3 failed (the WITH
++  delete emptied the copy); multi-statement check removed → 1 failed; R4 removed from
++  `NotesService` → 1 failed. Missing-file guard: exit 1, nothing created.
++- **Not done / open:** `rowCount` is the number of rows RETURNED (≤ limit), not the total the
++  statement would yield; the spec does not say which. `query` fetches all rows then slices.
++  Errors other than DomainError are rethrown, and the SDK (2.4.0) turns them into an
++  `isError` result with the raw message (no code): that is what "propagates" means over MCP.
++
+ ## 2026-10-27T11:01:00+08:00 - Module 1: users and notes (with sharing) resources built
+ 
+ - **Changed:** `src/users/` and `src/notes/` generated (nest g resource → `resource:template
+diff --git a/package.json b/package.json
+index b96ea11..48a7094 100644
+--- a/package.json
++++ b/package.json
+@@ -29,6 +29,7 @@
+     "db:migrate": "node --env-file-if-exists=.env dist/database/migrate.js",
+     "db:seed": "node scripts/seed.mjs",
+     "check:migrations": "node scripts/check-migrations.mjs",
++    "mcp": "node --env-file-if-exists=.env dist/mcp-server.js",
+     "mcp:inspect:ui": "npx -y @modelcontextprotocol/inspector@2.12.0"
+   },
+   "dependencies": {
+diff --git a/src/mcp-server.ts b/src/mcp-server.ts
+new file mode 100644
+index 0000000..879296a
+--- /dev/null
++++ b/src/mcp-server.ts
+@@ -0,0 +1,40 @@
++// `pnpm mcp`: the notes-db MCP server (specs/mcp.md) over stdio, on the SQLite file in
++// DATABASE_URL (else ./data/app.db). Not a Nest app: it builds only what the tools need.
++// Stdout belongs to the protocol, so every diagnostic goes to stderr.
++import { createClient } from '@libsql/client';
++import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
++import { existsSync } from 'node:fs';
++import { validateEnv } from './config/env.schema.js';
++import { connectSqlite } from './database/connect.js';
++import { createNotesDbServer } from './mcp/notes-db.server.js';
++import { DrizzleNotesRepository } from './notes/notes.drizzle-repository.js';
++import { NotesService } from './notes/notes.service.js';
++
++const env = validateEnv(process.env);
++const url = env.DATABASE_URL ?? 'file:./data/app.db';
++
++// connectSqlite creates a missing file (and its folder), which would serve an EMPTY database
++// with no tables. Started from the wrong working directory, that is the likely mistake.
++const file = url.slice('file:'.length).split('?')[0];
++if (!existsSync(file)) {
++  console.error(
++    `mcp-server: database file not found: ${file} (cwd ${process.cwd()}). ` +
++      'Set DATABASE_URL to an absolute file: URL, or start from the project folder.',
++  );
++  process.exit(1);
++}
++
++const connection = await connectSqlite(url);
++// The `query` tool's connection: SQLite refuses every write on it, whatever the SQL hides.
++const reader = createClient({ url });
++await reader.execute('PRAGMA query_only = ON');
++
++const notesRepository = new DrizzleNotesRepository(connection.db);
++const server = createNotesDbServer({
++  db: connection.db,
++  reader,
++  notes: new NotesService(notesRepository),
++  notesRepository,
++});
++await server.connect(new StdioServerTransport());
++console.error(`mcp-server: ready (${url})`);
+diff --git a/src/mcp/notes-db.server.ts b/src/mcp/notes-db.server.ts
+new file mode 100644
+index 0000000..1e41478
+--- /dev/null
++++ b/src/mcp/notes-db.server.ts
+@@ -0,0 +1,250 @@
++import type { Client as SqlClient } from '@libsql/client';
++import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
++import { and, asc, count, eq, sql } from 'drizzle-orm';
++import { z } from 'zod';
++import { DomainError, NotFoundError } from '../common/errors/domain-error.js';
++import type { Db } from '../database/database.types.js';
++import { noteShares } from '../notes/note-shares.table.js';
++import {
++  CreateNoteSchema,
++  NoteListQuerySchema,
++  NoteSchema,
++  UpdateNoteSchema,
++} from '../notes/note.schema.js';
++import type { NotesRepository } from '../notes/notes.repository.js';
++import type { NotesService } from '../notes/notes.service.js';
++import { notes } from '../notes/notes.table.js';
++import { users } from '../users/users.table.js';
++import { isSingleReadStatement } from './read-only-sql.js';
++
++/** What the tools need. The write tools go through NotesService, so they keep its rules. */
++export interface NotesDbDeps {
++  db: Db;
++  /** A connection with `PRAGMA query_only = ON`: the only one the `query` tool may use. */
++  reader: SqlClient;
++  notes: NotesService;
++  notesRepository: NotesRepository;
++}
++
++const TABLES = { users, notes, note_shares: noteShares } as const;
++const TableName = z.enum(['users', 'notes', 'note_shares']);
++
++const ok = (value: unknown): CallToolResult => ({
++  content: [{ type: 'text', text: JSON.stringify(value) }],
++});
++
++/** A tool error the model can read: `<CODE>: <message>` (specs/mcp.md). */
++const toolError = (code: string, message: string): CallToolResult => ({
++  content: [{ type: 'text', text: `${code}: ${message}` }],
++  isError: true,
++});
++
++/** Runs a tool body. A DomainError is the model's to read; anything else is a real failure. */
++async function run(body: () => Promise<unknown>): Promise<CallToolResult> {
++  try {
++    return ok(await body());
++  } catch (error) {
++    if (error instanceof DomainError)
++      return toolError(error.code, error.message);
++    throw error;
++  }
++}
++
++/** True for SQLite's refusal to write on a query_only connection. */
++const isReadOnlyRefusal = (error: unknown) =>
++  (error as { code?: unknown } | null)?.code === 'SQLITE_READONLY';
++
++/** The MCP server of specs/mcp.md, on an open database. The caller connects a transport. */
++export function createNotesDbServer(deps: NotesDbDeps): McpServer {
++  const { db, reader } = deps;
++  const server = new McpServer({ name: 'notes-db', version: '0.1.0' });
++
++  server.registerTool(
++    'list-tables',
++    {
++      description:
++        'The tables of the notes database (users, notes, note_shares) with their row counts.',
++      inputSchema: z.object({}),
++      annotations: { readOnlyHint: true },
++    },
++    () =>
++      run(async () =>
++        Promise.all(
++          Object.entries(TABLES).map(async ([table, t]) => {
++            const [{ rows }] = await db.select({ rows: count() }).from(t);
++            return { table, rows };
++          }),
++        ),
++      ),
++  );
++
++  server.registerTool(
++    'describe-table',
++    {
++      description:
++        'The columns of one table: name, SQL type, NOT NULL, primary key.',
++      inputSchema: z.object({ table: TableName }),
++      annotations: { readOnlyHint: true },
++    },
++    ({ table }) =>
++      run(async () => {
++        const columns = await db.all<{
++          name: string;
++          type: string;
++          notnull: number;
++          pk: number;
++        }>(
++          sql`select name, type, "notnull", pk from pragma_table_info(${table})`,
++        );
++        return columns.map((c) => ({
++          name: c.name,
++          type: c.type,
++          notNull: c.notnull === 1,
++          primaryKey: c.pk > 0,
++        }));
++      }),
++  );
++
++  server.registerTool(
++    'query',
++    {
++      description:
++        'Run ONE read-only SQL statement (SELECT, or WITH … SELECT) on the SQLite database. ' +
++        'Columns are snake_case (owner_id, due_at). Returns at most `limit` rows.',
++      inputSchema: z.object({
++        sql: z.string().min(1),
++        limit: z.number().int().min(1).max(200).default(50),
++      }),
++      annotations: { readOnlyHint: true },
++    },
++    async ({ sql: text, limit }) => {
++      if (!isSingleReadStatement(text)) {
++        return toolError(
++          'READ_ONLY',
++          'only a single SELECT (or WITH … SELECT) statement is allowed',
++        );
++      }
++      try {
++        const result = await reader.execute(text);
++        const rows = result.rows
++          .slice(0, limit)
++          .map((row) =>
++            Object.fromEntries(result.columns.map((c, i) => [c, row[i]])),
++          );
++        return ok({ rows, rowCount: rows.length });
++      } catch (error) {
++        // A write that got past the lexical check (e.g. `WITH … DELETE`) is refused here.
++        if (isReadOnlyRefusal(error)) {
++          return toolError('READ_ONLY', 'the statement would write');
++        }
++        throw error;
++      }
++    },
++  );
++
++  server.registerTool(
++    'notes-for-user',
++    {
++      description:
++        "A user's notes: the ones they own and/or the ones shared with them, each marked " +
++        "access 'owner' or 'shared'.",
++      inputSchema: z.object({
++        userId: z.string().uuid(),
++        include: z.enum(['owned', 'shared', 'all']).default('all'),
++        status: NoteListQuerySchema.shape.status,
++      }),
++      annotations: { readOnlyHint: true },
++    },
++    ({ userId, include, status }) =>
++      run(async () => {
++        if (!(await deps.notesRepository.findUser(userId))) {
++          throw new NotFoundError('User', userId);
++        }
++        const byStatus = status ? eq(notes.status, status) : undefined;
++        const order = [asc(notes.createdAt), asc(notes.id)];
++        const owned =
++          include === 'shared'
++            ? []
++            : await db
++                .select()
++                .from(notes)
++                .where(and(eq(notes.ownerId, userId), byStatus))
++                .orderBy(...order);
++        const shared =
++          include === 'owned'
++            ? []
++            : await db
++                .select({ note: notes })
++                .from(noteShares)
++                .innerJoin(notes, eq(notes.id, noteShares.noteId))
++                .where(and(eq(noteShares.userId, userId), byStatus))
++                .orderBy(...order);
++        return [
++          ...owned.map((note) => ({ ...note, access: 'owner' as const })),
++          ...shared.map(({ note }) => ({ ...note, access: 'shared' as const })),
++        ];
++      }),
++  );
++
++  server.registerTool(
++    'create-note',
++    {
++      description:
++        'Create an open note owned by an existing user. dueAt: an ISO datetime with offset.',
++      inputSchema: CreateNoteSchema.omit({ status: true }),
++    },
++    // Parsed again by the full create schema so its defaults (status 'open') apply.
++    (input) => run(() => deps.notes.create(CreateNoteSchema.parse(input))),
++  );
++
++  server.registerTool(
++    'update-note',
++    {
++      description:
++        'Change a note: at least one of title, body, status, dueAt (null clears it). ' +
++        "A done note can only be reopened with status 'open' alone.",
++      inputSchema: z
++        .object({ id: NoteSchema.shape.id, ...UpdateNoteSchema.shape })
++        // `id` plus at least one field (absent optional keys are not added by zod).
++        .refine((input) => Object.keys(input).length > 1, {
++          message: 'Provide at least one field to update',
++        }),
++    },
++    ({ id, ...patch }) => run(() => deps.notes.update(id, patch)),
++  );
++
++  const shareInput = z.object({
++    noteId: NoteSchema.shape.id,
++    userId: z.string().uuid(),
++  });
++
++  server.registerTool(
++    'share-note',
++    {
++      description:
++        'Share a note with a user (not its owner). Sharing twice is fine.',
++      inputSchema: shareInput,
++      annotations: { idempotentHint: true },
++    },
++    ({ noteId, userId }) =>
++      run(async () => {
++        await deps.notes.share(noteId, userId);
++        return { noteId, userId, shared: true };
++      }),
++  );
++
++  server.registerTool(
++    'unshare-note',
++    {
++      description: 'Stop sharing a note with a user.',
++      inputSchema: shareInput,
++    },
++    ({ noteId, userId }) =>
++      run(async () => {
++        await deps.notes.unshare(noteId, userId);
++        return { noteId, userId, shared: false };
++      }),
++  );
++
++  return server;
++}
+diff --git a/src/mcp/read-only-sql.spec.ts b/src/mcp/read-only-sql.spec.ts
+new file mode 100644
+index 0000000..6ae45c1
+--- /dev/null
++++ b/src/mcp/read-only-sql.spec.ts
+@@ -0,0 +1,30 @@
++import { isSingleReadStatement } from './read-only-sql.js';
++
++describe('isSingleReadStatement', () => {
++  it.each([
++    'select id from notes',
++    'SELECT 1;',
++    '  with x as (select 1) select * from x  ',
++    "select ';' as semi, 'it''s; fine' from notes",
++    'select 1 -- trailing; comment',
++    'select /* ; */ 1',
++    'select "a;b" from notes',
++  ])('accepts %s', (sql) => {
++    expect(isSingleReadStatement(sql)).toBe(true);
++  });
++
++  it.each([
++    'delete from notes',
++    'update notes set title = 1',
++    'drop table note_shares',
++    'select 1; delete from notes',
++    'select 1; pragma query_only = 0',
++    'pragma table_info(notes)',
++    'insert into notes select * from notes',
++    '/* select */ delete from notes',
++    'selectx from notes',
++    '',
++  ])('refuses %s', (sql) => {
++    expect(isSingleReadStatement(sql)).toBe(false);
++  });
++});
+diff --git a/src/mcp/read-only-sql.ts b/src/mcp/read-only-sql.ts
+new file mode 100644
+index 0000000..84c871d
+--- /dev/null
++++ b/src/mcp/read-only-sql.ts
+@@ -0,0 +1,51 @@
++/**
++ * The lexical half of the `query` tool's read-only guard (specs/mcp.md). It answers one
++ * question: is this text ONE statement that starts with SELECT or WITH?
++ *
++ * It is not the enforcement. `WITH x AS (…) DELETE …` starts with WITH and passes here; the
++ * write is refused by the connection the query runs on (`PRAGMA query_only = ON`, see
++ * mcp-server.ts), which SQLite applies to whatever the statement turns out to do.
++ *
++ * Why the single-statement check exists at all: libSQL's `execute()` runs only the FIRST
++ * statement of `select 1; delete from notes` and returns its rows without an error
++ * (measured, @libsql/client 0.18.0). Nothing is written, but the caller would believe the
++ * whole text ran, so it is refused instead.
++ */
++export function isSingleReadStatement(sql: string): boolean {
++  const code = stripLiteralsAndComments(sql).trim().replace(/;\s*$/, '');
++  if (code.includes(';')) return false;
++  return /^(select|with)\b/i.test(code);
++}
++
++/**
++ * The SQL with every string, quoted identifier and comment replaced by a space, so a `;`
++ * or a keyword inside one of them is not mistaken for code. An unterminated one swallows
++ * the rest of the text, which SQLite would reject anyway.
++ */
++function stripLiteralsAndComments(sql: string): string {
++  let out = '';
++  let i = 0;
++  while (i < sql.length) {
++    const c = sql[i];
++    const end = (close: string, from: number) => {
++      const at = sql.indexOf(close, from);
++      return at === -1 ? sql.length : at + close.length;
++    };
++    if (c === "'" || c === '"' || c === '`') {
++      // A doubled quote inside is an escaped quote: the scan simply resumes after it.
++      i = end(c, i + 1);
++    } else if (c === '[') {
++      i = end(']', i + 1);
++    } else if (c === '-' && sql[i + 1] === '-') {
++      i = end('\n', i + 2);
++    } else if (c === '/' && sql[i + 1] === '*') {
++      i = end('*/', i + 2);
++    } else {
++      out += c;
++      i += 1;
++      continue;
++    }
++    out += ' ';
++  }
++  return out;
++}
+diff --git a/test/mcp-server.e2e-spec.ts b/test/mcp-server.e2e-spec.ts
+new file mode 100644
+index 0000000..4dfe3df
+--- /dev/null
++++ b/test/mcp-server.e2e-spec.ts
+@@ -0,0 +1,263 @@
++import { createClient, type Client as SqlClient } from '@libsql/client';
++import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server';
++import { spawn, type ChildProcess } from 'node:child_process';
++import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
++import { join } from 'node:path';
++import { createInterface } from 'node:readline';
++
++/**
++ * specs/mcp.md over the wire: spawns the BUILT dist/mcp-server.js (global-setup builds it)
++ * on a COPY of the seeded data/app.db and speaks newline-delimited JSON-RPC to it, reading
++ * raw stdout, so anything else printed there fails the test.
++ */
++describe('mcp-server (e2e, stdio)', () => {
++  const root = join(import.meta.dirname, '..');
++  const missing = '00000000-0000-4000-8000-000000000000';
++  let dir: string;
++  let db: SqlClient;
++  let proc: ChildProcess;
++  let stderr = '';
++  const stdoutLines: string[] = [];
++  const pending = new Map<number, (message: Record<string, unknown>) => void>();
++  let nextId = 0;
++
++  type ToolResult = { isError?: boolean; content: { text: string }[] };
++
++  const send = (message: object) =>
++    proc.stdin!.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
++  const request = (method: string, params: object = {}) =>
++    new Promise<Record<string, unknown>>((resolve) => {
++      const id = ++nextId;
++      pending.set(id, resolve);
++      send({ id, method, params });
++    });
++  const call = async (name: string, args: object = {}) =>
++    (await request('tools/call', { name, arguments: args }))
++      .result as ToolResult;
++  const text = (r: ToolResult) => r.content.map((c) => c.text).join('');
++  const json = <T>(r: ToolResult): T => {
++    expect(r.isError, text(r)).toBeFalsy();
++    return JSON.parse(text(r)) as T;
++  };
++  const scalar = async (sql: string, args: string[] = []) =>
++    (await db.execute({ sql, args })).rows[0]?.[0];
++  /** A TEXT value (an id) from the database copy. */
++  const textOf = async (sql: string, args: string[] = []) =>
++    (await scalar(sql, args)) as string;
++
++  let serverInfo: unknown;
++
++  beforeAll(async () => {
++    // Under data/ (git-ignored), never data/app.db itself.
++    dir = mkdtempSync(join(root, 'data', 'mcp-e2e-'));
++    const file = join(dir, 'app.db');
++    copyFileSync(join(root, 'data', 'app.db'), file);
++    db = createClient({ url: `file:${file}` });
++    proc = spawn(process.execPath, [join(root, 'dist', 'mcp-server.js')], {
++      env: { ...process.env, DATABASE_URL: `file:${file}` },
++      stdio: ['pipe', 'pipe', 'pipe'],
++    });
++    proc.stderr!.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
++    createInterface({ input: proc.stdout! }).on('line', (line) => {
++      stdoutLines.push(line);
++      const message = JSON.parse(line) as Record<string, unknown>;
++      pending.get(message.id as number)?.(message);
++    });
++    const init = await request('initialize', {
++      protocolVersion: LATEST_PROTOCOL_VERSION,
++      capabilities: {},
++      clientInfo: { name: 'e2e', version: '1.0.0' },
++    });
++    serverInfo = (init.result as { serverInfo: unknown }).serverInfo;
++    send({ method: 'notifications/initialized' });
++  });
++
++  afterAll(() => {
++    proc?.kill();
++    db?.close();
++    rmSync(dir, { recursive: true, force: true });
++  });
++
++  it('identifies as notes-db 0.1.0 and lists exactly the eight tools', async () => {
++    expect(serverInfo).toEqual({ name: 'notes-db', version: '0.1.0' });
++    const { tools } = (await request('tools/list')).result as {
++      tools: { name: string }[];
++    };
++    expect(tools.map((t) => t.name).sort()).toEqual([
++      'create-note',
++      'describe-table',
++      'list-tables',
++      'notes-for-user',
++      'query',
++      'share-note',
++      'unshare-note',
++      'update-note',
++    ]);
++  });
++
++  it('writes only JSON-RPC to stdout, and its diagnostics to stderr', () => {
++    expect(stdoutLines.length).toBeGreaterThan(0);
++    for (const line of stdoutLines) {
++      expect(JSON.parse(line)).toMatchObject({ jsonrpc: '2.0' });
++    }
++    expect(stderr).toContain('mcp-server: ready (');
++  });
++
++  it('reads: list-tables, describe-table, query with a limit', async () => {
++    const tables = json<{ table: string; rows: number }[]>(
++      await call('list-tables'),
++    );
++    expect(tables).toEqual([
++      {
++        table: 'users',
++        rows: Number(await scalar('select count(*) from users')),
++      },
++      {
++        table: 'notes',
++        rows: Number(await scalar('select count(*) from notes')),
++      },
++      {
++        table: 'note_shares',
++        rows: Number(await scalar('select count(*) from note_shares')),
++      },
++    ]);
++    const columns = json<{ name: string; primaryKey: boolean }[]>(
++      await call('describe-table', { table: 'note_shares' }),
++    );
++    expect(columns.filter((c) => c.primaryKey).map((c) => c.name)).toEqual([
++      'note_id',
++      'user_id',
++    ]);
++    const res = json<{ rows: { id: string }[]; rowCount: number }>(
++      await call('query', { sql: 'select id from notes', limit: 3 }),
++    );
++    expect(res.rowCount).toBe(3);
++    expect(res.rows).toHaveLength(3);
++    expect(res.rows[0]).toHaveProperty('id');
++  });
++
++  it('query refuses writes with READ_ONLY, including one hidden in a WITH', async () => {
++    const before = await scalar('select count(*) from notes');
++    for (const sql of [
++      'delete from notes',
++      'select 1; delete from notes',
++      'with x as (select 1) delete from notes',
++      'pragma query_only = 0',
++    ]) {
++      const r = await call('query', { sql });
++      expect(r.isError, sql).toBe(true);
++      expect(text(r)).toMatch(/^READ_ONLY: /);
++    }
++    expect(await scalar('select count(*) from notes')).toBe(before);
++  });
++
++  it('notes-for-user marks access; an unknown user is NOT_FOUND', async () => {
++    const userId = await textOf(
++      'select user_id from note_shares order by note_id limit 1',
++    );
++    const all = json<{ access: string; ownerId: string }[]>(
++      await call('notes-for-user', { userId }),
++    );
++    expect(all.filter((n) => n.access === 'owner')).toHaveLength(
++      Number(
++        await scalar('select count(*) from notes where owner_id = ?', [userId]),
++      ),
++    );
++    expect(all.filter((n) => n.access === 'shared')).toHaveLength(
++      Number(
++        await scalar('select count(*) from note_shares where user_id = ?', [
++          userId,
++        ]),
++      ),
++    );
++    const owned = json<{ access: string }[]>(
++      await call('notes-for-user', { userId, include: 'owned' }),
++    );
++    expect(owned.every((n) => n.access === 'owner')).toBe(true);
++    const r = await call('notes-for-user', { userId: missing });
++    expect(text(r)).toMatch(/^NOT_FOUND: /);
++  });
++
++  it('create-note: R1 owner must exist, R3 dueAt stored as UTC', async () => {
++    const ownerId = await textOf('select id from users limit 1');
++    const created = json<{ id: string; status: string; body: string }>(
++      await call('create-note', {
++        ownerId,
++        title: '  From e2e  ',
++        dueAt: '2026-11-01T09:00:00+08:00',
++      }),
++    );
++    expect(created).toMatchObject({ status: 'open', body: '' });
++    expect(
++      await scalar(`select title || '|' || due_at from notes where id = ?`, [
++        created.id,
++      ]),
++    ).toBe('From e2e|2026-11-01T01:00:00.000Z');
++    const r = await call('create-note', { ownerId: missing, title: 'x' });
++    expect(r.isError).toBe(true);
++    expect(text(r)).toMatch(/^RULE_VIOLATION: /);
++  });
++
++  it('update-note: R2 a done note can only be reopened; unknown id NOT_FOUND', async () => {
++    const id = await textOf(
++      "select id from notes where status = 'done' limit 1",
++    );
++    const refused = await call('update-note', {
++      id,
++      status: 'open',
++      title: 'x',
++    });
++    expect(text(refused)).toMatch(/^RULE_VIOLATION: /);
++    expect(
++      json<{ status: string }>(
++        await call('update-note', { id, status: 'open' }),
++      ),
++    ).toMatchObject({ status: 'open' });
++    expect(
++      json<{ title: string }>(
++        await call('update-note', { id, title: 'Edited' }),
++      ),
++    ).toMatchObject({ title: 'Edited' });
++    const gone = await call('update-note', { id: missing, title: 'x' });
++    expect(text(gone)).toMatch(/^NOT_FOUND: /);
++    const empty = await call('update-note', { id });
++    expect(empty.isError).toBe(true);
++    expect(text(empty)).toMatch(/Input validation error/);
++  });
++
++  it('share-note is idempotent, never with the owner (R4); unshare-note removes it', async () => {
++    const noteId = await textOf('select id from notes limit 1');
++    const ownerId = await textOf('select owner_id from notes where id = ?', [
++      noteId,
++    ]);
++    const friend = await textOf(
++      'select id from users where id != ? and id not in (select user_id from note_shares where note_id = ?) limit 1',
++      [ownerId, noteId],
++    );
++    const shares = () =>
++      scalar(
++        'select count(*) from note_shares where note_id = ? and user_id = ?',
++        [noteId, friend],
++      );
++    for (let i = 0; i < 2; i++) {
++      expect(
++        json(await call('share-note', { noteId, userId: friend })),
++      ).toEqual({ noteId, userId: friend, shared: true });
++    }
++    expect(await shares()).toBe(1);
++    expect(
++      json(await call('unshare-note', { noteId, userId: friend })),
++    ).toEqual({ noteId, userId: friend, shared: false });
++    expect(await shares()).toBe(0);
++    const again = await call('unshare-note', { noteId, userId: friend });
++    expect(text(again)).toMatch(/^NOT_FOUND: /);
++    const own = await call('share-note', { noteId, userId: ownerId });
++    expect(text(own)).toMatch(/^RULE_VIOLATION: /);
++  });
++
++  it('bad input is a tool error that names the field', async () => {
++    const r = await call('query', { sql: 'select 1', limit: 500 });
++    expect(r.isError).toBe(true);
++    expect(text(r)).toMatch(/limit/);
++  });
++});

@@ -1,38 +1,62 @@
 # Resource spec: notes
 
-The input an agent fills the AI-FILL markers from. Write one of these per resource
-**before** running the scaffold. If something the agent needs is not here, the agent
-asks; it does not invent it.
+The TODO items of this app. The input an agent fills the AI-FILL markers from. If something
+the agent needs is not here, the agent asks; it does not invent it.
 
 - **singular / plural:** `note` / `notes`
 - **route:** `/api/v1/notes`
+- **storage:** `drizzle`. The tables are **provided**: `src/notes/notes.table.ts` and
+  `src/notes/note-shares.table.ts`, already in migration `0000` and already holding seeded
+  rows in `data/app.db`. Build the resource on them; do not generate a migration.
+
+A user **owns** many notes. A note can be **shared** with many users (`note_shares`, one
+row per note and user).
 
 ## Fields
 
-| field    | type     | constraints                                                      | default | client-settable |
-| -------- | -------- | ---------------------------------------------------------------- | ------- | --------------- |
-| `title`  | string   | trimmed, 1–200 chars                                             | —       | yes             |
-| `body`   | string   | 0–10,000 chars                                                   | `''`    | yes             |
-| `status` | enum     | `draft` \| `published`                                           | `draft` | yes             |
-| `tags`   | string[] | each: lowercase `a-z0-9-`, 1–30 chars; at most 10; no duplicates | `[]`    | yes             |
+| field     | type                 | constraints                                              | default | client-settable    |
+| --------- | -------------------- | -------------------------------------------------------- | ------- | ------------------ |
+| `ownerId` | uuid                 | an existing user                                         | —       | **on create only** |
+| `title`   | string               | trimmed, 1–200 chars                                     | —       | yes                |
+| `body`    | string               | 0–10,000 chars                                           | `''`    | yes                |
+| `status`  | enum                 | `open` \| `done`                                         | `open`  | yes                |
+| `dueAt`   | ISO datetime \| null | any offset accepted, **stored as `toISOString()` (UTC)** | `null`  | yes                |
+
+`id`, `createdAt` and `updatedAt` are server fields: returned, never accepted. `ownerId` is
+not part of the PATCH schema, so a PATCH that sends it has the key ignored (the house schemas
+strip unknown keys).
 
 ## Rules
 
-Rules that only need the **payload** go in the schema. Rules that need **stored state**
-go in the service.
+| #   | rule                                                                                                                                                  | where              | error → HTTP                       |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------- |
+| R1  | `ownerId` must be an existing user                                                                                                                    | service            | `RuleViolationError` → 422         |
+| R2  | a `done` note cannot be edited: a PATCH on a done note may contain only `status: 'open'` (reopen it; reopening and editing in one request is 422 too) | service            | `RuleViolationError` → 422         |
+| R3  | `dueAt` is stored in one format, UTC `toISOString()`, whatever offset was sent (SQLite sorts the text)                                                | schema (transform) | validation → 400 if not a datetime |
+| R4  | a note cannot be shared with its own owner                                                                                                            | service            | `RuleViolationError` → 422         |
 
-| #   | rule                                                                                                    | where                              | error → HTTP               |
-| --- | ------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------------- |
-| R1  | `tags` contain no duplicates                                                                            | schema                             | validation → 400           |
-| R2  | a note created as `published` must have a non-empty `body`                                              | schema (payload-only, cross-field) | validation → 400           |
-| R3  | once `published`, a note's `title` cannot change                                                        | service (needs stored state)       | `RuleViolationError` → 422 |
-| R4  | a `published` note cannot go back to `draft`                                                            | service (needs stored state)       | `RuleViolationError` → 422 |
-| R5  | publishing through PATCH requires the resulting `body` (patch value, else stored value) to be non-empty | service (needs stored state)       | `RuleViolationError` → 422 |
+## Listing
 
-> R5 was added while writing this spec. R2 alone left a hole: create a draft with an
-> empty body, then PATCH it to `published`. This is the kind of gap an agent should
-> raise as a question, not quietly close with a rule of its own.
+`GET /api/v1/notes` takes the house paging (`limit`, `offset`) plus optional filters, which
+combine with AND:
+
+- `ownerId=<uuid>`: notes that user owns;
+- `sharedWith=<uuid>`: notes shared with that user;
+- `status=open|done`.
+
+## Sharing
+
+The list filters above and these routes go beyond the template's CRUD: add them in the
+generated controller, service and repository (outside the markers), with e2e tests.
+
+| request                                   | answer                                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `GET /api/v1/notes/:id/shares`            | 200 `{ items: User[] }`, the users it is shared with; unknown note 404                 |
+| `PUT /api/v1/notes/:id/shares/:userId`    | 204; idempotent (sharing twice is still 204); unknown note or user 404; owner 422 (R4) |
+| `DELETE /api/v1/notes/:id/shares/:userId` | 204; not shared with that user 404                                                     |
+
+Deleting a note deletes its shares (the foreign key cascades).
 
 ## Out of scope
 
-Authentication, persistence beyond memory, search.
+Authentication and permissions: anyone can edit any note. Who may share is a later concern.
