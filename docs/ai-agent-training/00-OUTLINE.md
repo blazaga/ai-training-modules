@@ -9,7 +9,8 @@ database**: 25 users, 200 notes (the TODO items) and 120 shares, so there is dat
 from the first minute. In **two modules** your agent builds on it:
 
 1. the **users** and **notes** resources (two MVCs over REST, notes shareable between users);
-2. an **MCP server** on the same database, so your own AI client can read and change the data.
+2. an **MCP server** on the same database, connected to your **Claude Desktop** app, so you
+   can ask Claude about the data and have it change it.
 
 The proctor gives each step as an **instruction**: the goal, where the requirements are, and
 when it is done, never the steps. You give it to your agent, in your own words or as
@@ -31,10 +32,10 @@ Every module runs the same loop:
 proctor → instruct → agent → check → review
 ```
 
-| module                       | reading            | your agent builds                                                                    | you check                               | lab |
-| ---------------------------- | ------------------ | ------------------------------------------------------------------------------------ | --------------------------------------- | --- |
-| 1 Users and notes            | ch00 + ch01 + ch02 | sets the project up, then users and notes (with sharing) on the tables               | lab 01 · break a rule, see red          | 60' |
-| 2 An MCP server on your data | ch03 + ch04        | a stdio MCP server that reads and writes the database; you add it to your own Claude | lab 02 · ask your Claude about the data | 45' |
+| module                       | reading            | your agent builds                                                                       | you check                                  | lab |
+| ---------------------------- | ------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------ | --- |
+| 1 Users and notes            | ch00 + ch01 + ch02 | sets the project up, then users and notes (with sharing) on the tables                  | lab 01 · break a rule, see red             | 60' |
+| 2 An MCP server on your data | ch03 + ch04        | a stdio MCP server that reads and writes the database; you connect it to Claude Desktop | lab 02 · ask Claude Desktop about the data | 45' |
 
 Both lab times are estimates; nobody has run the course with an audience yet.
 

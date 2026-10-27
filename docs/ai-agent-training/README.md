@@ -1,7 +1,7 @@
 # Building Apps with AI Agents
 
-Your AI coding agent builds a NestJS 12 service with skills and templated code, then gives your
-own AI client an MCP server on its data; you direct it and check every step. The service starts
+Your AI coding agent builds a NestJS 12 service with skills and templated code, then connects your
+Claude Desktop app to it through an MCP server on its data; you direct it and check every step. The service starts
 in `boilerplate/nest-ai-starter/` with a seeded SQLite database (users, notes, shares), and
 grows one layer per module.
 
@@ -21,9 +21,14 @@ gets you to the start of the next module.
 Principles P1–P9 (working with agents) are in [`principles/`](principles/). Also:
 [Glossary](glossary.md) · [Facilitator notes](answers.md).
 
-```bash
-cd boilerplate/nest-ai-starter
-corepack enable && pnpm install && cp .env.example .env
-pnpm build && pnpm start                      # seeded SQLite file data/app.db, app on :3000
-pnpm verify                                   # typecheck, lint, format, markers, migrations, unit, e2e
+```powershell
+cd boilerplate\nest-ai-starter
+corepack enable
+pnpm install
+Copy-Item .env.example .env
+pnpm build
+pnpm start          # seeded SQLite file data/app.db, app on :3000
+pnpm verify         # in a second terminal: typecheck, lint, format, markers, migrations, unit, e2e
 ```
+
+The course assumes Windows and PowerShell; chapter 00 has the details.

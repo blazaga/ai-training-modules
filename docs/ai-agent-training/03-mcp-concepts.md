@@ -78,7 +78,7 @@ event: message
 data: {"result":{"protocolVersion":"2025-06-18", … },"jsonrpc":"2.0","id":1}
 ```
 
-**This course uses stdio** (module 2): your own AI client starts the server as a child
+**This course uses stdio** (module 2): Claude Desktop starts the server as a child
 process on your machine, so there is no port to open and nothing to authenticate. The trust
 column above is why: an HTTP server that can write to your database would need
 authentication before anyone else could reach it.

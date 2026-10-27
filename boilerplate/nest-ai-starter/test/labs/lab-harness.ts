@@ -57,7 +57,10 @@ export interface LabMcp {
  * dist/mcp-server.js over stdio on that copy. The committed database is never touched.
  */
 export async function startMcpServer(): Promise<LabMcp> {
-  execFileSync(join(root, 'node_modules', '.bin', 'nest'), ['build'], {
+  // Run the CLI's JS entry with this node, not node_modules/.bin/<tool>: on Windows that
+  // shim is a .cmd file, which execFile cannot start (the sh version is no use there either).
+  const nest = join(root, 'node_modules', '@nestjs', 'cli', 'bin', 'nest.js');
+  execFileSync(process.execPath, [nest, 'build'], {
     cwd: root,
     stdio: 'ignore',
   });

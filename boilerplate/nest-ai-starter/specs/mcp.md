@@ -55,17 +55,35 @@ over REST. It talks to the database **directly**, not through the REST API.
 database (never `data/app.db` itself), reads raw stdout, and covers: the identity, the exact
 tool list, a read, each write and its rule violations, and a write sent to `query`.
 
-## Using it from your own client
+## Using it from Claude Desktop
 
-Your client starts the server itself, from its own working directory, so give it absolute
-paths. From the starter folder:
+The goal of module 2: your **Claude Desktop** app talks to this server and answers questions
+about the data. Claude Desktop starts the server itself, from its own working folder and with a
+minimal `PATH`, so its config needs **absolute** paths: for `node`, for the built server, and
+for the database. The base prints that entry for your machine:
 
-```bash
+```powershell
 pnpm build
-claude mcp add notes-db -e DATABASE_URL="file:$PWD/data/app.db" -- node "$PWD/dist/mcp-server.js"
-pnpm mcp:inspect:ui      # or the MCP Inspector: transport stdio, the same command and variable
+node scripts\claude-desktop-config.mjs      # prints the config file path and the entry to paste
 ```
 
-The `claude mcp add` form (`-e` for an environment variable, `--` before the command) follows
-Claude Code's documented syntax; in Claude Code, `/mcp` lists the server and its tools. The
-tools change your real `data/app.db`: `pnpm db:seed` rebuilds it.
+1. Open the config file: Claude Desktop → Settings → Developer → Edit Config, or the path the
+   script names (Windows: `%APPDATA%\Claude\claude_desktop_config.json`; macOS:
+   `~/Library/Application Support/Claude/claude_desktop_config.json`). If it does not exist,
+   create it with exactly the printed JSON; otherwise add the `"notes-db"` entry inside its
+   `"mcpServers"` object.
+2. **Quit and reopen** Claude Desktop (on Windows, also quit it from the system tray). The
+   `notes-db` tools then appear in its tools menu.
+3. Ask it about the data: "Which open notes are shared with more than one person?"
+
+Measured on the module 2 build, on Linux (no Claude Desktop there): the printed entry,
+started from another working folder with nothing but its own command, arguments and
+environment, answers `initialize` as `notes-db`, lists the three tables with their row
+counts, and runs a read-only query. The config format is Claude Desktop's documented
+`mcpServers` form.
+
+**Other clients:** the same command and `DATABASE_URL` work in the MCP Inspector
+(`pnpm mcp:inspect:ui`, transport stdio) and in Claude Code
+(`claude mcp add notes-db -e DATABASE_URL="file:$PWD/data/app.db" -- node "$PWD/dist/mcp-server.js"`).
+
+The write tools change your real `data/app.db`: `pnpm db:seed` rebuilds it.

@@ -1,7 +1,9 @@
 # Chapter 00 — Setup: Node, pnpm and one seeded SQLite file
 
 **You need:** Node 24 (measured on 24.22; `package.json` also accepts 22.22.3 and later) and
-pnpm through corepack, which ships with Node. **You don't need** a database server: the
+pnpm through corepack, which ships with Node. **The course assumes Windows**: install Node from
+nodejs.org (the installer puts `node` on your `PATH`), Git for Windows, Claude Desktop for
+module 2, and run the commands in **PowerShell** (Windows Terminal is fine). **You don't need** a database server: the
 database is **SQLite**, a single file, `data/app.db`, and it ships **with data in it**.
 
 In the workshop your agent works these steps out from the module 1 instruction; this chapter
@@ -9,16 +11,20 @@ is what it should do and what you check afterwards.
 
 ## Install
 
-```bash
-cd boilerplate/nest-ai-starter
-corepack enable            # puts the pinned pnpm (12.15.0) on your PATH
+```powershell
+cd boilerplate\nest-ai-starter
+corepack enable                  # puts the pinned pnpm (12.15.0) on your PATH
 pnpm install
-cp .env.example .env       # DATABASE_URL=file:./data/app.db, PORT=3000
+Copy-Item .env.example .env      # DATABASE_URL=file:./data/app.db, PORT=3000
 ```
 
-If `corepack enable` is refused on your machine (it writes into the Node install folder;
-measured: `EACCES` without admin rights), write `corepack pnpm` wherever this course writes
-`pnpm`.
+- **`corepack enable` refused?** It writes into the Node install folder, which on Windows
+  usually needs a terminal opened with **Run as administrator** (measured on Linux: `EACCES`
+  without admin rights). Without it, write `corepack pnpm` wherever this course writes `pnpm`.
+- **One command per line.** Windows PowerShell 5.1 (the one most machines open) does not
+  accept `&&` between commands; PowerShell 7 does. The course writes one per line.
+- **`curl` in PowerShell** is an alias for `Invoke-WebRequest` in Windows PowerShell 5.1; write
+  `curl.exe` for the real curl (it ships with Windows 10 and 11), or use Postman.
 
 **Port 3000 already taken?** Set another port in `.env` (`PORT=3100`) before starting, and
 use that port wherever the course writes 3000 (the Postman `baseUrl`, curl).
@@ -44,10 +50,10 @@ measured), so changing data while you experiment costs nothing.
 
 ## Run the app
 
-```bash
-pnpm build                          # compile to dist/
-pnpm start                          # http://localhost:3000, docs at /api/docs
-curl localhost:3000/api/health      # {"status":"ok"}
+```powershell
+pnpm build                              # compile to dist/
+pnpm start                              # http://localhost:3000, docs at /api/docs
+curl.exe localhost:3000/api/health      # in a second terminal: {"status":"ok"}
 ```
 
 `pnpm start:dev` does the same with a file watcher: it rebuilds and restarts when you save.
@@ -60,9 +66,15 @@ file byte-identical. You need it again only when a new migration is added.
 
 ## The gate: `pnpm verify`
 
-```bash
+```powershell
 pnpm verify      # typecheck, lint, format, AI-FILL markers, migrations, unit, e2e
 ```
+
+**Windows notes for the gate,** fixed in the base and measured on Linux, not yet on Windows:
+the checks start their tools (`nest`, `prettier`, `drizzle-kit`) with `node` and each tool's
+JavaScript entry, because the `node_modules\.bin` shims are `.cmd` files on Windows and a
+program cannot start them directly; and the starter's `.gitattributes` keeps every text file
+LF on checkout, so the formatting check does not fail on Git for Windows' CRLF conversion.
 
 Measured on the base: exit 0, unit `Tests 20 passed`, e2e `Tests 2 passed`. **No test
 touches `data/app.db`:** under test the app ignores `.env` (the vitest configs set

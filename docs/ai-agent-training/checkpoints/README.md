@@ -18,19 +18,24 @@ its tests (see below).
 Never patch on top of your own work: the patches expect the exact checkpoint before them. Take
 a **fresh copy of the base** instead, and keep your own folder to compare against.
 
-```bash
-# from the course repository root; the copy must be OUTSIDE this git repository
-CP="$PWD/docs/ai-agent-training/checkpoints"
-cp -r boilerplate/nest-ai-starter ~/catch-up
-cd ~/catch-up
-rm -rf node_modules dist .env         # if they came along; data/app.db stays (it is the seed)
-git apply "$CP/module-1-users-notes.patch"
-git apply "$CP/module-2-mcp-server.patch"   # only to catch up past module 2
-pnpm install && cp .env.example .env
+In PowerShell, from the course repository root (the copy must be OUTSIDE this git repository):
+
+```powershell
+$CP = "$PWD\docs\ai-agent-training\checkpoints"
+Copy-Item -Recurse boilerplate\nest-ai-starter $HOME\catch-up
+cd $HOME\catch-up
+# if they came along; data\app.db stays (it is the seed)
+Remove-Item -Recurse -Force node_modules, dist, .env -ErrorAction SilentlyContinue
+git apply "$CP\module-1-users-notes.patch"
+git apply "$CP\module-2-mcp-server.patch"   # only to catch up past module 2
+pnpm install
+Copy-Item .env.example .env
 pnpm build
-pnpm verify                           # read the counts against the table below
-pnpm lab 01                           # and `pnpm lab 02` after module 2
+pnpm verify                                 # read the counts against the table below
+pnpm lab 01                                 # and `pnpm lab 02` after module 2
 ```
+
+The recipe was proven on Linux, where its bash form gives a copy byte-identical to checkpoint 2.
 
 ⚠️ Inside this course repository, `git apply` resolves paths from the repository root, so run in
 the starter folder it prints `Skipped patch …` for every file and **still exits 0**: nothing

@@ -53,6 +53,6 @@ The specs are the contracts: `specs/users.md`, `specs/notes.md` (module 1) and
 ## When a check fails and you think you are right
 
 Read the assertion: it names the rule and the request. Then reproduce the request yourself
-(the Postman collection has every REST call; the MCP Inspector or your own Claude can call
+(the Postman collection has every REST call; the MCP Inspector or Claude Desktop can call
 the tools), and compare what the spec says with what was built. A difference there is the
 bug, in one of the two.

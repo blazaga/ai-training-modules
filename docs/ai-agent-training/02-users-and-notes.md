@@ -79,7 +79,7 @@ with sharing), checked with `pnpm lab 01`.
    `pnpm lab 01` and `pnpm verify`, put it back. Which layer's tests went red? Then delete the
    `dueAt` transform: why does no unit test notice?
 3. **Play with the data.** Start the app (`pnpm build && pnpm start`) and use the Postman
-   folders or `curl` on the seeded rows: `GET /api/v1/notes?sharedWith=<a user id>`. Then
+   folders or `curl.exe` on the seeded rows: `GET /api/v1/notes?sharedWith=<a user id>`. Then
    `pnpm db:seed` to put the data back.
 
 Principles behind this chapter: P1 (orientation), P5 (verification).

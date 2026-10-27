@@ -66,12 +66,12 @@ A module groups one feature: its controller, its service and its repository. The
 
 ## Three rules for the lab
 
-- **Node 24 + pnpm**: Every command runs in boilerplate/nest-ai-starter. `corepack enable` once puts pnpm on your PATH; otherwise write `corepack pnpm`.
+- **Windows, PowerShell, Node 24**: Every command runs in boilerplate\nest-ai-starter, one per line. `corepack enable` needs an administrator terminal; otherwise write `corepack pnpm`.
 - **Counts, not exit codes**: Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.
 - **The data is yours to break**: data/app.db ships seeded. Change it freely while you try things; `pnpm db:seed` puts it back, byte for byte.
 
 <!--
-Linux, macOS and WSL shells were the target. Not tested on PowerShell.
+The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line; curl is curl.exe there (plain curl is Invoke-WebRequest). The base starts its tools with node and their JS entry, because the node_modules\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.
 -->
 
 ---
@@ -83,7 +83,7 @@ Linux, macOS and WSL shells were the target. Not tested on PowerShell.
 - **It writes to your data**: Requests create, change and delete rows in data/app.db. `pnpm db:seed` restores the seeded data.
 
 <!--
-Module 2 has no Postman folder: its client is your own Claude (or the MCP Inspector), over stdio.
+Module 2 has no Postman folder: its client is Claude Desktop (or the MCP Inspector), over stdio.
 -->
 
 ---
@@ -205,10 +205,11 @@ Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first 
 ## Check it: module 1
 
 ```bash
-pnpm verify           # read both Tests lines
-pnpm build && pnpm start
+pnpm verify       # read both Tests lines
+pnpm build
+pnpm start
 # second terminal: the seeded rows
-curl -s 'localhost:3000/api/v1/notes?status=done'
+curl.exe "localhost:3000/api/v1/notes?status=done"
 pnpm lab 01   # the lab check: all green?
 ```
 
@@ -260,7 +261,7 @@ notes?status=done total=85
 
 # An MCP server on your data
 
-Your agent builds an MCP server that reads and writes the database; you add it to your own Claude and ask it about the data.
+Your agent builds an MCP server that reads and writes the database; you connect it to Claude Desktop and ask Claude about the data.
 
 ⏱ 45 min lab (draft estimate)
 
@@ -272,15 +273,15 @@ Covers chapters 03 + 04. Left out for time: the stdio framing lab (chapter 03): 
 
 ## Instruction: an MCP server on your data
 
-> **Proctor:** Your own Claude should be able to read and change this data. The model writes the SQL, so the server decides what may run.
+> **Proctor:** The goal: your Claude Desktop app answers questions from this database. The model writes the SQL, so the server decides what may run.
 
 **Give it to your agent** (paste, or say it in your own words):
 
 ```text
-I want to use this data from my own Claude. Build the MCP
+I want to use this data from Claude Desktop. Build the MCP
 server in specs/mcp.md. Done when pnpm lab 02 and pnpm
-verify are green; then tell me how to add it to Claude
-Code, and show me two questions I could ask it.
+verify are green; then show me how to connect it to Claude
+Desktop, and two questions I could ask it.
 ```
 
 **Watch its approach**
@@ -288,7 +289,7 @@ Code, and show me two questions I could ask it.
 - reads the installed SDK, not its memory
 - write tools call NotesService: no rule copied
 - query read-only in two layers
-- exits when data/app.db is missing
+- gives the Claude Desktop entry with absolute paths
 
 <!--
 Measured: a fresh agent got lab 02 10/10 (lab 01 still 15/15) and verify 60 unit / 55 e2e. Its query guard has two layers, each proven by removing it: one SELECT/WITH statement (libSQL silently runs only the first of two), and a query_only connection (a delete hidden in a WITH emptied the copy without it). It also found that the default database path is relative to the working directory.
@@ -301,39 +302,40 @@ Measured: a fresh agent got lab 02 10/10 (lab 01 still 15/15) and verify 60 unit
 ```bash
 pnpm verify
 pnpm build
-claude mcp add notes-db -e DATABASE_URL="file:$PWD/data/app.db" \
-  -- node "$PWD/dist/mcp-server.js"
-# then, in Claude: "Which open notes are
-#   shared with more than one person?"
+node scripts\claude-desktop-config.mjs
+# paste the entry into the config file it names,
+# quit and reopen Claude Desktop, then ask:
+# "Which open notes are shared with more
+#   than one person?"
 pnpm lab 02   # the lab check: all green?
 ```
 
 <!--
-The lab runs the server on a COPY of data/app.db. When learners try it from Claude, the writes go to their own data/app.db: pnpm db:seed puts it back.
+Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database: the script prints them. Quit Claude Desktop completely (not just the window) before reopening. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and pnpm db:seed puts it back.
 -->
 
 ---
 
-## Checkpoint: your Claude, your data
+## Checkpoint: Claude Desktop, your data
 
 _Output: captured_
 
 ```bash
-# pnpm verify
-Tests  60 passed (60)
-Tests  55 passed (55)
-# pnpm lab 01 02
+# pnpm verify; pnpm lab 01 02
+Tests  60 passed (60) · 55 passed (55)
 Tests  25 passed (25)
+# started as Claude Desktop does it
+server: notes-db
+users 25 · notes 200 · note_shares 120
 # query: delete from notes
-READ_ONLY: only a single SELECT
-(or WITH … SELECT) statement is allowed
+READ_ONLY: only a single SELECT …
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 02`: every test passes
 - [ ] a write sent to query is READ_ONLY
-- [ ] your Claude answers a question about the data
+- [ ] Claude Desktop answers a question about the data
 
 ---
 
@@ -342,12 +344,13 @@ READ_ONLY: only a single SELECT
 - **query checks the SQL string only**: A write can hide inside a WITH. Ask for a query_only connection too, and a test that tries it.
 - **Claude sees no tables**: The server started in another folder and got an empty database. Use absolute paths; the server should exit when the file is missing.
 - **It copies the notes rules into the tools**: One rule, two copies, one will drift. The tools should call NotesService.
+- **Claude Desktop shows no notes-db tools**: A relative path or a bare node in the entry. Use the script's absolute paths, then quit Claude Desktop fully and reopen.
 
 ---
 
 # What you built
 
-Seeded SQLite → Users → Notes + sharing → MCP server → Your Claude
+Seeded SQLite → Users → Notes + sharing → MCP server → Claude Desktop
 
 Next: authentication before anyone else can reach it · an HTTP transport for a shared server · your own tables and tools
 

@@ -12,7 +12,10 @@ import { join } from 'node:path';
 export default function setup(): void {
   const root = join(import.meta.dirname, '..');
   const started = Date.now();
-  execFileSync(join(root, 'node_modules', '.bin', 'nest'), ['build'], {
+  // Run the CLI's JS entry with this node, not node_modules/.bin/<tool>: on Windows that
+  // shim is a .cmd file, which execFile cannot start (the sh version is no use there either).
+  const nest = join(root, 'node_modules', '@nestjs', 'cli', 'bin', 'nest.js');
+  execFileSync(process.execPath, [nest, 'build'], {
     cwd: root,
     stdio: 'inherit',
   });

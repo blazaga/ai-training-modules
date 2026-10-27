@@ -17,12 +17,16 @@ The idea: split every piece of work by who does it best.
 
 ## Run it (Node 24 + pnpm, no database server)
 
-```bash
-corepack enable && pnpm install
-cp .env.example .env                        # DATABASE_URL=file:./data/app.db
-pnpm build && pnpm start                    # app on :3000 (pnpm start:dev to watch)
-curl localhost:3000/api/health              # {"status":"ok"}
-open http://localhost:3000/api/docs         # OpenAPI, generated from the zod schemas
+PowerShell on Windows (one command per line: Windows PowerShell 5.1 has no `&&`):
+
+```powershell
+corepack enable                             # refused? run as administrator, or write `corepack pnpm`
+pnpm install
+Copy-Item .env.example .env                 # DATABASE_URL=file:./data/app.db
+pnpm build
+pnpm start                                  # app on :3000 (pnpm start:dev to watch)
+curl.exe localhost:3000/api/health          # second terminal: {"status":"ok"}
+start http://localhost:3000/api/docs        # OpenAPI, generated from the zod schemas
 pnpm verify                                 # the full gate
 pnpm lab 01                                 # a module's lab check (red until it is built)
 ```
@@ -37,6 +41,18 @@ owned by a user) and 120 shares (a note shared with other users), generated with
 `src/notes/notes.table.ts`, `src/notes/note-shares.table.ts`); the resources on top of them
 are what you build. `pnpm db:seed` rebuilds the file from scratch, and two runs write the
 same rows. Tests never touch it: they use an empty in-memory database.
+
+## Use the module 2 server from Claude Desktop
+
+Once your agent has built the MCP server (module 2):
+
+```powershell
+pnpm build
+node scripts\claude-desktop-config.mjs   # prints the entry, with absolute paths for this machine
+```
+
+Paste the entry into Claude Desktop's config file (the script prints its path), quit and reopen
+Claude Desktop, and ask it about the notes. Details: `specs/mcp.md`.
 
 ## Call it from Postman
 

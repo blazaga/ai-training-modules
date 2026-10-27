@@ -1,8 +1,8 @@
 # Chapter 04 — An MCP server on the database
 
 **Your agent will:** build an MCP server that reads and writes `data/app.db` directly, over
-stdio, so your own AI client (Claude Code, or the MCP Inspector) can ask questions about the
-users and notes and change them. **Spec:** `specs/mcp.md`. **Check:** `pnpm lab 02`.
+stdio, so your **Claude Desktop** app can answer questions about the users and notes, and
+change them. **Spec:** `specs/mcp.md`. **Check:** `pnpm lab 02`.
 
 ## The shape
 
@@ -59,30 +59,79 @@ Bad input needs no code: with a zod `inputSchema`, the SDK itself answers a tool
   Asked to run `delete from notes`, the server answered
   `READ_ONLY: only a single SELECT (or WITH … SELECT) statement is allowed`.
 
-## Use it from your own Claude
+## Connect it to Claude Desktop
 
-From the starter folder:
+This is the goal of the workshop: your Claude Desktop app, talking to the server your agent
+built, answering questions from the SQLite file.
 
-```bash
+Claude Desktop starts the server itself, **from its own working folder and with a minimal
+`PATH`**. Two things then break for anyone new to Node: a bare `node` may not be found (nvm
+and similar installs are not on a desktop app's `PATH`), and a relative `dist/mcp-server.js`
+or `data/app.db` points nowhere. So the config entry uses absolute paths for all three, and
+the base prints it for your machine:
+
+```powershell
 pnpm build
-claude mcp add notes-db -e DATABASE_URL="file:$PWD/data/app.db" -- node "$PWD/dist/mcp-server.js"
+node scripts\claude-desktop-config.mjs
 ```
 
-The command follows Claude Code's documented syntax (`-e` for an environment variable, `--`
-before the server command); `/mcp` inside Claude Code lists the server and its tools. The
-**MCP Inspector** works too: `pnpm mcp:inspect:ui`, transport **stdio**, the same command and
-variable. The write tools change your real `data/app.db`; `pnpm db:seed` puts it back.
+It prints where the config file is and the entry to paste. On Windows it looks like this (the
+script fills in your own paths):
+
+```json
+{
+  "mcpServers": {
+    "notes-db": {
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": ["C:\\Users\\you\\workshop\\nest-ai-starter\\dist\\mcp-server.js"],
+      "env": { "DATABASE_URL": "file:C:/Users/you/workshop/nest-ai-starter/data/app.db" }
+    }
+  }
+}
+```
+
+Backslashes are doubled inside JSON strings; the database URL uses forward slashes, which is
+what libSQL expects (measured: its parser reads `file:C:/Users/…/app.db` as the path
+`C:/Users/…/app.db`, with no host).
+
+1. Open the config file: in Claude Desktop, **Settings → Developer → Edit Config** (Claude
+   Desktop's documentation), or the path the script prints, on Windows
+   `%APPDATA%\Claude\claude_desktop_config.json` (macOS:
+   `~/Library/Application Support/Claude/claude_desktop_config.json`). No file yet: create it with exactly the printed JSON. A file already there:
+   add the `"notes-db"` entry inside its `"mcpServers"` object.
+2. **Quit Claude Desktop completely and reopen it** (on Windows, also from the system tray:
+   closing the window leaves it running). The `notes-db` tools appear in the tools
+   menu of a new chat.
+3. Ask it something: "Which open notes are shared with more than one person?"
+
+**What we measured,** on the module 2 build, on Linux, without Claude Desktop: the
+printed entry, started from another working folder with nothing but its own command, arguments
+and environment (as Claude Desktop does), answered `initialize` as `notes-db`, listed
+`users 25, notes 200, note_shares 120`, and ran a read-only query (`done 85, open 115`). Run
+on the base, before the server exists, the script warns and exits 1. The JSON is Claude
+Desktop's documented `mcpServers` form.
+
+**Not connecting?** The server writes its reason to stderr, which Claude Desktop keeps in its
+MCP log (Windows `%APPDATA%\Claude\logs\`, macOS `~/Library/Logs/Claude/`, per Claude
+Desktop's documentation; not measured here): a missing
+`data/app.db` exits with a message saying so. Rerun the script after moving the project folder:
+the paths in the entry are absolute.
+
+Other clients work with the same command and `DATABASE_URL`: the MCP Inspector
+(`pnpm mcp:inspect:ui`, transport stdio) and Claude Code (`claude mcp add notes-db -e
+DATABASE_URL="file:$PWD/data/app.db" -- node "$PWD/dist/mcp-server.js"`). The write tools
+change your real `data/app.db`; `pnpm db:seed` puts it back.
 
 ## Labs
 
 Module 2, built by your agent from the proctor's instruction, checked with `pnpm lab 02`.
 
-1. **Ask your Claude about the data.** Which open notes are shared with more than one
+1. **Ask Claude Desktop about the data.** Which open notes are shared with more than one
    person? Whose notes are overdue? Watch which tools it chooses, and read the SQL it sends to
    `query`.
-2. **Try to break `query`.** Ask your Claude to delete a note through `query`, then to do it
+2. **Try to break `query`.** Ask Claude Desktop to delete a note through `query`, then to do it
    with a `WITH` clause. Both must answer `READ_ONLY`, and the row count must not move.
-3. **Change data through the tools, then check over REST.** Share a note from Claude, then
+3. **Change data through the tools, then check over REST.** Share a note from Claude Desktop, then
    `GET /api/v1/notes/:id/shares` (module 1's app). Same database, two front doors.
 
 Principles behind this chapter: P5 (verification), P8 (shipping safely).

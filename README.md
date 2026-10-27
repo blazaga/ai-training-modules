@@ -1,15 +1,17 @@
 # Building Apps with AI Agents
 
 A hands-on workshop: your AI coding agent builds a NestJS 12 service with skills and templated
-code, then an MCP server so your own AI client can use its data; you direct it and check every
+code, then an MCP server that your Claude Desktop app connects to, to query and change the
+data; you direct it and check every
 step. Two modules, about 105 minutes. In each module the proctor gives an instruction (the
 goal, where the requirements are, when it is done), the agent works out how, and a lab check
 confirms it.
 
 1. **Users and notes:** two REST resources (MVCs) on a SQLite file that ships seeded with
    faker data: 25 users, 200 notes (the TODO items), 120 shares.
-2. **An MCP server on your data:** read and write tools over stdio; you add it to your own
-   Claude and ask it about the users and notes.
+2. **An MCP server on your data:** read and write tools over stdio; you connect it to Claude
+   Desktop (`node scripts/claude-desktop-config.mjs` prints the entry) and ask it about the users
+   and notes.
 
 | path | what |
 |---|---|

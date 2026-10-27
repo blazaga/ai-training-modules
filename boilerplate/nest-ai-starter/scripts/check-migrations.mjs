@@ -18,7 +18,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const kit = join(root, 'node_modules', '.bin', 'drizzle-kit');
+// drizzle-kit's JS entry, run with this node: node_modules/.bin/drizzle-kit is a shell shim, and
+// on Windows a .cmd file, which spawnSync cannot start.
+const kit = join(root, 'node_modules', 'drizzle-kit', 'bin.cjs');
 const SCRATCH = '.drizzle-check'; // relative: drizzle-kit mangles absolute --out paths
 const CLEAN = 'No schema changes, nothing to migrate';
 const DRIFT = 'Your SQL migration file';
@@ -35,8 +37,9 @@ try {
     cpSync(join(root, 'drizzle'), scratch, { recursive: true });
   }
   const run = spawnSync(
-    kit,
+    process.execPath,
     [
+      kit,
       'generate',
       '--dialect',
       'sqlite',

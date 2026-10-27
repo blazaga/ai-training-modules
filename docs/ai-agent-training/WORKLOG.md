@@ -2,6 +2,40 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T11:54:21+08:00 - The audience is on Windows
+
+- **Request (operator):** expect the audience on Windows.
+- **Fixed in the base:** the checks and the template script now start `nest`, `prettier` and
+  `drizzle-kit` with `node` and the tool's JS entry; the `.bin` shims (`.cmd` on Windows) cannot
+  be started by `execFile`, so `pnpm verify` and the labs would have failed on Windows.
+  Measured on Linux: verify, the template, and `check-migrations`' drift detection still work.
+- **Docs:** chapter 00 assumes Windows + PowerShell (Node installer, Git for Windows, Claude
+  Desktop; `corepack enable` needs an administrator terminal; one command per line; `curl.exe`);
+  READMEs, the catch-up recipe (PowerShell), chapter 04 and `specs/mcp.md` (Windows paths and
+  Edit Config first, quit from the tray), the deck's rules and check slides.
+- **Not measured:** nothing has been run on a Windows machine yet. A dry run there is the next
+  thing worth doing before a workshop.
+
+## 2026-10-27T11:50:18+08:00 - Module 2 ends in Claude Desktop
+
+- **Request (operator):** the end goal is the learners' **Claude Desktop** app connecting to
+  the MCP server they built, to query the SQLite file.
+- **Why a helper:** Claude Desktop starts the server from its own working folder with a minimal
+  `PATH`, so a bare `node` or a relative path breaks. `scripts/claude-desktop-config.mjs`
+  prints the config file location (macOS, Windows) and the `notes-db` entry with absolute paths
+  for node (the one running the script), `dist/mcp-server.js` and `DATABASE_URL`. It only prints;
+  it warns and exits 1 when the server is not built or the database is missing.
+- **Measured** on the module 2 build, without Claude Desktop (none in this environment): the
+  printed entry, started from `/` with only its own command, arguments and environment,
+  answered `initialize` as `notes-db`, listed `users 25, notes 200, note_shares 120`, and ran a
+  read-only query (`done 85, open 115`); `data/app.db` unchanged. On the base: exit 1, one
+  warning. The config path, Settings → Developer → Edit Config and the log folders are Claude
+  Desktop's documented ones, not measured here.
+- **Changed:** `specs/mcp.md` (Claude Desktop first; Inspector and Claude Code as
+  alternatives), chapter 04 ("Connect it to Claude Desktop", with a not-connecting section),
+  outline, READMEs, the deck's module 2 instruction, check, checkpoint, a "no tools" row and the
+  closing slide.
+
 ## 2026-10-27T11:14:05+08:00 - Two modules: users and notes, then an MCP server on a seeded SQLite file
 
 - **Request (operator):** drop auth; module 1 builds two MVCs (users, notes); module 2 has the

@@ -63,7 +63,8 @@ src/
 ├── health/                     GET /api/health (unversioned)
 └── <resource>/                 one folder per resource, generated - see below
 templates/resource/             the house templates (step 2)
-scripts/                        apply-resource-template.mjs, check-ai-fill.mjs, seed.mjs (rebuilds data/app.db)
+scripts/                        apply-resource-template.mjs, check-ai-fill.mjs, seed.mjs (rebuilds data/app.db),
+                                claude-desktop-config.mjs (prints the Claude Desktop entry for the module 2 server)
 data/app.db                     the seeded SQLite database (committed)
 specs/<plural>.md               one spec per resource; the input for step 3
 ```

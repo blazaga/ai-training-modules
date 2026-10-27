@@ -135,12 +135,18 @@ for (const [rel, tpl] of sources) {
 }
 
 // Format what we wrote, so a long or short resource name never fails lint.
-const prettier = join(root, 'node_modules', '.bin', 'prettier');
+// Prettier's JS entry, run with this node: node_modules/.bin/prettier is a shell shim, and on
+// Windows a .cmd file, which execFile cannot start.
+const prettier = join(root, 'node_modules', 'prettier', 'bin', 'prettier.cjs');
 if (!existsSync(prettier))
-  fail('node_modules/.bin/prettier missing: run pnpm install first');
-execFileSync(prettier, ['--write', ...written.map((f) => join(root, f))], {
-  stdio: 'ignore',
-});
+  fail('node_modules/prettier is missing: run pnpm install first');
+execFileSync(
+  process.execPath,
+  [prettier, '--write', ...written.map((f) => join(root, f))],
+  {
+    stdio: 'ignore',
+  },
+);
 
 // nest g output that the template set replaces: controller spec (covered by e2e).
 const removed = [];

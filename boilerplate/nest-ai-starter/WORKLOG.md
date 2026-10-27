@@ -2,6 +2,40 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T11:54:21+08:00 - Windows: the checks start their tools with node, not the .bin shims
+
+- **Request (operator):** expect the audience on Windows.
+- **Bug fixed:** four places ran `node_modules/.bin/<tool>` with `execFile`/`spawnSync`:
+  `test/global-setup.ts` and `test/labs/lab-harness.ts` (`nest build`),
+  `scripts/apply-resource-template.mjs` (prettier), `scripts/check-migrations.mjs`
+  (drizzle-kit). Those shims are shell scripts here (`#!/bin/sh`) and `.cmd` files on Windows,
+  which a program cannot start that way, so `pnpm verify` and the labs would have failed on
+  every Windows machine. Each now runs `process.execPath` with the tool's own JS entry
+  (`@nestjs/cli/bin/nest.js`, `prettier/bin/prettier.cjs`, `drizzle-kit/bin.cjs`).
+- **Measured on Linux** (no Windows machine here): `pnpm verify` exit 0 on the base (20 / 2);
+  the template still formats (prettier check clean, provided table kept, 14 markers);
+  `check-migrations` still catches drift (an added column: exit 1, `DRIFT`). libSQL parses
+  `file:C:/Users/…/app.db` as the path `C:/Users/…/app.db`, so the Claude Desktop helper's URL
+  form holds on Windows. `.gitattributes` already pins LF, so prettier does not fail on CRLF.
+- **Docs:** PowerShell commands, one per line (Windows PowerShell 5.1 has no `&&`), `curl.exe`,
+  `Copy-Item`, Claude Desktop's Windows config path and tray quit first.
+
+## 2026-10-27T11:50:18+08:00 - Claude Desktop is the client: a helper prints its config entry
+
+- **Request (operator):** the end goal is the learners' **Claude Desktop** app connecting to
+  the MCP server they built, to query the SQLite file.
+- **Why a helper:** Claude Desktop starts the server from its own working folder with a minimal
+  `PATH`, so a bare `node` or a relative path breaks. `scripts/claude-desktop-config.mjs`
+  prints the config file location (macOS, Windows) and the `notes-db` entry with absolute paths
+  for node (the one running the script), `dist/mcp-server.js` and `DATABASE_URL`. It only prints;
+  it warns and exits 1 when the server is not built or the database is missing.
+- **Measured** on the module 2 build, without Claude Desktop (none in this environment): the
+  printed entry, started from `/` with only its own command, arguments and environment,
+  answered `initialize` as `notes-db`, listed `users 25, notes 200, note_shares 120`, and ran a
+  read-only query (`done 85, open 115`); `data/app.db` unchanged. On the base: exit 1, one
+  warning. The config path, Settings → Developer → Edit Config and the log folders are Claude
+  Desktop's documented ones, not measured here.
+
 ## 2026-10-27T11:03:06+08:00 - Two modules, no auth: users and notes on a seeded SQLite file, then MCP
 
 - **Request (operator):** drop auth; module 1 builds two MVCs, users and notes; module 2 an
