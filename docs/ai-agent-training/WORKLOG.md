@@ -2,6 +2,18 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T12:27:12+08:00 - npm instead of pnpm
+
+- **Request (operator):** npm rather than pnpm, for a newer audience.
+- **What:** chapters 00, 01, README, outline, checkpoints and the deck now use `npm install`,
+  `npm run <name>`, `npx nest` and `npm run resource:template -- --name …` (the `--` is
+  required: measured, npm keeps a flag before it for itself). Corepack is gone from the
+  material. Chapter 01's pnpm 12 lockfile notes became the npm equivalent (`scarfSettings`).
+  The principle chapters keep their anecdotes as they happened.
+- **Scan:** `package-lock.json` is checked on its own (every `resolved` URL must be
+  registry.npmjs.org: 469 of 469) instead of against the host allow-list, which its funding
+  links do not fit. Negative control: one rewritten URL → exit 1 naming the line.
+
 ## 2026-10-27T12:06:35+08:00 - The playground page replaces Postman; the catch-up patches apply again
 
 - **Request (operator):** remove Postman from the labs; serve a page in the Nest app that lists

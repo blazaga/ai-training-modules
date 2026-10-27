@@ -29,11 +29,21 @@ mapfile -t FILES < <(find "${ROOTS[@]}" -type f \
   \( -name '*.md' -o -name '*.ts' -o -name '*.mjs' -o -name '*.js' -o -name '*.json' \
      -o -name '*.tpl' -o -name '*.yaml' -o -name '*.yml' -o -name '*.sh' -o -name '*.patch' -o -name '*.sql' -o -name Dockerfile \
      -o -name '.env*' -o -name '.npmrc' -o -name '.dockerignore' \) \
-  -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name WORKLOG.md)
+  -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name WORKLOG.md -not -name package-lock.json)
 test "${#FILES[@]}" -gt 0 || { echo "scan: no files found" >&2; exit 2; }
 echo "scan: ${#FILES[@]} files under ${#ROOTS[@]} roots"
 
-FAIL=0
+# package-lock.json is generated: its URLs are npm "resolved" tarballs plus each package's
+# own "funding" pages, so the host allow-list does not fit it. What matters there is that
+# every package comes from the public registry (an internal registry URL would leak).
+mapfile -t LOCKS < <(find "${ROOTS[@]}" -name package-lock.json -not -path '*/node_modules/*')
+for l in "${LOCKS[@]}"; do
+  n=$(grep -c '"resolved": ' "$l"); bad=$(grep '"resolved": ' "$l" | grep -vc '"resolved": "https://registry.npmjs.org/')
+  echo "  lockfile ${l#"$ROOT"/}: resolved from registry.npmjs.org $((n-bad)) of $n"
+  [ "$n" -gt 0 ] && [ "$bad" -eq 0 ] || { grep -n '"resolved": ' "$l" | grep -v 'registry.npmjs.org/' | sed 's/^/    /'; LOCKFAIL=1; }
+done
+
+FAIL=${LOCKFAIL:-0}
 SUPPRESSED=0
 excepted() { # "file:line:match" -> 0 if a reviewed exception covers it
   local file=${1%%:*} rel path sub

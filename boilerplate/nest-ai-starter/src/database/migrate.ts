@@ -1,4 +1,4 @@
-// `pnpm db:migrate`: apply drizzle/ migrations to DATABASE_URL, then print the
+// `npm run db:migrate`: apply drizzle/ migrations to DATABASE_URL, then print the
 // ledger. Verify a migration by reading the `__drizzle_migrations` table, never by
 // trusting this script's exit code. drizzle's own output is the same for nine
 // migrations and for zero.

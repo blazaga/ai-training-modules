@@ -8,7 +8,7 @@ import {
 /**
  * The __names__ table. TS keys are camelCase; SQL columns are snake_case.
  * Must declare exactly the fields of __Name__Schema: __names__.table.spec.ts
- * fails on any drift. After changing it: `pnpm db:generate`, then commit the
+ * fails on any drift. After changing it: `npm run db:generate`, then commit the
  * whole drizzle/ folder.
  */
 export const __namesCamel__ = sqliteTable('__names_sql__', {

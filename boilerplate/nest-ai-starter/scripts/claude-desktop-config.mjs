@@ -40,10 +40,10 @@ const configFile =
 const problems = [];
 if (!existsSync(server))
   problems.push(
-    'dist/mcp-server.js is missing: build the module 2 server first (`pnpm build`).',
+    'dist/mcp-server.js is missing: build the module 2 server first (`npm run build`).',
   );
 if (!existsSync(db))
-  problems.push('data/app.db is missing: rebuild it with `pnpm db:seed`.');
+  problems.push('data/app.db is missing: rebuild it with `npm run db:seed`.');
 
 const entry = {
   mcpServers: {

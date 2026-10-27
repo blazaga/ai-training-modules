@@ -2,7 +2,7 @@
 
 **Your agent will:** build an MCP server that reads and writes `data/app.db` directly, over
 stdio, so your **Claude Desktop** app can answer questions about the users and notes, and
-change them. **Spec:** `specs/mcp.md`. **Check:** `pnpm lab 02`.
+change them. **Spec:** `specs/mcp.md`. **Check:** `npm run lab 02`.
 
 ## The shape
 
@@ -46,8 +46,8 @@ Bad input needs no code: with a zod `inputSchema`, the SDK itself answers a tool
 
 ## What we measured building it
 
-- **Module 2 checks:** `pnpm verify` unit 60, e2e 55 in the agent's run (58 at the checkpoint,
-  with the playground's test); `pnpm lab 01` and `pnpm lab 02` together
+- **Module 2 checks:** `npm run verify` unit 60, e2e 55 in the agent's run (58 at the checkpoint,
+  with the playground's test); `npm run lab 01` and `npm run lab 02` together
   25/25; `data/app.db` byte-identical afterwards (every test works on a copy).
 - **A trap it found: the working directory.** The default `file:./data/app.db` is relative to
   where the process starts, and your client starts it from its own folder. The shared connect
@@ -72,7 +72,7 @@ or `data/app.db` points nowhere. So the config entry uses absolute paths for all
 the base prints it for your machine:
 
 ```powershell
-pnpm build
+npm run build
 node scripts\claude-desktop-config.mjs
 ```
 
@@ -119,13 +119,13 @@ Desktop's documentation; not measured here): a missing
 the paths in the entry are absolute.
 
 Other clients work with the same command and `DATABASE_URL`: the MCP Inspector
-(`pnpm mcp:inspect:ui`, transport stdio) and Claude Code (`claude mcp add notes-db -e
+(`npm run mcp:inspect:ui`, transport stdio) and Claude Code (`claude mcp add notes-db -e
 DATABASE_URL="file:$PWD/data/app.db" -- node "$PWD/dist/mcp-server.js"`). The write tools
-change your real `data/app.db`; `pnpm db:seed` puts it back.
+change your real `data/app.db`; `npm run db:seed` puts it back.
 
 ## Labs
 
-Module 2, built by your agent from the proctor's instruction, checked with `pnpm lab 02`.
+Module 2, built by your agent from the proctor's instruction, checked with `npm run lab 02`.
 
 1. **Ask Claude Desktop about the data.** Which open notes are shared with more than one
    person? Whose notes are overdue? Watch which tools it chooses, and read the SQL it sends to

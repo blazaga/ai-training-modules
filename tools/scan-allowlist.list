@@ -32,3 +32,5 @@ xata.io
 app
 # Postman collection format: the public v2.1 schema identifier every collection carries in info.schema
 schema.getpostman.com
+# the public npm registry: every "resolved" URL in package-lock.json
+registry.npmjs.org

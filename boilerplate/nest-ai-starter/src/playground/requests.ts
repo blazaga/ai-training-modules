@@ -35,7 +35,7 @@ export const PLAYGROUND: PlaygroundGroup[] = [
   {
     title: 'Users (module 1)',
     intro:
-      'The users resource on the seeded data/app.db. These requests change your database; pnpm db:seed rebuilds it.',
+      'The users resource on the seeded data/app.db. These requests change your database; npm run db:seed rebuilds it.',
     requests: [
       {
         name: 'List users (seeded)',

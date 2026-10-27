@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Fails when the drizzle tables in src/ and the committed migrations in drizzle/
-// disagree, i.e. someone changed a *.table.ts and forgot `pnpm db:generate`.
+// disagree, i.e. someone changed a *.table.ts and forgot `npm run db:generate`.
 //
 // Why this needs its own check: tests run on an in-memory database built from the
 // MIGRATION SQL, not from the TypeScript tables. Measured: with `.unique()` removed from
@@ -26,7 +26,7 @@ const CLEAN = 'No schema changes, nothing to migrate';
 const DRIFT = 'Your SQL migration file';
 
 if (!existsSync(kit)) {
-  console.error('check-migrations: drizzle-kit missing - run pnpm install');
+  console.error('check-migrations: drizzle-kit missing - run npm install');
   process.exit(2);
 }
 
@@ -56,7 +56,7 @@ try {
       'check-migrations: DRIFT - tables changed without a migration.',
     );
     console.error(
-      '  run `pnpm db:generate` and commit the whole drizzle/ folder.',
+      '  run `npm run db:generate` and commit the whole drizzle/ folder.',
     );
     process.exit(1);
   }

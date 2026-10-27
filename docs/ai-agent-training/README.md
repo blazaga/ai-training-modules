@@ -12,7 +12,7 @@ gets you to the start of the next module.
 
 | ch  |                                                                            |
 | --- | -------------------------------------------------------------------------- |
-| 00  | [Setup: Node, pnpm and one seeded SQLite file](00-setup.md)                |
+| 00  | [Setup: Node, npm and one seeded SQLite file](00-setup.md)                 |
 | 01  | [Starting from the CLI and templates](01-cli-and-templates.md)             |
 | 02  | [Users and notes on the provided tables](02-users-and-notes.md)            |
 | 03  | [The Model Context Protocol: envelopes and transports](03-mcp-concepts.md) |
@@ -23,12 +23,11 @@ Principles P1–P9 (working with agents) are in [`principles/`](principles/). Al
 
 ```powershell
 cd boilerplate\nest-ai-starter
-corepack enable
-pnpm install
+npm install
 Copy-Item .env.example .env
-pnpm build
-pnpm start          # seeded SQLite file data/app.db, app on :3000
-pnpm verify         # in a second terminal: typecheck, lint, format, markers, migrations, unit, e2e
+npm run build
+npm start              # seeded SQLite file data/app.db, app on :3000
+npm run verify         # in a second terminal: typecheck, lint, format, markers, migrations, unit, e2e
 ```
 
 The course assumes Windows and PowerShell; chapter 00 has the details.

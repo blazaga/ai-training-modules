@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import * as schema from './schema.js';
 import type { Db } from './database.types.js';
 
-/** The committed migrations (`pnpm db:generate` writes them; `pnpm db:migrate` applies them). */
+/** The committed migrations (`npm run db:generate` writes them; `npm run db:migrate` applies them). */
 export const MIGRATIONS_FOLDER = fileURLToPath(
   new URL('../../drizzle', import.meta.url),
 );
@@ -23,7 +23,7 @@ export interface Connection {
  * SQLite through libSQL. `url` is a libSQL URL such as `file:./data/app.db`; without one the
  * database lives in memory.
  *
- * - A FILE database is migrated by `pnpm db:migrate` (`dist/database/migrate.js`) before the
+ * - A FILE database is migrated by `npm run db:migrate` (`dist/database/migrate.js`) before the
  *   app starts, never by the app itself. Its folder is created if missing: libSQL cannot
  *   open a file in a folder that does not exist (measured: ConnectionFailed).
  * - An IN-MEMORY database is empty on every start, so it is migrated here, from the same

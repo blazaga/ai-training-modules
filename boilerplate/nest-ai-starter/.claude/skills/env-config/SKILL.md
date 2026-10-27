@@ -20,7 +20,7 @@ validated once at boot by `ConfigModule.forRoot({ validate: validateEnv })`.
    `ConfigService<Env, true>`. **Never read `process.env` directly**, because that skips
    validation.
 4. Add a case to `src/config/env.schema.spec.ts`: the default, and one invalid value.
-5. Run `pnpm verify`.
+5. Run `npm run verify`.
 
 ## Never
 

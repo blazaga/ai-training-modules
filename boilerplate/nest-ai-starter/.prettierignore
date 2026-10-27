@@ -2,4 +2,4 @@
 # Reformatting them would silently break that claim.
 .claude/skills/karpathy-guidelines/
 .claude/skills/nestjs-best-practices/
-pnpm-lock.yaml
+package-lock.json

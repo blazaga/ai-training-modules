@@ -5,7 +5,7 @@ description: Verify a change to this NestJS service before calling it done - typ
 
 # Verify: ask the artefact, not the exit code
 
-`pnpm verify` runs, in order and stopping at the first failure:
+`npm run verify` runs, in order and stopping at the first failure:
 
 | check        | command                                         | what a real pass looks like                           |
 | ------------ | ----------------------------------------------- | ----------------------------------------------------- |
@@ -22,14 +22,14 @@ A check that has never failed in front of you is a hypothesis. Run these once pe
 session, and again after changing any config:
 
 - **typecheck:** create `src/__planted.ts` containing
-  `export const x: number = 'no';` and confirm `pnpm typecheck` reports `TS2322`.
+  `export const x: number = 'no';` and confirm `npm run typecheck` reports `TS2322`.
   Then delete the file.
 - **lint:** add `async function f(): Promise<void> {}` and an un-awaited `f();` in a scratch
   file and confirm oxlint reports `no-floating-promises`. oxlint is silent when clean, so the
   silence means nothing until you have seen it fail.
 - **tests:** delete one business rule from a service and confirm a test fails. Then
   restore it. Do this for every rule you added.
-- **test selection:** when you run a subset (`pnpm exec vitest run src/notes`), confirm the
+- **test selection:** when you run a subset (`npx vitest run src/notes`), confirm the
   summary names the suites you meant. A filter that matches nothing can still exit 0.
 
 ## Read output, not status

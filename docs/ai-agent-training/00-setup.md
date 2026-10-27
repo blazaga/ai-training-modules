@@ -1,7 +1,7 @@
-# Chapter 00 — Setup: Node, pnpm and one seeded SQLite file
+# Chapter 00 — Setup: Node, npm and one seeded SQLite file
 
-**You need:** Node 24 (measured on 24.22; `package.json` also accepts 22.22.3 and later) and
-pnpm through corepack, which ships with Node. **The course assumes Windows**: install Node from
+**You need:** Node 24 (measured on 24.22; `package.json` also accepts 22.22.3 and later),
+which brings npm with it. **The course assumes Windows**: install Node from
 nodejs.org (the installer puts `node` on your `PATH`), Git for Windows, Claude Desktop for
 module 2, and run the commands in **PowerShell** (Windows Terminal is fine). **You don't need** a database server: the
 database is **SQLite**, a single file, `data/app.db`, and it ships **with data in it**.
@@ -13,14 +13,14 @@ is what it should do and what you check afterwards.
 
 ```powershell
 cd boilerplate\nest-ai-starter
-corepack enable                  # puts the pinned pnpm (12.15.0) on your PATH
-pnpm install
+npm install                      # installs what package-lock.json lists
 Copy-Item .env.example .env      # DATABASE_URL=file:./data/app.db, PORT=3000
 ```
 
-- **`corepack enable` refused?** It writes into the Node install folder, which on Windows
-  usually needs a terminal opened with **Run as administrator** (measured on Linux: `EACCES`
-  without admin rights). Without it, write `corepack pnpm` wherever this course writes `pnpm`.
+- **Scripts run as `npm run <name>`** (`npm run verify`, `npm run lab 01`). A flag meant for
+  the script goes after `--`, or npm keeps it for itself:
+  `npm run resource:template -- --name note --plural notes`. `npm start` and `npm test` work
+  without `run`.
 - **One command per line.** Windows PowerShell 5.1 (the one most machines open) does not
   accept `&&` between commands; PowerShell 7 does. The course writes one per line.
 - **`curl` in PowerShell** is an alias for `Invoke-WebRequest` in Windows PowerShell 5.1; write
@@ -45,30 +45,30 @@ The tables are provided (`src/users/users.table.ts`, `src/notes/notes.table.ts`,
 `src/notes/note-shares.table.ts`); the REST resources on top of them are what your agent
 builds in module 1, and the MCP server that reads and writes the file directly is module 2.
 
-The data was generated with faker by `scripts/seed.mjs`. **`pnpm db:seed` rebuilds the file
+The data was generated with faker by `scripts/seed.mjs`. **`npm run db:seed` rebuilds the file
 from scratch** (migrations, then the same rows: two runs write byte-identical files,
 measured), so changing data while you experiment costs nothing.
 
 ## Run the app
 
 ```powershell
-pnpm build                              # compile to dist/
-pnpm start                              # http://localhost:3000, docs at /api/docs
+npm run build                              # compile to dist/
+npm start                                  # http://localhost:3000, docs at /api/docs
 curl.exe localhost:3000/api/health      # in a second terminal: {"status":"ok"}
 ```
 
-`pnpm start:dev` does the same with a file watcher: it rebuilds and restarts when you save.
+`npm run start:dev` does the same with a file watcher: it rebuilds and restarts when you save.
 On the base the app serves only health and the docs: the users and notes routes are what
 module 1 adds.
 
-The app never migrates a file database itself; `pnpm db:migrate` does. The seeded file is
-already migrated: measured, `pnpm db:migrate` on it prints `ledger rows: 1` and leaves the
+The app never migrates a file database itself; `npm run db:migrate` does. The seeded file is
+already migrated: measured, `npm run db:migrate` on it prints `ledger rows: 1` and leaves the
 file byte-identical. You need it again only when a new migration is added.
 
-## The gate: `pnpm verify`
+## The gate: `npm run verify`
 
 ```powershell
-pnpm verify      # typecheck, lint, format, AI-FILL markers, migrations, unit, e2e
+npm run verify      # typecheck, lint, format, AI-FILL markers, migrations, unit, e2e
 ```
 
 **Windows notes for the gate,** fixed in the base and measured on Linux, not yet on Windows:
@@ -80,7 +80,7 @@ LF on checkout, so the formatting check does not fail on Git for Windows' CRLF c
 Measured on the base: exit 0, unit `Tests 20 passed`, e2e `Tests 5 passed`. **No test
 touches `data/app.db`:** under test the app ignores `.env` (the vitest configs set
 `NODE_ENV=test`), so the tests use an empty in-memory SQLite database, migrated from the same
-committed SQL. You can run `pnpm verify` while the app is running.
+committed SQL. You can run `npm run verify` while the app is running.
 
 Why that matters: the e2e tests boot the whole app, and an app that read `.env` would open
 the same file as your running app. We measured that state on an earlier build:
@@ -100,7 +100,7 @@ On the base only health is green: the users and notes routes answer 404, and the
 need an id wait for it. Once module 1 is built, every row turns ✓. Measured in a headless
 Chromium against the module 1 + 2 build: 19 of 19 ✓, all four ids carried along, no script
 errors; against the base: health ✓, 4 × 404, 14 waiting for an id. The requests write to your
-`data/app.db`; `pnpm db:seed` puts it back.
+`data/app.db`; `npm run db:seed` puts it back.
 
 The page is served with the API docs (`SWAGGER_ENABLED`, on unless `NODE_ENV=production`). A
 Postman collection with the same requests also lives in the starter (`postman/`), for anyone
@@ -114,4 +114,4 @@ which is fine on your own machine and nowhere else). `.env` is git-ignored.
 
 ## Stop and clean up
 
-Stop the app with Ctrl+C. To get the original data back, `pnpm db:seed`.
+Stop the app with Ctrl+C. To get the original data back, `npm run db:seed`.

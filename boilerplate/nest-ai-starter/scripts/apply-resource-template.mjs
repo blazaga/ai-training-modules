@@ -4,8 +4,8 @@
 //   2. node scripts/apply-resource-template.mjs --name <singular> --plural <plural>
 //        [--storage memory|drizzle]      house conventions (this script, deterministic)
 //      memory (default): in-process storage. drizzle: SQLite table + repository,
-//      registered in src/database/schema.ts; then run `pnpm db:generate`.
-//   3. an agent fills every AI-FILL marker, then `pnpm verify` must pass
+//      registered in src/database/schema.ts; then run `npm run db:generate`.
+//   3. an agent fills every AI-FILL marker, then `npm run verify` must pass
 //
 // Deterministic on purpose: the same input always yields the same files, so the
 // conventions never drift between resources or between agents. Judgement-heavy
@@ -81,7 +81,7 @@ const resourceDir = join(root, 'src', plural);
 const generatedModule = join(resourceDir, `${plural}.module.ts`);
 if (!existsSync(generatedModule)) {
   fail(
-    `${relative(root, generatedModule)} not found. Run step 1 first: pnpm exec nest g resource ${plural} --type rest --crud`,
+    `${relative(root, generatedModule)} not found. Run step 1 first: npx nest g resource ${plural} --type rest --crud`,
   );
 }
 const schemaFile = join(resourceDir, `${name}.schema.ts`);
@@ -139,7 +139,7 @@ for (const [rel, tpl] of sources) {
 // Windows a .cmd file, which execFile cannot start.
 const prettier = join(root, 'node_modules', 'prettier', 'bin', 'prettier.cjs');
 if (!existsSync(prettier))
-  fail('node_modules/prettier is missing: run pnpm install first');
+  fail('node_modules/prettier is missing: run npm install first');
 execFileSync(
   process.execPath,
   [prettier, '--write', ...written.map((f) => join(root, f))],
@@ -206,8 +206,8 @@ console.log(
 );
 console.log(
   storage === 'drizzle' && kept.length === 0
-    ? 'next: fill every AI-FILL marker, run `pnpm db:generate`, then `pnpm verify`'
+    ? 'next: fill every AI-FILL marker, run `npm run db:generate`, then `npm run verify`'
     : storage === 'drizzle'
-      ? 'next: fill every AI-FILL marker, then run `pnpm verify` (the table was provided: no migration)'
-      : 'next: fill every AI-FILL marker, then run `pnpm verify`',
+      ? 'next: fill every AI-FILL marker, then run `npm run verify` (the table was provided: no migration)'
+      : 'next: fill every AI-FILL marker, then run `npm run verify`',
 );

@@ -21,12 +21,12 @@ The fix is to give each kind of work to the tool best suited to it:
 | 1. structure   | `nest g resource`                                                  | folders, module wiring, `AppModule` import                                      | yes: the framework's own generator |
 | 2. conventions | `templates/resource/*.tpl` + `scripts/apply-resource-template.mjs` | validation, errors, data access, controller shape, test skeletons               | yes: same input, same bytes        |
 | 3. domain      | an AI agent + `.claude/skills/`                                    | fields, business rules, rule tests, **only inside `// AI-FILL(topic)` markers** | no, so it is fenced in             |
-| 4. proof       | `pnpm verify`                                                      | did all of the above happen?                                                    | yes                                |
+| 4. proof       | `npm run verify`                                                   | did all of the above happen?                                                    | yes                                |
 
 ## Create the project (what we measured on nest-cli 12.0.10)
 
 ```bash
-npx @nestjs/cli@12 new nest-ai-starter --package-manager pnpm --strict
+npx @nestjs/cli@12 new nest-ai-starter --package-manager npm --strict
 ```
 
 A fresh Nest 12 project differs from Nest 11 in toolchain, not just version:
@@ -39,14 +39,9 @@ Things we hit on the way, all reproducible:
 - `nest new --directory /absolute/path`, run from another directory, wrote the project
   under the **current** directory and still exited 0. Find the files before trusting the
   exit code (P5).
-- pnpm 12 (what corepack installs today) **ignores `frozen-lockfile` in `.npmrc`**. A
-  deliberately drifted `package.json` installed with exit 0 and rewrote the lockfile. The
-  setting moved to `pnpm-workspace.yaml` (`frozenLockfile: true`), and the same drift is
-  now refused with `ERR_PNPM_OUTDATED_LOCKFILE`.
-- pnpm 12 **fails** an install when a dependency wants to run an install script. Swagger UI
-  pulls in `@scarf/scarf`, an install-time telemetry package; it is **denied**
-  (`allowBuilds: false`), not approved to make the error go away. drizzle-kit's esbuild
-  scripts are denied too, and drizzle-kit still works.
+- Swagger UI pulls in `@scarf/scarf`, an install-time telemetry package. The starter turns it
+  off in `package.json` (`"scarfSettings": { "enabled": false }`) rather than leaving it to
+  each machine.
 - `nestjs-zod` has no release that supports Nest 12 (its peer range is `^10 || ^11`), so
   the starter carries a ~60-line adapter in `src/common/zod/` with the same
   `createZodDto(Schema)` shape. OpenAPI is generated from the same zod schemas via
@@ -57,14 +52,14 @@ Things we hit on the way, all reproducible:
 ```bash
 # 0. spec first: specs/users.md (skill: resource-spec)
 # 1. structure
-pnpm exec nest g resource users --type rest --crud
+npx nest g resource users --type rest --crud
 # 2. conventions; drizzle storage, because the users table is provided
-pnpm resource:template --name user --plural users --storage drizzle
+npm run resource:template -- --name user --plural users --storage drizzle
 #   → measured on the base: files written: 12; AI-FILL markers to complete: 14
 #   →   kept src/users/users.table.ts (provided table)
 # 3. the agent fills every marker from specs/users.md  (skill: nest-resource-scaffold)
 # 4. proof
-pnpm verify
+npm run verify
 ```
 
 nest-cli 11 rejected `--type` and `--crud` and had to be fed prompt answers through a
@@ -110,7 +105,7 @@ artefact.
 ## Verify
 
 ```bash
-pnpm verify   # tsc · oxlint · prettier --check · check:ai-fill · check:migrations · unit · e2e
+npm run verify   # tsc · oxlint · prettier --check · check:ai-fill · check:migrations · unit · e2e
 ```
 
 Read the counts, not the exit code. In this chapter's state: unit `Tests 22 passed`, e2e

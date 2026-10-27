@@ -2,7 +2,7 @@
 
 **Your agent will:** build two REST resources, users and notes (the TODO items, shareable
 between users), on tables that already exist and already hold data. **Specs:**
-`specs/users.md`, `specs/notes.md`. **Check:** `pnpm lab 01`.
+`specs/users.md`, `specs/notes.md`. **Check:** `npm run lab 01`.
 
 ## What is already there
 
@@ -20,15 +20,15 @@ repository, the service (the rules), the controller (the routes) and the tests. 
 resource is one MVC, built with the procedure of chapter 01.
 
 ```bash
-pnpm exec nest g resource users --type rest --crud
-pnpm resource:template --name user --plural users --storage drizzle
+npx nest g resource users --type rest --crud
+npm run resource:template -- --name user --plural users --storage drizzle
 #   kept    src/users/users.table.ts (provided table)
 #   files written: 12; AI-FILL markers to complete: 14
 ```
 
 The template **keeps** a provided table instead of overwriting it, and writes a **drift
 test** that fails if the schema your agent writes does not match the table's columns. There
-is no migration to generate: `check:migrations` in `pnpm verify` confirms it.
+is no migration to generate: `check:migrations` in `npm run verify` confirms it.
 
 ## Where each rule lives
 
@@ -51,7 +51,7 @@ A fresh agent built this module from the three proctor instructions alone (the
 
 - It found the procedure itself: `CLAUDE.md` → the `resource-spec` and
   `nest-resource-scaffold` skills → generate, template, fill. Users: 14 markers.
-- After users: `pnpm verify` unit 29, e2e 18; lab 01 still 12 of 15 red (the rest needs
+- After users: `npm run verify` unit 29, e2e 18; lab 01 still 12 of 15 red (the rest needs
   notes). After notes: unit 43, e2e 46, **lab 01 15/15** (e2e 49 at the checkpoint, which
   adds the playground's own test).
 - **Every rule was broken once on purpose and turned something red.** Deleting R3 (the
@@ -71,16 +71,16 @@ A fresh agent built this module from the three proctor instructions alone (the
 ## Labs
 
 Module 1, built by your agent from the proctor's three instructions (setup; users; notes
-with sharing), checked with `pnpm lab 01`.
+with sharing), checked with `npm run lab 01`.
 
 1. **Watch the order it works in.** A good agent writes or updates the spec first, then
    generates, templates and fills, and reports counts. Ask it where each rule went, and
    compare with the table above.
 2. **Break a rule yourself.** Delete the "done note can only be reopened" check, run
-   `pnpm lab 01` and `pnpm verify`, put it back. Which layer's tests went red? Then delete the
+   `npm run lab 01` and `npm run verify`, put it back. Which layer's tests went red? Then delete the
    `dueAt` transform: why does no unit test notice?
-3. **Play with the data.** Start the app (`pnpm build`, then `pnpm start`), open
+3. **Play with the data.** Start the app (`npm run build`, then `npm run start`), open
    `http://localhost:3000/playground` and click **Run all in order**: every row should turn ✓.
-   Then break a rule again and watch which row turns ✗. `pnpm db:seed` puts the data back.
+   Then break a rule again and watch which row turns ✗. `npm run db:seed` puts the data back.
 
 Principles behind this chapter: P1 (orientation), P5 (verification).

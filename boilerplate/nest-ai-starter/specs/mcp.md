@@ -63,7 +63,7 @@ minimal `PATH`, so its config needs **absolute** paths: for `node`, for the buil
 for the database. The base prints that entry for your machine:
 
 ```powershell
-pnpm build
+npm run build
 node scripts\claude-desktop-config.mjs      # prints the config file path and the entry to paste
 ```
 
@@ -83,7 +83,7 @@ counts, and runs a read-only query. The config format is Claude Desktop's docume
 `mcpServers` form.
 
 **Other clients:** the same command and `DATABASE_URL` work in the MCP Inspector
-(`pnpm mcp:inspect:ui`, transport stdio) and in Claude Code
+(`npm run mcp:inspect:ui`, transport stdio) and in Claude Code
 (`claude mcp add notes-db -e DATABASE_URL="file:$PWD/data/app.db" -- node "$PWD/dist/mcp-server.js"`).
 
-The write tools change your real `data/app.db`: `pnpm db:seed` rebuilds it.
+The write tools change your real `data/app.db`: `npm run db:seed` rebuilds it.

@@ -63,7 +63,7 @@ it; the drift test holds the agent's schema to it.
 anything that is not a single read, and prove the data is unchanged afterwards (chapter 04).
 
 **Seeded database.** `data/app.db`, committed with generated data (`scripts/seed.mjs`,
-faker with a fixed seed). `pnpm db:seed` rebuilds it byte for byte.
+faker with a fixed seed). `npm run db:seed` rebuilds it byte for byte.
 
 **JSON-RPC 2.0.** The message envelope MCP uses: requests (`id`, `method`, `params`),
 responses (the same `id`, `result` or `error`) and notifications (no `id`).

@@ -1,5 +1,5 @@
 // Rebuild data/app.db: apply every migration in drizzle/, then fill it with generated users,
-// notes and shares. `pnpm db:seed`. The repository commits the result, so learners have data
+// notes and shares. `npm run db:seed`. The repository commits the result, so learners have data
 // to work with from the first minute; run this only to start over.
 //
 // Reproducible on purpose: faker gets a fixed seed and a fixed reference date, and rows are

@@ -6,15 +6,13 @@ there is nothing to restart first. The check never imports your code, so it tell
 the lab **behaves** as asked, not how you built it.
 
 ```bash
-pnpm lab 01      # one lab (any part of the file name works: 01, users, mcp, …)
-pnpm lab         # every lab
+npm run lab 01      # one lab (any part of the file name works: 01, users, mcp, …)
+npm run lab         # every lab
 ```
-
-(Without `corepack enable`, write `corepack pnpm lab 01`.)
 
 **Read the counts.** A lab is done when its check reports `Test Files 1 passed` and every
 test in `Tests` passed. A failure message names the rule it checks and usually says where
-the fix belongs. `pnpm verify` must stay green as well: the lab checks are extra, not a
+the fix belongs. `npm run verify` must stay green as well: the lab checks are extra, not a
 replacement for your own tests.
 
 Both checks are red on the base you start from, because the feature does not exist yet, and

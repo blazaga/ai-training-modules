@@ -72,7 +72,9 @@ export async function startMcpServer(): Promise<LabMcp> {
   }
   const seeded = join(root, 'data', 'app.db');
   if (!existsSync(seeded)) {
-    throw new Error('data/app.db is missing: run `pnpm db:seed` to rebuild it');
+    throw new Error(
+      'data/app.db is missing: run `npm run db:seed` to rebuild it',
+    );
   }
   const dir = mkdtempSync(join(tmpdir(), 'lab-mcp-'));
   const file = join(dir, 'app.db');

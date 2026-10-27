@@ -2,28 +2,28 @@
 
 A NestJS 12 REST service designed to be built **with AI agents**. nest-cli generates the
 structure, repo templates apply the conventions, and agents fill only marked gaps from a
-written spec. Every change ends with `pnpm verify`.
+written spec. Every change ends with `npm run verify`.
 
 ## Quick start
 
-Node 24 and pnpm (`corepack enable`); no database server:
+Node 24 (npm ships with it); no database server:
 
 ```bash
-pnpm install && cp .env.example .env         # DATABASE_URL=file:./data/app.db
-pnpm build && pnpm start                     # app on :3000
-pnpm verify                                  # the gate
+npm install && cp .env.example .env    # DATABASE_URL=file:./data/app.db
+npm run build && npm start             # app on :3000
+npm run verify                         # the gate
 ```
 
 The database is SQLite: the file `data/app.db`, **committed with seeded data** (users,
-notes and shares generated with faker; `scripts/seed.mjs`). `pnpm db:seed` rebuilds it from
-scratch, reproducibly. The app never migrates a file database itself; `pnpm db:migrate` does,
+notes and shares generated with faker; `scripts/seed.mjs`). `npm run db:seed` rebuilds it from
+scratch, reproducibly. The app never migrates a file database itself; `npm run db:migrate` does,
 and the seeded file is already migrated. Without `DATABASE_URL` the app and the tests use an
 empty in-memory database, migrated on connect, so tests never touch `data/app.db`.
 
-`pnpm-workspace.yaml` sets `frozenLockfile: true` (pnpm 12 ignores that key in `.npmrc`). To
-change dependencies on purpose, run `pnpm install --no-frozen-lockfile` and commit the
-lockfile. The same file denies the install-time telemetry script of `@scarf/scarf`; keep it
-denied.
+`package-lock.json` pins every dependency. `npm install` follows it; to
+change dependencies on purpose, `npm install <pkg>@<version>` and commit the lockfile.
+`package.json` turns off the install-time telemetry of `@scarf/scarf` (`scarfSettings`); keep
+it off.
 
 ## Skills: load before acting
 
@@ -72,11 +72,11 @@ specs/<plural>.md               one spec per resource; the input for step 3
 
 ## Adding a resource: always three steps
 
-1. `pnpm exec nest g resource <plural> --type rest --crud` (nest-cli: wiring)
-2. `pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]`
+1. `npx nest g resource <plural> --type rest --crud` (nest-cli: wiring)
+2. `npm run resource:template -- --name <singular> --plural <plural> [--storage drizzle]`
    (templates: conventions; `drizzle` adds a repository and an SQLite table, or keeps a
    provided one)
-3. Fill every `AI-FILL(...)` marker from `specs/<plural>.md`, then run `pnpm verify`.
+3. Fill every `AI-FILL(...)` marker from `specs/<plural>.md`, then run `npm run verify`.
 
 Full procedure and traps: `.claude/skills/nest-resource-scaffold/SKILL.md`.
 
@@ -92,11 +92,11 @@ table. Do not generate a migration for a provided table.
    it, so the field is declared once. A unit-test fixture typed as the parsed DTO
    needs the new field too (tsc says where).
 3. With SQLite storage: the column in `<plural>.table.ts` (the drift test requires it),
-   then `pnpm db:generate`. Read the generated SQL: a nullable `ADD` is safe on a table
-   with rows, a `NOT NULL` one is not (see Conventions). `pnpm check:migrations` fails
+   then `npm run db:generate`. Read the generated SQL: a nullable `ADD` is safe on a table
+   with rows, a `NOT NULL` one is not (see Conventions). `npm run check:migrations` fails
    before the migration exists and passes after.
 4. e2e tests for the validation (unit tests get already-parsed input), then
-   `pnpm verify`.
+   `npm run verify`.
 
 ## Conventions
 
@@ -115,7 +115,7 @@ table. Do not generate a migration for a provided table.
   Storage is swapped in the module only. SQLite tables are drizzle (`*.table.ts`),
   registered in `src/database/schema.ts`; ids and timestamps use the helpers in
   `src/database/columns.ts` (TEXT: a UUID, an ISO string). After any table change,
-  `pnpm db:generate` and commit all of `drizzle/`. Verify a migration by reading the
+  `npm run db:generate` and commit all of `drizzle/`. Verify a migration by reading the
   `__drizzle_migrations` table, never drizzle's log.
 - **Private fields** (a password or secret hash, if a resource ever has one) live in the
   schema's `PRIVATE` set. Responses go through `<Name>ResponseSchema`, so they never leave
@@ -137,8 +137,8 @@ table. Do not generate a migration for a provided table.
   and watch a test go red.
 - **Layer matters:** validation, defaults and status-code bugs are only visible to e2e
   tests. Unit tests get already-parsed input.
-- **`pnpm` may not be on PATH:** use `corepack pnpm`. The `verify` script calls the tool
-  binaries directly, so it works either way.
+- **Run scripts with `npm run <name>`** (`npm run verify`, `npm run lab 01`). Flags for a
+  script go after `--`: `npm run resource:template -- --name note --plural notes`.
 
 ## Never
 

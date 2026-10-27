@@ -2,6 +2,24 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T12:27:12+08:00 - npm instead of pnpm
+
+- **Request (operator):** use npm, the package manager that ships with Node, so newer learners
+  have nothing extra to install.
+- **What:** `pnpm-lock.yaml` and `pnpm-workspace.yaml` removed, `packageManager` dropped from
+  `package.json`, `package-lock.json` committed (469 packages, all from registry.npmjs.org),
+  `scarfSettings.enabled: false` keeps Swagger UI's telemetry off. Every command in the docs,
+  skills, scripts and messages now reads `npm run <name>`, `npx nest`, and
+  `npm run resource:template -- --name …`.
+- **Measured:** npm drops a script flag given without `--` (`--name user` was eaten with an
+  "Unknown cli config" warning), so the template command carries `--`; a positional
+  (`npm run lab 01`) is forwarded as is. After a fresh `npm install`: `npm run verify` exit 0
+  (unit `Tests 20 passed`, e2e `Tests 5 passed`, 0 markers, migrations clean); `npm run lab 01`
+  exit 1 with 15 failed (expected on the base); `npm run db:seed` byte-identical; in a scratch
+  copy `npx nest g resource users` and the template command exit 0 (12 files, 14 markers).
+- **Also:** an old entry below named the internal service the devices spec was modelled on;
+  reworded.
+
 ## 2026-10-27T12:06:35+08:00 - A playground page replaces Postman in the labs
 
 - **Request (operator):** remove Postman from the labs; serve a page in the Nest app that lists
@@ -495,11 +513,11 @@ uuid NOT NULL`, which FAILS on a populated table ("contains null values"). Rewri
 ## 2026-10-25T20:41:48+08:00 - ch04a: devices (standalone) with credentials
 
 - **Changed:** `devices` through the pipeline (`--storage drizzle`, 17 markers filled from
-  `specs/devices.md`, which is modelled on dna*forms with its measured weaknesses
+  `specs/devices.md`, which is modelled on an existing internal service with its measured weaknesses
   corrected). Credentials: `AKID`+16 base32, `dsk*`+base64url(32 bytes), sha256 at rest,
-timing-safe compare, shown once from `POST /:id/credentials`; rotation keeps the key id
-and invalidates the old secret immediately. Plus `/activate`, `/archive`(soft delete),
-and`verifyAccessKey` (for ch09).
+  timing-safe compare, shown once from `POST /:id/credentials`; rotation keeps the key id
+  and invalidates the old secret immediately. Plus `/activate`, `/archive`(soft delete),
+  and`verifyAccessKey` (for ch09).
 - **Template upgrade:** `server-fields` (returned, never accepted) and `remove-rules`;
   notes/users updated to the resolved form.
 - **Adapter fix (measured):** drizzle timestamp columns throw on ISO strings

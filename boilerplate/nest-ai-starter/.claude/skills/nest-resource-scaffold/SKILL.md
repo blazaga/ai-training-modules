@@ -1,6 +1,6 @@
 ---
 name: nest-resource-scaffold
-description: Add a new REST resource (CRUD endpoints, service, schema, tests) to this NestJS service. Use whenever a task says "add an endpoint/resource/entity/API for X". Runs nest-cli, then the repo templates, then fills only the AI-FILL markers from a written spec, and finishes with pnpm verify.
+description: Add a new REST resource (CRUD endpoints, service, schema, tests) to this NestJS service. Use whenever a task says "add an endpoint/resource/entity/API for X". Runs nest-cli, then the repo templates, then fills only the AI-FILL markers from a written spec, and finishes with npm run verify.
 ---
 
 # Add a REST resource: generate → template → fill → verify
@@ -20,13 +20,13 @@ Do not skip or reorder steps. Do not hand-write what step 1 or 2 generates.
 - A spec exists at `specs/<plural>.md`, with fields, rules and the error each rule raises.
   If it is missing, write one with the `resource-spec` skill and get it confirmed
   **before** step 1. Never invent fields or rules.
-- `pnpm verify` passes **before** you start. If it does not, stop and report: you would not
+- `npm run verify` passes **before** you start. If it does not, stop and report: you would not
   be able to tell your breakage from the existing one.
 
 ## 1. Generate with nest-cli
 
 ```bash
-pnpm exec nest g resource <plural> --type rest --crud
+npx nest g resource <plural> --type rest --crud
 ```
 
 - nest-cli 12 honours `--type`/`--crud`, so there are no prompts. (nest-cli 11 rejected
@@ -40,7 +40,7 @@ pnpm exec nest g resource <plural> --type rest --crud
 ## 2. Apply the templates
 
 ```bash
-pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]
+npm run resource:template -- --name <singular> --plural <plural> [--storage drizzle]
 # e.g. --name line-item --plural line-items  (lower kebab-case, plural given explicitly)
 ```
 
@@ -48,12 +48,12 @@ pnpm resource:template --name <singular> --plural <plural> [--storage drizzle]
   has already templated (`--force` discards fill work, so do not use it on filled code).
 - It prints every file written and the number of `AI-FILL` markers. Note that number: it
   is your to-do list.
-- At this point `pnpm typecheck`, `pnpm lint` and `pnpm format:check` already pass. If they do not, the
+- At this point `npm run typecheck`, `npm run lint` and `npm run format:check` already pass. If they do not, the
   templates are broken: stop and report it rather than patching around it.
 
 ## 3. Fill every AI-FILL marker from the spec
 
-List them with `pnpm check:ai-fill`. Each marker names its topic:
+List them with `npm run check:ai-fill`. Each marker names its topic:
 
 | marker                          | file                          | fill with                                                                                               |
 | ------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -81,7 +81,7 @@ next reader knows it was considered and not forgotten.
 - Adds `<plural>.table.ts`, a drizzle repository, a module wired to it, a service spec that
   runs on **real SQLite (in memory)**, and a **drift test** (table columns == schema fields).
 - Registers the table in `src/database/schema.ts` automatically.
-- For a **new** table, after filling `columns`, run `pnpm db:generate` and commit the **whole** `drizzle/`
+- For a **new** table, after filling `columns`, run `npm run db:generate` and commit the **whole** `drizzle/`
   folder. `verify` runs `check:migrations`, which fails if a table changed without a
   migration. Tests cannot catch that by themselves, because the in-memory database is built
   from the migration SQL, not from the TypeScript table.
@@ -89,13 +89,13 @@ next reader knows it was considered and not forgotten.
 ## 4. Verify
 
 ```bash
-pnpm verify    # typecheck, lint, no AI-FILL/stub left, unit tests, e2e tests
+npm run verify    # typecheck, lint, no AI-FILL/stub left, unit tests, e2e tests
 ```
 
 Then prove the rule tests can fail. For **each** service rule:
 
 1. Delete the rule.
-2. Run `pnpm exec vitest run src/<plural>`.
+2. Run `npx vitest run src/<plural>`.
 3. At least one test must fail.
 4. Restore the rule.
 

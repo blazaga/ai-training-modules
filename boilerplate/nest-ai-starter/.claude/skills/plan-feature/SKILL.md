@@ -35,10 +35,10 @@ An ordered list. Each task is small enough to verify on its own:
 ```
 
 A task without a verify line is not a task. "Tests pass" is not a verify line;
-`pnpm test -- src/orders → Tests: 12 passed` is.
+`npm test -- src/orders → Tests: 12 passed` is.
 
 ## 4. Execute
 
-Work the list in order, run `pnpm verify` after each task, tick the box, and record
+Work the list in order, run `npm run verify` after each task, tick the box, and record
 progress with the `worklog-handoff` skill. If the plan turns out wrong, edit the plan and
 say why. Do not quietly drift from it.

@@ -28,15 +28,15 @@ cd $HOME\catch-up
 Remove-Item -Recurse -Force node_modules, dist, .env -ErrorAction SilentlyContinue
 git apply "$CP\module-1-users-notes.patch"
 git apply "$CP\module-2-mcp-server.patch"   # only to catch up past module 2
-pnpm install
+npm install
 Copy-Item .env.example .env
-pnpm build
-pnpm verify                                 # read the counts against the table below
-pnpm lab 01                                 # and `pnpm lab 02` after module 2
+npm run build
+npm run verify                                 # read the counts against the table below
+npm run lab 01                                 # and `npm run lab 02` after module 2
 ```
 
 The recipe was proven on Linux: both patches apply to a fresh copy of the base, and every
-checkpoint passes `pnpm verify` and its labs (table below).
+checkpoint passes `npm run verify` and its labs (table below).
 
 ⚠️ Inside this course repository, `git apply` resolves paths from the repository root, so run in
 the starter folder it prints `Skipped patch …` for every file and **still exits 0**: nothing
@@ -46,7 +46,7 @@ really changed.
 
 ## What each checkpoint was checked against
 
-Every checkpoint was exported clean and run through `pnpm verify` and both lab checks. A copy
+Every checkpoint was exported clean and run through `npm run verify` and both lab checks. A copy
 of the base with both patches applied is identical to the `modules-done` branch apart from
 `WORKLOG.md`: the patches leave it out, so they keep applying as the base's log grows. No
 checkpoint changes `data/app.db`.

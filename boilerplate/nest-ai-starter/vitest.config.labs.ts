@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * The lab checks: `pnpm lab` runs all of them, `pnpm lab 04` one lab.
- * Kept out of `pnpm verify` on purpose: a lab check for a lab you have not
+ * The lab checks: `npm run lab` runs all of them, `npm run lab 04` one lab.
+ * Kept out of `npm run verify` on purpose: a lab check for a lab you have not
  * done yet is SUPPOSED to fail.
  */
 export default defineConfig({

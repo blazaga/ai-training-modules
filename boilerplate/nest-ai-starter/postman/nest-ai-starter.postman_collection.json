@@ -42,7 +42,7 @@
     {
       "id": "48a13dc5-9bf6-5fab-9f54-2e0fe662e306",
       "name": "01 · Users (module 1)",
-      "description": "The users resource on the seeded data/app.db (25 users). These requests write to your database; `pnpm db:seed` rebuilds it from scratch.",
+      "description": "The users resource on the seeded data/app.db (25 users). These requests write to your database; `npm run db:seed` rebuilds it from scratch.",
       "item": [
         {
           "id": "ffb363cb-db31-5652-a323-741a476e1230",
@@ -228,7 +228,7 @@
     {
       "id": "83dae31d-3ca0-5dc7-9cf1-cc208344a408",
       "name": "02 · Notes and sharing (module 1)",
-      "description": "The notes (TODO items) and who they are shared with. Run 01 first: it sets userId and friendId. These requests write to your database; `pnpm db:seed` rebuilds it.",
+      "description": "The notes (TODO items) and who they are shared with. Run 01 first: it sets userId and friendId. These requests write to your database; `npm run db:seed` rebuilds it.",
       "item": [
         {
           "id": "16de6fbb-8ede-5ecb-be1d-3257cccf435e",

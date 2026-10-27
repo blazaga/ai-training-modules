@@ -106,7 +106,7 @@ const MODULE2_EXPECT = [
 const MODULE2_NOTES =
   'Measured: a fresh agent got lab 02 10/10 (lab 01 still 15/15) and verify 60 unit / 55 e2e. Its query guard has two layers, each proven by removing it: one SELECT/WITH statement (libSQL silently runs only the first of two), and a query_only connection (a delete hidden in a WITH emptied the copy without it). It also found that the default database path is relative to the working directory.';
 const MODULE2_OUTPUT = [
-  '# pnpm verify; pnpm lab 01 02',
+  '# npm run verify; npm run lab 01 02',
   'Tests  60 passed (60) · 58 passed (58)',
   'Tests  25 passed (25)',
   '# started as Claude Desktop does it',
@@ -139,7 +139,7 @@ const SLIDES = [
       ['Proctor', 'the goal, where the requirements are, when it is done'],
       ['Instruct', 'you give that to your agent, never the steps'],
       ['Agent', 'works out how from the repo, then builds it'],
-      ['Check', 'pnpm verify + pnpm lab NN: read the counts'],
+      ['Check', 'npm run verify + npm run lab NN: read the counts'],
       ['Review', 'ask it to show, not tell: the red run, the SQL'],
     ],
     notes:
@@ -166,9 +166,9 @@ const SLIDES = [
     type: 'rules',
     title: 'Three rules for the lab',
     rows: [
-      ['FiTerminal', 'Windows, PowerShell, Node 24', 'Every command runs in boilerplate\\nest-ai-starter, one per line. `corepack enable` needs an administrator terminal; otherwise write `corepack pnpm`.'],
+      ['FiTerminal', 'Windows, PowerShell, Node 24', 'Every command runs in boilerplate\\nest-ai-starter, one per line. npm ships with Node; scripts run as `npm run <name>`.'],
       ['FiCheckCircle', 'Counts, not exit codes', 'Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.'],
-      ['FiDatabase', 'The data is yours to break', 'data/app.db ships seeded. Change it freely while you try things; `pnpm db:seed` puts it back, byte for byte.'],
+      ['FiDatabase', 'The data is yours to break', 'data/app.db ships seeded. Change it freely while you try things; `npm run db:seed` puts it back, byte for byte.'],
     ],
     notes:
       'The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line; curl is curl.exe there (plain curl is Invoke-WebRequest). The base starts its tools with node and their JS entry, because the node_modules\\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.',
@@ -179,7 +179,7 @@ const SLIDES = [
     rows: [
       ['FiGlobe', 'One page, every request', 'With the app running, open http://localhost:3000/playground. It lists every module 1 request: health, users, notes and sharing.'],
       ['FiPlay', 'Click to send', 'Each Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.'],
-      ['FiRefreshCw', 'It writes to your data', 'Requests create, change and delete rows in data/app.db. `pnpm db:seed` restores the seeded data.'],
+      ['FiRefreshCw', 'It writes to your data', 'Requests create, change and delete rows in data/app.db. `npm run db:seed` restores the seeded data.'],
     ],
     notes:
       'Before module 1 is built, health is the only green row: the rest answer 404 or wait for an id. Module 2 has no playground: its client is Claude Desktop, over stdio. The Postman collection stays in the starter (postman/) for anyone who prefers it; the labs do not use it.',
@@ -187,7 +187,7 @@ const SLIDES = [
     type: 'rules',
     title: 'Lab checks: is my lab done?',
     rows: [
-      ['FiCheckSquare', 'One check per lab', '`pnpm lab 01` runs the check for lab 01, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.'],
+      ['FiCheckSquare', 'One check per lab', '`npm run lab 01` runs the check for lab 01, `npm run lab` all of them. Done means `Test Files 1 passed` and every test green.'],
       ['FiTool', 'Red until built', 'Every lab check fails on the starter, because its feature is not there yet. It turns green when your agent has built it, and stays green after.'],
       ['FiShield', 'Fell behind?', 'Start the next module from its checkpoint (docs/ai-agent-training/checkpoints/), not by patching your own copy.'],
     ],
@@ -207,43 +207,43 @@ const SLIDES = [
     type: 'prompt', ch: '1', title: 'Instruction 1/3: set the project up',
     proctor: 'The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.',
     prompt: WRAP('Set this project up on this machine and prove it works: counts, not "it works". Then show me what is in the database.'),
-    expect: ['reads CLAUDE.md before running anything', 'counts: 20 unit, 5 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares', 'switches to corepack pnpm if pnpm is missing'],
+    expect: ['reads CLAUDE.md before running anything', 'counts: 20 unit, 5 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares', 'passes script flags after --'],
     notes: 'Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground\'s test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).',
   },
   {
     type: 'prompt', ch: '1', title: 'Instruction 2/3: the users resource',
     proctor: 'Do not tell your agent how. The repo says how resources are built; watch whether it finds that out.',
-    prompt: WRAP('Build the users resource on the provided users table: specs/users.md. Done when pnpm verify is green.'),
+    prompt: WRAP('Build the users resource on the provided users table: specs/users.md. Done when npm run verify is green.'),
     expect: ['finds the steps: generate, template, fill', 'keeps the provided table, 14 markers', 'no migration for a provided table', '409s left to the database, not re-coded'],
     notes: 'Measured: a fresh agent found the resource-spec and nest-resource-scaffold skills from CLAUDE.md on its own; the template kept users.table.ts and left 14 markers; verify went to 29 unit / 18 e2e. Lab 01 stays red until notes exist. Ask: which instruction told it to use the skill? None did.',
   },
   {
     type: 'prompt', ch: '1', title: 'Instruction 3/3: notes, with sharing',
     proctor: 'A user owns many notes; a note can be shared with many users. The rules decide where each piece goes.',
-    prompt: WRAP('Now the notes resource, with sharing: specs/notes.md. Done when pnpm lab 01 and pnpm verify are green.'),
+    prompt: WRAP('Now the notes resource, with sharing: specs/notes.md. Done when npm run lab 01 and npm run verify are green.'),
     expect: ['stored-state rules in the service (422)', 'filters and /shares routes, with e2e tests', 'a bad dueAt is 400, not 500', 'every rule broken once to see red'],
     notes: 'Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first dueAt answered 500 for "next tuesday" (zod 4 runs a transform after a failed format check); it found and fixed it. The filters and share routes go outside the markers, on purpose.',
   },
   {
     type: 'run', ch: '1', title: 'Check it: module 1',
     code: [
-      'pnpm verify       # read both Tests lines',
-      'pnpm build',
-      'pnpm start',
+      'npm run verify       # read both Tests lines',
+      'npm run build',
+      'npm run start',
       '# second terminal: the seeded rows',
       'curl.exe "localhost:3000/api/v1/notes?status=done"',
     ],
     playground: playground('Health', 'List users (seeded)', 'Create user', 'Create note', 'Edit a done note → 422 (R2)', 'Share with a friend'),
-    notes: 'The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then pnpm db:seed puts the data back.',
+    notes: 'The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then npm run db:seed puts the data back.',
   },
   {
     type: 'checkpoint', ch: '1', title: 'Checkpoint: two MVCs on real data',
     outputSource: 'captured',
     output: [
-      '# pnpm verify (base: 20 unit, 5 e2e)',
+      '# npm run verify (base: 20 unit, 5 e2e)',
       'Tests  43 passed (43)',
       'Tests  49 passed (49)',
-      '# pnpm lab 01',
+      '# npm run lab 01',
       'Tests  15 passed (15)',
       '# the app on the seeded file',
       'users total=25  notes total=200',
@@ -257,7 +257,7 @@ const SLIDES = [
   {
     type: 'stuck', ch: '1', title: 'When the agent goes wrong: module 1',
     rows: [
-      ['It runs db:generate for users', 'The table is provided: there is nothing to generate. pnpm verify (check:migrations) proves it.'],
+      ['It runs db:generate for users', 'The table is provided: there is nothing to generate. npm run verify (check:migrations) proves it.'],
       ['A bad dueAt answers 500', 'Zod 4 runs the transform after a failed datetime check. Guard it; the scaffold skill lists the trap.'],
       ['It counts notes before deleting a user', 'A second copy of a rule the foreign key already enforces. Let the database refuse; map the error.'],
     ],
@@ -268,22 +268,22 @@ const SLIDES = [
   {
     type: 'prompt', ch: '2', title: 'Instruction: an MCP server on your data',
     proctor: 'The goal: your Claude Desktop app answers questions from this database. The model writes the SQL, so the server decides what may run.',
-    prompt: WRAP('I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when pnpm lab 02 and pnpm verify are green; then show me how to connect it to Claude Desktop, and two questions I could ask it.'),
+    prompt: WRAP('I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when npm run lab 02 and npm run verify are green; then show me how to connect it to Claude Desktop, and two questions I could ask it.'),
     expect: MODULE2_EXPECT,
     notes: MODULE2_NOTES,
   },
   {
     type: 'run', ch: '2', title: 'Check it: module 2',
     code: [
-      'pnpm verify',
-      'pnpm build',
+      'npm run verify',
+      'npm run build',
       'node scripts\\claude-desktop-config.mjs',
       '# paste the entry into the config file it names,',
       '# quit and reopen Claude Desktop, then ask:',
       '# "Which open notes are shared with more',
       '#   than one person?"',
     ],
-    notes: 'Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database: the script prints them. Quit Claude Desktop completely (not just the window) before reopening. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and pnpm db:seed puts it back.',
+    notes: 'Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database: the script prints them. Quit Claude Desktop completely (not just the window) before reopening. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and npm run db:seed puts it back.',
   },
   {
     type: 'checkpoint', ch: '2', title: 'Checkpoint: Claude Desktop, your data',
@@ -315,7 +315,7 @@ function withLabChecks(slides, labsByUnit) {
   return slides.map((s, i) => {
     const labs = labsByUnit[s.ch];
     if (!labs) return s;
-    const cmd = `pnpm lab ${labs.join(' ')}`;
+    const cmd = `npm run lab ${labs.join(' ')}`;
     const guard = labs.every((l) => GUARD_LABS.has(l));
     if (s.type === 'run' && lastRun.get(s.ch) === i && !s.code.some((l) => l.startsWith(cmd))) {
       const comment = guard ? '# green now; break it, see red, revert' : '# the lab check: all green?';
@@ -456,7 +456,7 @@ async function buildPptx(file, track) {
       slide = pres.addSlide({ masterName: 'TITLE' });
       slide.addText(s.title, { placeholder: 'title' });
       slide.addText(s.subtitle, { placeholder: 'subtitle' });
-      terminal(slide, 0.6, 4.05, 5.6, 0.85, ['$ pnpm verify'], { fontSize: 12 });
+      terminal(slide, 0.6, 4.05, 5.6, 0.85, ['$ npm run verify'], { fontSize: 12 });
     } else if (s.type === 'section') {
       const c = chap(s.ch);
       slide = pres.addSlide({ masterName: 'SECTION' });

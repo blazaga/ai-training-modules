@@ -32,8 +32,8 @@ requests to click on the app's `/playground` page. The script reads the starter'
 `src/playground/requests.ts` and **fails the build** if a slide names a request the playground
 does not have, so the deck cannot point at a request that was renamed.
 
-The commands run in `boilerplate/nest-ai-starter` with Node 24 and pnpm (slide 3), on the
-seeded `data/app.db`; `pnpm db:seed` restores it.
+The commands run in `boilerplate/nest-ai-starter` with Node 24 and npm (slide 3), on the
+seeded `data/app.db`; `npm run db:seed` restores it.
 
 ## Rebuild
 

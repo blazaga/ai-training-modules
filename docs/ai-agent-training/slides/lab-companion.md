@@ -21,7 +21,7 @@ Keep this deck on screen during lab work. Each module has: a divider (goal + tim
 1. **Proctor**: the goal, where the requirements are, when it is done
 2. **Instruct**: you give that to your agent, never the steps
 3. **Agent**: works out how from the repo, then builds it
-4. **Check**: pnpm verify + pnpm lab NN: read the counts
+4. **Check**: npm run verify + npm run lab NN: read the counts
 5. **Review**: ask it to show, not tell: the red run, the SQL
 
 _Repeatable work → tools. Judgement → the agent, fenced in._
@@ -68,7 +68,7 @@ A module groups one feature: its controller, its service and its repository. The
 
 - **Windows, PowerShell, Node 24**: Every command runs in boilerplate\nest-ai-starter, one per line. `corepack enable` needs an administrator terminal; otherwise write `corepack pnpm`.
 - **Counts, not exit codes**: Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.
-- **The data is yours to break**: data/app.db ships seeded. Change it freely while you try things; `pnpm db:seed` puts it back, byte for byte.
+- **The data is yours to break**: data/app.db ships seeded. Change it freely while you try things; `npm run db:seed` puts it back, byte for byte.
 
 <!--
 The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line; curl is curl.exe there (plain curl is Invoke-WebRequest). The base starts its tools with node and their JS entry, because the node_modules\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.
@@ -80,7 +80,7 @@ The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does)
 
 - **One page, every request**: With the app running, open http://localhost:3000/playground. It lists every module 1 request: health, users, notes and sharing.
 - **Click to send**: Each Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.
-- **It writes to your data**: Requests create, change and delete rows in data/app.db. `pnpm db:seed` restores the seeded data.
+- **It writes to your data**: Requests create, change and delete rows in data/app.db. `npm run db:seed` restores the seeded data.
 
 <!--
 Before module 1 is built, health is the only green row: the rest answer 404 or wait for an id. Module 2 has no playground: its client is Claude Desktop, over stdio. The Postman collection stays in the starter (postman/) for anyone who prefers it; the labs do not use it.
@@ -90,7 +90,7 @@ Before module 1 is built, health is the only green row: the rest answer 404 or w
 
 ## Lab checks: is my lab done?
 
-- **One check per lab**: `pnpm lab 01` runs the check for lab 01, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
+- **One check per lab**: `npm run lab 01` runs the check for lab 01, `npm run lab` all of them. Done means `Test Files 1 passed` and every test green.
 - **Red until built**: Every lab check fails on the starter, because its feature is not there yet. It turns green when your agent has built it, and stays green after.
 - **Fell behind?**: Start the next module from its checkpoint (docs/ai-agent-training/checkpoints/), not by patching your own copy.
 
@@ -146,7 +146,7 @@ database.
 - reads CLAUDE.md before running anything
 - counts: 20 unit, 5 e2e, a red lab 01
 - data: 25 users, 200 notes, 120 shares
-- switches to corepack pnpm if pnpm is missing
+- switches to corepack npm run if npm run is missing
 
 <!--
 Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground's test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).
@@ -162,7 +162,7 @@ Measured: a fresh agent given only this instruction installed, built, started th
 
 ```text
 Build the users resource on the provided users table:
-specs/users.md. Done when pnpm verify is green.
+specs/users.md. Done when npm run verify is green.
 ```
 
 **Watch its approach**
@@ -186,7 +186,7 @@ Measured: a fresh agent found the resource-spec and nest-resource-scaffold skill
 
 ```text
 Now the notes resource, with sharing: specs/notes.md. Done
-when pnpm lab 01 and pnpm verify are green.
+when npm run lab 01 and npm run verify are green.
 ```
 
 **Watch its approach**
@@ -205,12 +205,12 @@ Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first 
 ## Check it: module 1
 
 ```bash
-pnpm verify       # read both Tests lines
-pnpm build
-pnpm start
+npm run verify       # read both Tests lines
+npm run build
+npm run start
 # second terminal: the seeded rows
 curl.exe "localhost:3000/api/v1/notes?status=done"
-pnpm lab 01   # the lab check: all green?
+npm run lab 01   # the lab check: all green?
 ```
 
 **In the playground** (`localhost:3000/playground`)
@@ -223,7 +223,7 @@ pnpm lab 01   # the lab check: all green?
 6. Share with a friend
 
 <!--
-The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then pnpm db:seed puts the data back.
+The labs run on an empty in-memory database; this step proves the resources also serve the seeded rows. Then npm run db:seed puts the data back.
 -->
 
 ---
@@ -233,10 +233,10 @@ The labs run on an empty in-memory database; this step proves the resources also
 _Output: captured_
 
 ```bash
-# pnpm verify (base: 20 unit, 5 e2e)
+# npm run verify (base: 20 unit, 5 e2e)
 Tests  43 passed (43)
 Tests  49 passed (49)
-# pnpm lab 01
+# npm run lab 01
 Tests  15 passed (15)
 # the app on the seeded file
 users total=25  notes total=200
@@ -245,7 +245,7 @@ notes?status=done total=85
 
 **Done when**
 
-- [ ] `pnpm lab 01`: every test passes
+- [ ] `npm run lab 01`: every test passes
 - [ ] deleting a rule turns a test red
 - [ ] the app lists the seeded rows
 
@@ -253,7 +253,7 @@ notes?status=done total=85
 
 ## When the agent goes wrong: module 1
 
-- **It runs db:generate for users**: The table is provided: there is nothing to generate. pnpm verify (check:migrations) proves it.
+- **It runs db:generate for users**: The table is provided: there is nothing to generate. npm run verify (check:migrations) proves it.
 - **A bad dueAt answers 500**: Zod 4 runs the transform after a failed datetime check. Guard it; the scaffold skill lists the trap.
 - **It counts notes before deleting a user**: A second copy of a rule the foreign key already enforces. Let the database refuse; map the error.
 
@@ -283,7 +283,7 @@ Covers chapters 03 + 04. Left out for time: the stdio framing lab (chapter 03): 
 
 ```text
 I want to use this data from Claude Desktop. Build the MCP
-server in specs/mcp.md. Done when pnpm lab 02 and pnpm
+server in specs/mcp.md. Done when npm run lab 02 and pnpm
 verify are green; then show me how to connect it to Claude
 Desktop, and two questions I could ask it.
 ```
@@ -304,18 +304,18 @@ Measured: a fresh agent got lab 02 10/10 (lab 01 still 15/15) and verify 60 unit
 ## Check it: module 2
 
 ```bash
-pnpm verify
-pnpm build
+npm run verify
+npm run build
 node scripts\claude-desktop-config.mjs
 # paste the entry into the config file it names,
 # quit and reopen Claude Desktop, then ask:
 # "Which open notes are shared with more
 #   than one person?"
-pnpm lab 02   # the lab check: all green?
+npm run lab 02   # the lab check: all green?
 ```
 
 <!--
-Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database: the script prints them. Quit Claude Desktop completely (not just the window) before reopening. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and pnpm db:seed puts it back.
+Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database: the script prints them. Quit Claude Desktop completely (not just the window) before reopening. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and npm run db:seed puts it back.
 -->
 
 ---
@@ -325,7 +325,7 @@ Claude Desktop starts the server from its own folder with a minimal PATH, so the
 _Output: captured_
 
 ```bash
-# pnpm verify; pnpm lab 01 02
+# npm run verify; npm run lab 01 02
 Tests  60 passed (60) · 58 passed (58)
 Tests  25 passed (25)
 # started as Claude Desktop does it
@@ -337,7 +337,7 @@ READ_ONLY: only a single SELECT …
 
 **Done when**
 
-- [ ] `pnpm lab 02`: every test passes
+- [ ] `npm run lab 02`: every test passes
 - [ ] a write sent to query is READ_ONLY
 - [ ] Claude Desktop answers a question about the data
 
