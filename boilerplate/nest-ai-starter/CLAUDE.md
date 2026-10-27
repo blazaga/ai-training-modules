@@ -39,6 +39,9 @@ and everyone checks the result together before the next one.
   specs of later steps (`specs/notes.md` before notes, `specs/mcp.md` before the MCP server)
   and the red lab checks of later modules (`npm run lab 02` before module 2) are expected,
   and are not work for you until an instruction names them.
+- **`steps/` holds the instructions, one file per step** (`steps/01-set-up.md` …). When the
+  learner points you at one, do **that file only**. Do not open, list or act on the other step
+  files: a later step is the same as a later instruction.
 - "Prove it works" means run the checks and show the counts, not build more features.
 - Unsure what the instruction covers? Ask one question instead of guessing wider.
 
@@ -85,6 +88,7 @@ scripts/                        apply-resource-template.mjs, check-ai-fill.mjs, 
                                 claude-desktop-config.mjs (prints the Claude Desktop entry for the module 2 server)
 data/app.db                     the seeded SQLite database (committed)
 specs/<plural>.md               one spec per resource; the input for step 3
+steps/NN-*.md                   the workshop instructions, one per file: do only the one you are given
 ```
 
 ## Adding a resource: always three steps

@@ -2,6 +2,15 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T15:15:16+08:00 - steps/: the workshop instructions as files; the zod trap named right
+
+- **What:** `steps/01-set-up.md` … `04-mcp-server.md` + README (one instruction per file, read
+  by the deck); `CLAUDE.md` says to do only the step file you are pointed at. The
+  `nest-resource-scaffold` skill's zod trap now names `.overwrite()` (runs after a failed
+  check, throws, 500) rather than `.transform()` (does not run: 400), measured on zod 4.6.7.
+- **Measured:** an agent given only "Read steps/03-notes.md and do what it says" built notes,
+  wrote its WORKLOG entry and stopped before the MCP server.
+
 ## 2026-10-27T15:01:53+08:00 - CLAUDE.md: a guided run stops after each instruction
 
 - **Why:** in the workshop every learner's agent must stop when its instruction is done, so

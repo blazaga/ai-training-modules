@@ -2,6 +2,30 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T15:15:16+08:00 - The instructions as files in steps/, referenced from the slides
+
+- **Request (operator):** every instruction in the deck should also be a markdown file in a
+  steps directory, so learners have their Claude read and execute it instead of typing; the
+  slides should show the file path.
+- **What:** `boilerplate/nest-ai-starter/steps/` with `01-set-up.md`, `02-users.md`,
+  `03-notes.md`, `04-mcp-server.md` and a README. Each holds the instruction verbatim under
+  `## Instruction`, with a note to the agent to do that step only. The deck now READS the
+  instruction text from these files (`STEPS_DIR`), so slide and file cannot disagree; the
+  build fails if a file lacks the section or its text does not end with the stop sentence.
+  Each instruction slide shows the path as its label and `> Read steps/NN-….md and do what it
+says.` above the text. The starter's `CLAUDE.md` says to do only the step file you are
+  pointed at; the outline explains it.
+- **Caught in review:** the first build cut every instruction to its first line (a multiline
+  regex stopped at the first line end); seen on the rendered slides, fixed, guard added.
+- **Measured:** a fresh agent on a project with users built, told only "Read steps/03-notes.md
+  and do what it says": notes built (lab 01 15/15, verify unit 48 / e2e 66), WORKLOG entry
+  written, stopped; no MCP server, no `mcp` script, seed unchanged.
+- **Corrected from that run:** the zod trap was described as `.transform()` running after a
+  failed date check. Measured on zod 4.6.7: `.transform()` does not (400); `.overwrite()`
+  does, and throws (500), which is what the module 1 agent had used. Skill, chapter 02 and
+  slide 17 now say so.
+- Deck: 24 slides, validator passed; instruction slides and slide 17 checked.
+
 ## 2026-10-27T15:01:53+08:00 - Stopping points: one instruction at a time
 
 - **Request (operator):** agents must stop at each module, not bulldoze through the course;

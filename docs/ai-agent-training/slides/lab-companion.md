@@ -152,7 +152,13 @@ The repository ships .env.example: the variable names and safe defaults, never a
 
 > **Proctor:** The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.
 
-**Give it to your agent** (paste, or say it in your own words):
+**Give it to your agent:** the instruction is the file `steps/01-set-up.md` in the starter, so you can tell your agent:
+
+```text
+Read steps/01-set-up.md and do what it says.
+```
+
+It says (paste it, or say it in your own words, if you prefer):
 
 ```text
 Set this project up on this machine and prove it works:
@@ -177,7 +183,13 @@ Measured: a fresh agent given only this instruction installed, built, started th
 
 > **Proctor:** Do not tell your agent how. The repo says how resources are built; watch whether it finds that out.
 
-**Give it to your agent** (paste, or say it in your own words):
+**Give it to your agent:** the instruction is the file `steps/02-users.md` in the starter, so you can tell your agent:
+
+```text
+Read steps/02-users.md and do what it says.
+```
+
+It says (paste it, or say it in your own words, if you prefer):
 
 ```text
 Build the users resource on the provided users table:
@@ -202,7 +214,13 @@ Measured: a fresh agent found the resource-spec and nest-resource-scaffold skill
 
 > **Proctor:** A user owns many notes; a note can be shared with many users. The rules decide where each piece goes.
 
-**Give it to your agent** (paste, or say it in your own words):
+**Give it to your agent:** the instruction is the file `steps/03-notes.md` in the starter, so you can tell your agent:
+
+```text
+Read steps/03-notes.md and do what it says.
+```
+
+It says (paste it, or say it in your own words, if you prefer):
 
 ```text
 Now the notes resource, with sharing: specs/notes.md. Done
@@ -218,7 +236,7 @@ stop and wait for my next instruction.
 - every rule broken once to see red
 
 <!--
-Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first dueAt answered 500 for "next tuesday" (zod 4 runs a transform after a failed format check); it found and fixed it. The filters and share routes go outside the markers, on purpose.
+Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first dueAt answered 500 for "next tuesday" (it converted with .overwrite(), a zod 4 check that still runs after the format check failed); it found and fixed it. The filters and share routes go outside the markers, on purpose.
 -->
 
 ---
@@ -296,7 +314,7 @@ notes?status=done total=85
 ## When the agent goes wrong: module 1
 
 - **It runs db:generate for users**: The table is provided: there is nothing to generate. npm run verify (check:migrations) proves it.
-- **A bad dueAt answers 500**: Zod 4 runs the transform after a failed datetime check. Guard it; the scaffold skill lists the trap.
+- **A bad dueAt answers 500**: An .overwrite() still runs after the date check failed and throws. Use .transform(), or guard first; the scaffold skill lists it.
 - **It counts notes before deleting a user**: A second copy of a rule the foreign key already enforces. Let the database refuse; map the error.
 
 ---
@@ -343,7 +361,13 @@ Module 1 built the REST front door: an HTTP request reaches a controller, the co
 
 > **Proctor:** The goal: your Claude Desktop app queries and changes this database. The model writes the SQL, so the server decides what may run.
 
-**Give it to your agent** (paste, or say it in your own words):
+**Give it to your agent:** the instruction is the file `steps/04-mcp-server.md` in the starter, so you can tell your agent:
+
+```text
+Read steps/04-mcp-server.md and do what it says.
+```
+
+It says (paste it, or say it in your own words, if you prefer):
 
 ```text
 I want to use this data from Claude Desktop. Build the MCP

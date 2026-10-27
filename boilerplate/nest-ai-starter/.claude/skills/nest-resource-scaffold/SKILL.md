@@ -111,12 +111,14 @@ A rule whose deletion leaves the tests green is not tested.
 - **A provided table:** when the table already exists (users, notes), the template keeps it
   and writes no `columns` work for you. Do not run `db:generate` for it: `check:migrations`
   in `verify` confirms there is nothing to generate.
-- **Zod 4 keeps going after a failed check:** `z.string().datetime({ offset: true })
-.transform((s) => new Date(s).toISOString())` answers **500, not 400**, for
-  `"next tuesday"`: the format check fails, but the transform still runs and throws
-  (`RangeError: Invalid time value`). Measured by a dry-run agent. Guard the transform (or
-  parse with `z.coerce.date()` and check `isNaN`) so a bad value stays a 400, and test a
-  value without an offset and an impossible date (`2026-02-31`).
+- **Zod 4 checks keep going after a failed check:** `z.iso.datetime({ offset: true })
+.overwrite((s) => new Date(s).toISOString())` answers **500, not 400**, for
+  `"next tuesday"`: `.overwrite()` is a check, so it still runs after the format check failed,
+  and `toISOString()` throws (`RangeError: Invalid time value`). Found by a dry-run agent;
+  measured on zod 4.6.7. A `.transform()` does NOT run after a failed check (same input →
+  400), so either use `.transform()`, or put an aborting guard first
+  (`.refine((v) => !Number.isNaN(Date.parse(v)), { abort: true })`). Either way, test a value
+  without an offset and an impossible date (`2026-02-31`).
 - **Routes beyond CRUD:** the markers cover the house CRUD. Extra routes (list filters,
   sub-resources such as `/notes/:id/shares`) are added in the generated controller, service
   and repository, outside the markers, and need their own e2e tests. That is expected, not a

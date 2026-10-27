@@ -58,9 +58,11 @@ A fresh agent built this module from the three proctor instructions alone (the
   `dueAt` transform) turned e2e and the lab red but no unit test: unit tests receive input
   that was already parsed, so a schema rule is invisible to them.
 - **A real bug on the way:** its first `dueAt` answered **500, not 400**, for
-  `"next tuesday"`. Zod 4 runs a `.transform()` even after the datetime check failed, and
-  `new Date("next tuesday").toISOString()` throws. The fix guards the transform; the
-  scaffold skill now lists the trap.
+  `"next tuesday"`. It converted the date with `.overwrite()`, which in zod 4 is a check: it
+  still runs after the datetime check has failed, and `new Date("next tuesday").toISOString()`
+  throws. (A `.transform()` does not run after a failed check: measured on zod 4.6.7, it
+  answers 400.) The fix is an aborting guard before the conversion; the scaffold skill lists
+  the trap.
 - **Routes beyond CRUD go outside the markers.** The list filters and the
   `/notes/:id/shares` routes have no marker; the agent added them to the generated
   controller, service and repository, with e2e tests. That is expected (the skill says so).

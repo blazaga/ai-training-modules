@@ -17,7 +17,9 @@ when it is done, never the steps. You give it to your agent, in your own words o
 written; the agent works out how (from the repo's `CLAUDE.md`, its skills and its specs) and
 you watch its approach. **It stops when that instruction is done** (every instruction ends
 "Then stop and wait for my next instruction", and the starter's `CLAUDE.md` says the same), so
-the room moves one step at a time. Then you **check** the result with a lab check and `npm run verify`, and
+the room moves one step at a time. Each instruction is also a file in the starter's `steps/`
+folder, so instead of typing it you can tell your agent _"Read steps/01-set-up.md and do what it
+says"_. Then you **check** the result with a lab check and `npm run verify`, and
 **review** what it wrote. It runs on Node 24 and npm (chapter 00); the database is one file,
 so there is no database server to install.
 
