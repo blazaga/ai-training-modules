@@ -118,14 +118,14 @@ function WRAP(text, n = 58) {
 // base + module 1 checkpoint, Run all in order in Chromium at 1280x720.
 const SHOT_ALT = 'The playground after Run all in order: the four variables filled, Health and List users answered 200 with a check mark.';
 const SHOT_POINTS = [
-  '19 of 19 cards ✓ in our dry run',
+  '36 of 36 cards ✓ in our dry run',
+  'Each card names its lab 01 check',
   'Variables filled: the ids carry over',
   '409 and 422 cards ✓ too: the rule said no',
-  'Red in DevTools for those: expected',
-  'List users shows the 25 seeded users',
+  'Not built or not restarted: ✗ "no such route"',
 ];
 const SHOT_NOTES =
-  'Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint and no .env, verify 44 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green, no page errors, List users showing the 25 seeded users. With DevTools open the two 409 and three 422 requests show in red as failed loads; that is expected, they are the rule checks. If port 3000 is taken, npm start prints "successfully started" and THEN fails: the last line says the port is in use. Set PORT in .env and use that port in the URL. A missing .env does not matter: in development the app uses data/app.db by default. npm run db:seed puts the data back afterwards.';
+  'Captured in Chromium at 1280x720 against the module 1 build after Run all in order: 36 of 36 cards green, all five ids carried, no page errors. Every card names the lab 01 test it reproduces, and npm run playground:check sends the same requests from a terminal against the running app (steps 02 and 03 end with it). A 404 from a route that does not exist (Cannot GET) is always red: the module is not built, or the app was not restarted after building it. With DevTools open the rule checks (409, 422) show as red failed loads: expected. To get the data back: stop the app, npm run db:seed, start it again (reseeding under a running app breaks its next write).';
 // Module 2 slide content, from the measured dry run (see the WORKLOG).
 const MODULE2_EXPECT = [
   'reads the installed SDK, not its memory',
@@ -137,7 +137,7 @@ const MODULE2_NOTES =
   'Measured: a fresh agent got labs 31/31 and verify 46 unit / 58 e2e. Five SQL guards, each removed once and caught by lab 02: query is one SELECT/WITH statement (libSQL silently drops a second) run under PRAGMA query_only (a WITH can hide a delete); execute is one statement, only INSERT/UPDATE/DELETE, and UPDATE/DELETE need a WHERE. Its own e2e test missed two of the five: the lab checks come from the spec, not the code. The typed write tools call UsersService and NotesService, so removing a rule there turns the MCP checks red too. execute keeps foreign keys on but does not apply the service rules; its description says so.';
 const MODULE2_OUTPUT = [
   '# npm run verify; npm run lab',
-  'Tests  47 passed (47) · 58 passed (58)',
+  'Tests  47 passed (47) · 59 passed (59)',
   'Tests  31 passed (31)',
   '# started as Claude Desktop does it',
   'create-user · create-note · share-note',
@@ -198,7 +198,7 @@ const SLIDES = [
     rows: [
       ['FiTerminal', 'Windows, PowerShell, Node 24', 'Every command runs in boilerplate\\nest-ai-starter, one per line. npm ships with Node; scripts run as `npm run <name>`.'],
       ['FiCheckCircle', 'Counts, not exit codes', 'Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.'],
-      ['FiDatabase', 'The data is yours to break', 'data/app.db ships seeded. Change it freely while you try things; `npm run db:seed` puts it back, byte for byte.'],
+      ['FiDatabase', 'The data is yours to break', 'data/app.db ships seeded. Change it freely while you try things; stop the app and `npm run db:seed` puts it back, byte for byte.'],
     ],
     notes:
       'The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line. Nobody needs curl: the playground page sends the requests. The base starts its tools with node and their JS entry, because the node_modules\\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.',
@@ -208,8 +208,8 @@ const SLIDES = [
     title: 'Try it in the browser: /playground',
     rows: [
       ['FiGlobe', 'One page, every request', 'With the app running, open http://localhost:3000/playground. It lists every module 1 request: health, users, notes and sharing.'],
-      ['FiPlay', 'Click to send', 'Each Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.'],
-      ['FiRefreshCw', 'It writes to your data', 'Requests create, change and delete rows in data/app.db. `npm run db:seed` restores the seeded data.'],
+      ['FiPlay', 'Click to send', 'Each request mirrors a lab 01 check; Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.'],
+      ['FiRefreshCw', 'It writes to your data', 'Requests create, change and delete rows in data/app.db. To restore it: stop the app, `npm run db:seed`, start it again.'],
     ],
     notes:
       'Before module 1 is built, health is the only green row: the rest answer 404 or wait for an id. Module 2 has no playground: its client is Claude Desktop, over stdio. The Postman collection stays in the starter (postman/) for anyone who prefers it; the labs do not use it.',
@@ -237,7 +237,7 @@ const SLIDES = [
     type: 'prompt', ch: '1', title: 'Instruction 1/3: set the project up',
     proctor: 'The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.',
     step: STEP('01-set-up.md'),
-    expect: ['reads CLAUDE.md before running anything', 'copies .env.example to .env (git ignores it)', 'counts: 21 unit, 5 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares'],
+    expect: ['reads CLAUDE.md before running anything', 'copies .env.example to .env (git ignores it)', 'counts: 21 unit, 6 e2e, a red lab 01', 'leaves the app running: the /playground link', 'data: 25 users, 200 notes, 120 shares'],
     notes: 'Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground\'s test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).',
   },
   {
@@ -260,15 +260,14 @@ const SLIDES = [
       '# 1. the tests first',
       'npm run verify       # read both Tests lines',
       'npm run lab 01       # the lab check: all green?',
-      '# 2. then the app on the seeded data',
-      '#    (port taken? the last line says so: PORT= in .env)',
-      'npm run build',
-      'npm start',
+      '# 2. the app is still running from step 01:',
+      '#    your agent restarts it after each build',
+      '#    (not running? npm run build, then npm start)',
       '# 3. open localhost:3000/playground (or your PORT)',
       '#    and click Run all in order',
     ],
-    playground: playground('Health', 'List users (seeded)', 'Create user', 'Create note', 'Mark done', 'Edit a done note → 422 (R2)', 'Share with a friend'),
-    notes: 'Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then start the app and open the playground: it sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.',
+    playground: playground('Health', 'Create user', 'List users (seeded)', 'Create note', 'Mark done', 'Edit a done note → 422 (R2)', 'Share with a friend'),
+    notes: 'Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then open the playground: the app has been running since step 01, and the agent rebuilds and restarts it after each step that adds routes (the starter CLAUDE.md says so). If it is not running, npm run build then npm start. The playground sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.',
   },
   {
     type: 'screenshot', ch: '1', title: 'What to expect: the playground after Run all',
@@ -281,9 +280,9 @@ const SLIDES = [
     type: 'checkpoint', ch: '1', title: 'Checkpoint: two MVCs on real data',
     outputSource: 'captured',
     output: [
-      '# npm run verify (base: 21 unit, 5 e2e)',
+      '# npm run verify (base: 21 unit, 6 e2e)',
       'Tests  44 passed (44)',
-      'Tests  49 passed (49)',
+      'Tests  50 passed (50)',
       '# npm run lab 01',
       'Tests  15 passed (15)',
       '# /playground on the seeded file',
@@ -542,7 +541,7 @@ async function buildPptx(file, track) {
       terminal(slide, 0.5, 1.9, 5.7, 3.15, lines, { fontSize: fitCode(lines, 5.05, 2.6), label: `${s.step.file} · give it to your agent` });
       slide.addText('Watch its approach', { x: 6.45, y: 1.9, w: 3.05, h: 0.4, fontSize: 16, bold: true, color: COL.text, margin: 0, isTextBox: true });
       s.expect.forEach((e, i) => {
-        const y = 2.4 + i * 0.66;
+        const y = 2.4 + i * Math.min(0.66, 2.6 / s.expect.length);
         badge(slide, 6.45, y + 0.04, 0.32, COL.mint, icons.check);
         slide.addText(md2runs(e), { x: 6.9, y, w: 2.6, h: 0.62, fontSize: 12, color: COL.text, valign: 'top', margin: 0, isTextBox: true });
       });

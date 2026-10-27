@@ -48,6 +48,16 @@ and everyone checks the result together before the next one.
   learner points you at one, do **that file only**. Do not open, list or act on the other step
   files: a later step is the same as a later instruction.
 - "Prove it works" means run the checks and show the counts, not build more features.
+- **When a step asks you to leave the app running,** start it in the background (`npm start`,
+  after `npm run build`) and give the learner the playground link. It stays running between
+  steps: after a later step builds new routes, rebuild and restart it so the playground shows
+  them, and say so. Tests never need it stopped (they use their own in-memory database).
+- **`npm run playground:check`** sends the playground's requests (they mirror lab 01, case by
+  case) to the **running** app and prints ✓/✗. It is the only check that sees the app the
+  learner is looking at: verify and the labs boot their own copy, so they stay green when the
+  running app was never restarted or the module was never wired in.
+- **Reseeding:** stop the app first, then `npm run db:seed`, then start it again. Measured: a
+  running app whose `data/app.db` is replaced underneath it fails its next write.
 - Unsure what the instruction covers? Ask one question instead of guessing wider.
 
 ## Skills: load before acting

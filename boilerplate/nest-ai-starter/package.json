@@ -29,6 +29,7 @@
     "db:migrate": "node --env-file-if-exists=.env dist/database/migrate.js",
     "db:seed": "node scripts/seed.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
+    "playground:check": "node scripts/playground-check.mjs",
     "mcp:inspect:ui": "npx -y @modelcontextprotocol/inspector@2.12.0"
   },
   "dependencies": {

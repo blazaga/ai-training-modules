@@ -52,7 +52,7 @@ A fresh agent built this module from the three proctor instructions alone (the
 - It found the procedure itself: `CLAUDE.md` → the `resource-spec` and
   `nest-resource-scaffold` skills → generate, template, fill. Users: 14 markers.
 - After users: `npm run verify` unit 29, e2e 18; lab 01 still 12 of 15 red (the rest needs
-  notes). After notes: unit 43, e2e 46, **lab 01 15/15** (unit 44, e2e 49 at the checkpoint, whose
+  notes). After notes: unit 43, e2e 46, **lab 01 15/15** (unit 44, e2e 50 at the checkpoint, whose
   base has since gained the playground's test and one settings test).
 - **Every rule was broken once on purpose and turned something red.** Deleting R3 (the
   `dueAt` transform) turned e2e and the lab red but no unit test: unit tests receive input

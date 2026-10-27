@@ -2,6 +2,36 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T16:57:09+08:00 - The playground mirrors lab 01, and a check that sees the running app
+
+- **Reported (operator):** after the users step the playground showed `404 Cannot GET
+/api/v1/users`; the playground tests should match the tests. Also: step 01 should start the
+  app so the learner can review the playground.
+- **Cause, as far as it can be named:** a 404 "Cannot GET" means the running app has no users
+  route: either it was started before step 02 and never restarted, or the module was not
+  wired in. Step 02 could pass anyway: its only gate was `npm run verify`, and verify (like
+  the labs) boots its own copy of the app.
+- **What changed:**
+  - `steps/01-set-up.md`: after verify passes, start the app, leave it running, give the
+    playground link (tested: the agent left it running; `/playground` 200).
+  - The playground: 36 requests that mirror lab 01 case by case, each naming its lab test
+    (shown on the page); a new e2e test fails if a lab test has no request or a request
+    names a test that does not exist (negative control: one renamed label → red).
+  - `npm run playground:check [-- <group>]`: the same requests against the RUNNING app.
+    Steps 02 and 03 now end with it, after a rebuild and restart. `CLAUDE.md` explains why
+    and says when to restart.
+  - A Nest "Cannot GET" 404 never counts as ✓, even where a 404 is expected (it had shown
+    "Unknown id → 404" green on the base).
+  - Stop the app before `npm run db:seed` (measured: reseeding under a running app broke
+    its next write), now said in chapter 00, the slides, the page and `CLAUDE.md`.
+  - The module 1 check slide: the app is still running from step 01; the agent restarts it.
+- **Measured:** module 1 build: Chromium 36/36 ✓ and `playground:check` 36 ✓ (exit 0); base:
+  health ✓, 7 ✗ "no such route", 28 not sent (exit 1). Step 02 by a fresh agent with the app
+  already running from step 01: it rebuilt and restarted it; the proctor's own
+  `playground:check users` against that app: 8 ✓. Checkpoints from a clean `npm ci`: base
+  21/6, module 1 44/50, module 2 47/59, labs 31/31, seed unchanged; patch 2 regenerated (its
+  `package.json` context moved). New screenshots; deck 23 slides, validator passed.
+
 ## 2026-10-27T16:22:12+08:00 - Step 04 connects the server to Claude Desktop; the learner restarts it
 
 - **Request (operator):** the module 2 instruction should have Claude connect the new server

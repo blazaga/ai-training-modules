@@ -51,7 +51,9 @@ builds in module 1, and the MCP server that reads and writes the file directly i
 
 The data was generated with faker by `scripts/seed.mjs`. **`npm run db:seed` rebuilds the file
 from scratch** (migrations, then the same rows: two runs write byte-identical files,
-measured), so changing data while you experiment costs nothing.
+measured), so changing data while you experiment costs nothing. **Stop the app first**
+(Ctrl+C), then `npm run db:seed`, then start it again: measured, a running app that has its
+file replaced underneath it fails the next write (`DrizzleQueryError` on an insert).
 
 ## First, the tests: `npm run verify`
 
@@ -65,7 +67,7 @@ JavaScript entry, because the `node_modules\.bin` shims are `.cmd` files on Wind
 program cannot start them directly; and the starter's `.gitattributes` keeps every text file
 LF on checkout, so the formatting check does not fail on Git for Windows' CRLF conversion.
 
-Measured on the base: exit 0, unit `Tests 21 passed`, e2e `Tests 5 passed`. **No test
+Measured on the base: exit 0, unit `Tests 21 passed`, e2e `Tests 6 passed`. **No test
 touches `data/app.db`:** under test the app ignores `.env` (the vitest configs set
 `NODE_ENV=test`), so the tests use an empty in-memory SQLite database, migrated from the same
 committed SQL. You can run `npm run verify` while the app is running.
@@ -96,17 +98,25 @@ file byte-identical. You need it again only when a new migration is added.
 ## Trying the API: the playground page
 
 With the app running, open **http://localhost:3000/playground**. The app serves a page that
-lists every request of module 1 (health, users, notes and sharing). Each **Send** button calls
-the real controller from your browser and shows the status, with a ✓ when it is the one the
-specs expect, the time and the response body. **Run all in order** sends them top to bottom
-and carries the ids along (the new user, the new note, a seeded friend); the variables are
-editable at the top.
+lists the requests of module 1: health, users, notes, sharing and deleting, 36 in all. **They
+mirror the lab 01 check case by case**: each one names the lab test it reproduces, and a test
+in the starter fails if a lab test has no request. Each **Send** button calls the real
+controller from your browser and shows the status, with a ✓ when it is the one the specs
+expect, the time and the response body. **Run all in order** sends them top to bottom and
+carries the ids along (the new user, the new note, a seeded friend, a spare user); the
+variables are editable at the top. A 404 from a route that does not exist (`Cannot GET …`)
+is always ✗, even where a 404 is expected: it means the module is not built, or the app was
+not restarted after building it.
 
-On the base only health is green: the users and notes routes answer 404, and the requests that
-need an id wait for it. Once module 1 is built, every row turns ✓. Measured in a headless
-Chromium against the module 1 + 2 build: 19 of 19 ✓, all four ids carried along, no script
-errors; against the base: health ✓, 4 × 404, 14 waiting for an id. The requests write to your
-`data/app.db`; `npm run db:seed` puts it back.
+**`npm run playground:check`** sends the same requests from a terminal to the running app and
+prints ✓/✗ per request (`npm run playground:check -- users` for one group). It is the one check
+that looks at the app you are running: `npm run verify` and the lab checks start their own
+copy, so they stay green when the running app is stale. Steps 02 and 03 end with it.
+
+On the base only health is green. Measured, against the module 1 build: 36 of 36 ✓ in headless
+Chromium and from `playground:check`, all five ids carried along, no script errors; against the
+base: health ✓, 7 × "no such route", 28 waiting for an id. The requests write to your
+`data/app.db`; stop the app, `npm run db:seed`, start it again.
 
 The page is served with the API docs (`SWAGGER_ENABLED`, on unless `NODE_ENV=production`). A
 Postman collection with the same requests also lives in the starter (`postman/`), for anyone
@@ -120,4 +130,4 @@ which is fine on your own machine and nowhere else). `.env` is git-ignored.
 
 ## Stop and clean up
 
-Stop the app with Ctrl+C. To get the original data back, `npm run db:seed`.
+Stop the app with Ctrl+C. To get the original data back, `npm run db:seed` (with the app stopped).

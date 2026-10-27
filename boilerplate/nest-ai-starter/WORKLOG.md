@@ -2,6 +2,18 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T16:57:09+08:00 - Playground = lab 01, case by case; playground:check for the running app
+
+- **Why:** a learner's playground showed 404 for the users routes after step 02 while verify
+  was green: verify and the labs boot their own app, so a stale running app goes unnoticed.
+- **What:** `src/playground/requests.ts` now has 36 requests, each with `check` naming its
+  lab 01 test; the page shows it; `test/playground.e2e-spec.ts` holds the two in step.
+  `scripts/playground-check.mjs` (`npm run playground:check`) sends them to the running app.
+  Nest's "Cannot GET" 404 is always ✗. Steps 01–03 and `CLAUDE.md` use it; reseed with the
+  app stopped.
+- **Measured:** verify exit 0, unit 21 / e2e 6; module 1 build 36/36 ✓ (browser and CLI);
+  base 1 ✓ / 7 ✗ / 28 not sent.
+
 ## 2026-10-27T16:22:12+08:00 - claude-desktop-config.mjs --install
 
 - **What:** `--install` writes the `notes-db` entry into Claude Desktop's config: backs the file

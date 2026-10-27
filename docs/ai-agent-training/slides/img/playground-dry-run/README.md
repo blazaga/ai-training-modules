@@ -1,41 +1,35 @@
-# Dry runs: "Check it: module 1", with screenshots
+# The playground, measured: what to expect after Run all in order
 
-An agent followed the slide in order, on the base plus `checkpoints/module-1-users-notes.patch`,
-Node 24.22.0, npm, with **no `.env`** (a learner who skipped `cp .env.example .env`).
-Screenshots: Playwright 1.57.0 (Chromium), 1280x720 viewport. The files here are from run 2.
+Playwright 1.57.0 (Chromium), 1280x720 viewport, "Run all in order" clicked, every card waited
+for. The page's 36 requests mirror the lab 01 check case by case (each card names its lab test).
 
-## Run 2 (2026-10-27, after the fixes)
+| build                                                                          | cards | result                                                           | variables       | page errors |
+| ------------------------------------------------------------------------------ | ----- | ---------------------------------------------------------------- | --------------- | ----------- |
+| module 1 (base + the module 1 checkpoint), freshly seeded, app freshly started | 36    | **36 ✓**                                                         | all five filled | none        |
+| the base (no users or notes routes yet)                                        | 36    | health ✓, 7 ✗ "no such route", 28 not sent (they wait for an id) | none            | none        |
 
-| step                                      | result                                                                                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm ci`                                  | exit 0 (warns that the install scripts of esbuild and `@scarf/scarf` are not run; nothing needs them)                                       |
-| `npm run verify`                          | exit 0 · unit `Tests 44 passed (44)` · e2e `Tests 49 passed (49)`                                                                           |
-| `npm run lab 01`                          | exit 0 · `Tests 15 passed (15)`                                                                                                             |
-| `npm run build`                           | exit 0                                                                                                                                      |
-| `npm start`                               | port 3000 was taken on the host: exit 1, last line `port 3000 is already in use: set another one in .env (PORT=3100) and use it in the URL` |
-| `.env` with only `PORT=3100`, `npm start` | `driver: sqlite (file)` · `listening on port 3100`                                                                                          |
-| `/playground` → Run all in order          | 19 of 19 cards ✓ (counted on the full-page shot), all four variables filled, no page errors; List users shows the seeded users, `total` 25  |
-| `npm run db:seed`                         | `data/app.db` back byte for byte (md5 matches)                                                                                              |
+`npm run playground:check` against the same two apps: module 1 `36 ✓, 0 ✗, 0 not sent` (exit 0);
+the base `1 ✓, 7 ✗, 28 not sent` (exit 1).
 
-| file                         | size      | what                                                                                                   |
-| ---------------------------- | --------- | ------------------------------------------------------------------------------------------------------ |
-| `01-playground-before.png`   | 1280x720  | the page as loaded                                                                                     |
-| `02-after-run-all-top.png`   | 1280x720  | after Run all: variables filled, Health and List users ✓ (on the slide as `../playground-run-all.png`) |
-| `03-after-run-all-notes.png` | 1280x720  | the notes section after Run all                                                                        |
-| `04-after-run-all-full.png`  | 1280x6139 | the whole page after Run all                                                                           |
+| file                             | size      | what                                                                                                                                         |
+| -------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `module1-after-run-all-top.png`  | 1280x720  | module 1 after Run all: variables filled, Health ✓, the first Users card with its lab 01 label (on the slide as `../playground-run-all.png`) |
+| `module1-after-run-all-full.png` | 1280x7753 | the whole page after Run all, module 1                                                                                                       |
+| `base-after-run-all-top.png`     | 1280x720  | the base after Run all: only Health is green                                                                                                 |
 
-With DevTools open the two 409 and three 422 requests show as red "Failed to load resource"
-lines: those are the rule checks, and their cards are ✓.
+## Found while measuring, and fixed
 
-## Run 1 (before the fixes) and what changed
+- **A 404 counted as a pass when the route did not exist.** "Unknown id → 404" showed ✓ on the
+  base, where `/api/v1/users` is not built at all: Nest's missing-route answer is also a 404.
+  The page and `playground:check` now treat Nest's `Cannot GET …` 404 as ✗ ("no such route"),
+  whatever was expected. Before: the base showed 2 ✓; after: 1 (health).
+- **Reseeding under a running app breaks its next write.** `npm run db:seed` replaced the file
+  while the app had it open; the next `POST /users` failed (`DrizzleQueryError` in the app log)
+  and the browser run went 7 ✓ / 2 ✗ / 27 not sent. Stop the app, reseed, start it: 36 of 36.
+  The course now says so wherever it mentions `db:seed`.
 
-- **No `.env` → an empty database.** The app ran on an in-memory database, so the playground
-  could not show the seeded rows. Fixed in the starter: in development an unset
-  `DATABASE_URL` means `data/app.db` (`src/config/env.schema.ts`); tests stay in memory.
-- **A taken port looked like a start.** `npm start` printed "successfully started" and then a
-  stack trace. Fixed in `src/main.ts`: one line naming the port and the fix, exit 1. Nest still
-  prints "successfully started" first, so the slide says to read the last line.
-- **"Mark done" missing** from the slide's playground list, so the 422 step read as following
-  "Create note". Listed now.
-- After run 2 the slide also says to use your own port in the URL, and that the red DevTools
-  lines are expected.
+## Earlier runs
+
+Two earlier dry runs (19 requests, before the page mirrored lab 01) found that a missing `.env`
+gave an empty database, that a taken port looked like a start, and that "Mark done" was missing
+from the slide; all three are fixed in the starter and the slides.

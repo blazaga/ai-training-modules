@@ -54,9 +54,9 @@ checkpoint changes `data/app.db`.
 
 | checkpoint | `verify`: unit | `verify`: e2e | lab checks green | lint warnings |
 | ---------- | -------------- | ------------- | ---------------- | ------------- |
-| base       | 21             | 5             | none             | 0             |
-| module 1   | 44             | 49            | 01               | 4             |
-| module 2   | 47             | 58            | 01, 02           | 4             |
+| base       | 21             | 6             | none             | 0             |
+| module 1   | 44             | 50            | 01               | 4             |
+| module 2   | 47             | 59            | 01, 02           | 4             |
 
 The four lint warnings (`no-misused-spread` in `src/notes/notes.service.spec.ts`) are in the
 agent's module 1 tests; `verify` does not fail on warnings. Fixing them is a good first

@@ -7,5 +7,7 @@
 
 Set this project up on this machine: install it, and create your local `.env` by copying
 `.env.example` (on Windows PowerShell: `Copy-Item .env.example .env`). Then prove it works:
-counts, not "it works". Then show me what is in the database. Then stop and wait for my next
-instruction.
+counts, not "it works" (lab 01 is red until module 1 is built: that is expected). Once
+`npm run verify` passes, start the app, leave it running, and give me the playground link
+(http://localhost:3000/playground, or my port) so I can review it. Then show me what is in the
+database. Then stop and wait for my next instruction.

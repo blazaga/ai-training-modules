@@ -1,11 +1,11 @@
 diff --git a/package.json b/package.json
-index 2721fd7..12c2938 100644
+index 3eb338c..035ad76 100644
 --- a/package.json
 +++ b/package.json
-@@ -29,6 +29,7 @@
-     "db:migrate": "node --env-file-if-exists=.env dist/database/migrate.js",
+@@ -30,6 +30,7 @@
      "db:seed": "node scripts/seed.mjs",
      "check:migrations": "node scripts/check-migrations.mjs",
+     "playground:check": "node scripts/playground-check.mjs",
 +    "mcp": "node --env-file-if-exists=.env dist/mcp-server.js",
      "mcp:inspect:ui": "npx -y @modelcontextprotocol/inspector@2.12.0"
    },

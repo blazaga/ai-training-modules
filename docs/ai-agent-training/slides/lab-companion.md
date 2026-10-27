@@ -68,7 +68,7 @@ A module groups one feature: its controller, its service and its repository. The
 
 - **Windows, PowerShell, Node 24**: Every command runs in boilerplate\nest-ai-starter, one per line. npm ships with Node; scripts run as `npm run <name>`.
 - **Counts, not exit codes**: Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.
-- **The data is yours to break**: data/app.db ships seeded. Change it freely while you try things; `npm run db:seed` puts it back, byte for byte.
+- **The data is yours to break**: data/app.db ships seeded. Change it freely while you try things; stop the app and `npm run db:seed` puts it back, byte for byte.
 
 <!--
 The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does), so every command is on its own line. Nobody needs curl: the playground page sends the requests. The base starts its tools with node and their JS entry, because the node_modules\.bin shims are .cmd files on Windows; measured on Linux, not yet on a Windows machine.
@@ -79,8 +79,8 @@ The audience is on Windows. Windows PowerShell 5.1 has no && (PowerShell 7 does)
 ## Try it in the browser: /playground
 
 - **One page, every request**: With the app running, open http://localhost:3000/playground. It lists every module 1 request: health, users, notes and sharing.
-- **Click to send**: Each Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.
-- **It writes to your data**: Requests create, change and delete rows in data/app.db. `npm run db:seed` restores the seeded data.
+- **Click to send**: Each request mirrors a lab 01 check; Send calls the real controller and shows the status, a ✓ when it is the one the specs expect, and the body. Run all in order chains the ids.
+- **It writes to your data**: Requests create, change and delete rows in data/app.db. To restore it: stop the app, `npm run db:seed`, start it again.
 
 <!--
 Before module 1 is built, health is the only green row: the rest answer 404 or wait for an id. Module 2 has no playground: its client is Claude Desktop, over stdio. The Postman collection stays in the starter (postman/) for anyone who prefers it; the labs do not use it.
@@ -145,7 +145,11 @@ It says (paste it, or say it in your own words, if you prefer):
 Set this project up on this machine: install it, and
 create your local .env by copying .env.example (on Windows
 PowerShell: Copy-Item .env.example .env). Then prove it
-works: counts, not "it works". Then show me what is in the
+works: counts, not "it works" (lab 01 is red until module
+1 is built: that is expected). Once npm run verify passes,
+start the app, leave it running, and give me the
+playground link (http://localhost:3000/playground, or my
+port) so I can review it. Then show me what is in the
 database. Then stop and wait for my next instruction.
 ```
 
@@ -153,7 +157,8 @@ database. Then stop and wait for my next instruction.
 
 - reads CLAUDE.md before running anything
 - copies .env.example to .env (git ignores it)
-- counts: 21 unit, 5 e2e, a red lab 01
+- counts: 21 unit, 6 e2e, a red lab 01
+- leaves the app running: the /playground link
 - data: 25 users, 200 notes, 120 shares
 
 <!--
@@ -176,8 +181,11 @@ It says (paste it, or say it in your own words, if you prefer):
 
 ```text
 Build the users resource on the provided users table:
-specs/users.md. Done when npm run verify is green. Then
-stop and wait for my next instruction.
+specs/users.md. Done when npm run verify is green and,
+with the app rebuilt and restarted, npm run
+playground:check -- users passes against it (the same
+requests as the playground page). Then stop and wait for
+my next instruction.
 ```
 
 **Watch its approach**
@@ -207,8 +215,10 @@ It says (paste it, or say it in your own words, if you prefer):
 
 ```text
 Now the notes resource, with sharing: specs/notes.md. Done
-when npm run lab 01 and npm run verify are green. Then
-stop and wait for my next instruction.
+when npm run lab 01 and npm run verify are green and, with
+the app rebuilt and restarted, npm run playground:check
+passes against it (every request of the playground page).
+Then stop and wait for my next instruction.
 ```
 
 **Watch its approach**
@@ -230,10 +240,9 @@ Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first 
 # 1. the tests first
 npm run verify       # read both Tests lines
 npm run lab 01       # the lab check: all green?
-# 2. then the app on the seeded data
-#    (port taken? the last line says so: PORT= in .env)
-npm run build
-npm start
+# 2. the app is still running from step 01:
+#    your agent restarts it after each build
+#    (not running? npm run build, then npm start)
 # 3. open localhost:3000/playground (or your PORT)
 #    and click Run all in order
 ```
@@ -241,15 +250,15 @@ npm start
 **In the playground** (`localhost:3000/playground`)
 
 1. Health
-2. List users (seeded)
-3. Create user
+2. Create user
+3. List users (seeded)
 4. Create note
 5. Mark done
 6. Edit a done note → 422 (R2)
 7. Share with a friend
 
 <!--
-Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then start the app and open the playground: it sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.
+Tests first: verify and the lab check run on an empty in-memory database, so a green result there is the proof the code works. Only then open the playground: the app has been running since step 01, and the agent rebuilds and restarts it after each step that adds routes (the starter CLAUDE.md says so). If it is not running, npm run build then npm start. The playground sends every module 1 request to the running app with one click and shows each answer, proving the resources also serve the seeded rows. Nobody needs curl. The playground writes to data/app.db; npm run db:seed puts the data back.
 -->
 
 ---
@@ -258,14 +267,14 @@ Tests first: verify and the lab check run on an empty in-memory database, so a g
 
 ![The playground after Run all in order: the four variables filled, Health and List users answered 200 with a check mark.](img/playground-run-all.png)
 
-- 19 of 19 cards ✓ in our dry run
+- 36 of 36 cards ✓ in our dry run
+- Each card names its lab 01 check
 - Variables filled: the ids carry over
 - 409 and 422 cards ✓ too: the rule said no
-- Red in DevTools for those: expected
-- List users shows the 25 seeded users
+- Not built or not restarted: ✗ "no such route"
 
 <!--
-Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint and no .env, verify 44 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green, no page errors, List users showing the 25 seeded users. With DevTools open the two 409 and three 422 requests show in red as failed loads; that is expected, they are the rule checks. If port 3000 is taken, npm start prints "successfully started" and THEN fails: the last line says the port is in use. Set PORT in .env and use that port in the URL. A missing .env does not matter: in development the app uses data/app.db by default. npm run db:seed puts the data back afterwards.
+Captured in Chromium at 1280x720 against the module 1 build after Run all in order: 36 of 36 cards green, all five ids carried, no page errors. Every card names the lab 01 test it reproduces, and npm run playground:check sends the same requests from a terminal against the running app (steps 02 and 03 end with it). A 404 from a route that does not exist (Cannot GET) is always red: the module is not built, or the app was not restarted after building it. With DevTools open the rule checks (409, 422) show as red failed loads: expected. To get the data back: stop the app, npm run db:seed, start it again (reseeding under a running app breaks its next write).
 -->
 
 ---
@@ -275,9 +284,9 @@ Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus 
 _Output: captured_
 
 ```bash
-# npm run verify (base: 21 unit, 5 e2e)
+# npm run verify (base: 21 unit, 6 e2e)
 Tests  44 passed (44)
-Tests  49 passed (49)
+Tests  50 passed (50)
 # npm run lab 01
 Tests  15 passed (15)
 # /playground on the seeded file
@@ -403,7 +412,7 @@ _Output: captured_
 
 ```bash
 # npm run verify; npm run lab
-Tests  47 passed (47) · 58 passed (58)
+Tests  47 passed (47) · 59 passed (59)
 Tests  31 passed (31)
 # started as Claude Desktop does it
 create-user · create-note · share-note

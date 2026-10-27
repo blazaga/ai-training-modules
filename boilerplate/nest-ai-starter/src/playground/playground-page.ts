@@ -38,6 +38,7 @@ export function renderPlayground(groups: PlaygroundGroup[]): string {
   .path { font: 13px ui-monospace, Consolas, monospace; color: var(--muted); word-break: break-all; }
   .expect { margin-left: auto; font-size: 12px; color: var(--muted); }
   .note { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+  .check { font: 11px ui-monospace, Consolas, monospace; color: #0e7490; margin: 4px 0 0; }
   textarea { width: 100%; font: 12px ui-monospace, Consolas, monospace; margin-top: 8px; border: 1px solid var(--line); border-radius: 4px; padding: 6px; }
   .result { margin-top: 8px; display: none; }
   .status { font-weight: 700; }
@@ -50,7 +51,7 @@ export function renderPlayground(groups: PlaygroundGroup[]): string {
   <h1>nest-ai-starter · playground</h1>
   <button id="run-all">Run all in order</button>
   <button class="secondary" id="clear">Clear results</button>
-  <p>Each button sends a real request to this app and shows what the controller answered. A ✓ means the status is the one the specs expect. On the base, the users and notes routes answer 404 until module 1 is built.</p>
+  <p>Each button sends a real request to this app and shows what the controller answered. A ✓ means the status is the one the specs expect. Every request names the lab 01 check it reproduces; <code>npm run playground:check</code> sends the same requests from a terminal. On the base, the users and notes routes answer 404 until module 1 is built.</p>
 </header>
 <main>
   <div class="vars" id="vars"></div>
@@ -58,14 +59,18 @@ export function renderPlayground(groups: PlaygroundGroup[]): string {
 </main>
 <script>
 const GROUPS = ${data};
-const vars = { userId: '', userEmail: '', friendId: '', noteId: '' };
+const vars = { userId: '', userEmail: '', friendId: '', noteId: '', spareId: '' };
 const $ = (tag, cls, text) => { const el = document.createElement(tag); if (cls) el.className = cls; if (text !== undefined) el.textContent = text; return el; };
 
+// {{name}} is a variable, {{upper:name}} the same in capitals, {{now}} a fresh timestamp.
 function fill(text) {
-  return text.replace(/{{(\\w+)}}/g, (m, k) => (k === 'now' ? String(Date.now()) : (vars[k] ?? m)));
+  return text.replace(/{{(upper:)?(\\w+)}}/g, (m, up, k) => {
+    const v = k === 'now' ? String(Date.now()) : vars[k];
+    return v === undefined ? m : up ? v.toUpperCase() : v;
+  });
 }
 function missing(text) {
-  return [...text.matchAll(/{{(\\w+)}}/g)].map((m) => m[1]).filter((k) => k !== 'now' && !vars[k]);
+  return [...text.matchAll(/{{(?:upper:)?(\\w+)}}/g)].map((m) => m[1]).filter((k) => k !== 'now' && !vars[k]);
 }
 function pick(obj, path) {
   return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -108,11 +113,14 @@ async function send(req, card) {
     return false;
   }
   const ms = Math.round(performance.now() - started);
-  const ok = res.status === req.expect;
-  result.append($('span', 'status ' + (ok ? 'ok' : 'bad'), (ok ? '✓ ' : '✗ ') + res.status + ' ' + res.statusText), $('span', 'path', '  ' + req.method + ' ' + url + ' · ' + ms + ' ms'));
   let body = text;
   let json;
   try { json = JSON.parse(text); body = JSON.stringify(json, null, 2); } catch { /* not JSON */ }
+  // Nest answers a route that does not exist with 404 "Cannot GET /…". That is never a pass,
+  // even where the request expects a 404 (a missing route is not "this id does not exist").
+  const noRoute = res.status === 404 && /^Cannot [A-Z]+ \\//.test(json?.message ?? '');
+  const ok = res.status === req.expect && !noRoute;
+  result.append($('span', 'status ' + (ok ? 'ok' : 'bad'), (ok ? '✓ ' : '✗ ') + res.status + ' ' + res.statusText + (noRoute ? ' (no such route: not built yet?)' : '')), $('span', 'path', '  ' + req.method + ' ' + url + ' · ' + ms + ' ms'));
   if (body) result.append($('pre', '', body));
   if (ok && json && req.save) {
     for (const [k, path] of Object.entries(req.save)) {
@@ -137,6 +145,7 @@ function render() {
       row.append($('span', 'method ' + req.method, req.method), $('span', 'name', req.name), $('span', 'path', req.path), $('span', 'expect', 'expect ' + req.expect), btn);
       card.append(row);
       if (req.note) card.append($('p', 'note', req.note));
+      for (const c of [].concat(req.check ?? [])) card.append($('p', 'check', 'lab 01 · ' + c));
       if (req.body) {
         const ta = $('textarea');
         ta.rows = Math.min(6, JSON.stringify(req.body, null, 2).split('\\n').length);
