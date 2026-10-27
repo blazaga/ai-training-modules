@@ -102,13 +102,14 @@ function WRAP(text, n = 58) {
 // base + module 1 checkpoint, Run all in order in Chromium at 1280x720.
 const SHOT_ALT = 'The playground after Run all in order: the four variables filled, Health and List users answered 200 with a check mark.';
 const SHOT_POINTS = [
-  'Every card has a ✓: 19 of 19 in our dry run',
-  'Variables filled: each id is carried to the next request',
-  'The 409 and 422 cards get a ✓ too: the rule refused, as the spec says',
-  'List users shows the seeded rows from data/app.db',
+  '19 of 19 cards ✓ in our dry run',
+  'Variables filled: the ids carry over',
+  '409 and 422 cards ✓ too: the rule said no',
+  'Red in DevTools for those: expected',
+  'List users shows the 25 seeded users',
 ];
 const SHOT_NOTES =
-  'Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint, verify 43 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green in about 3 seconds, no page errors. With DevTools open the 409 and 422 requests show in red as failed loads; that is expected, they are the rule checks. If List users comes back empty, the app is on the in-memory database: .env is missing (copy .env.example, chapter 00). npm run db:seed puts the data back afterwards.';
+  'Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint and no .env, verify 44 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green, no page errors, List users showing the 25 seeded users. With DevTools open the two 409 and three 422 requests show in red as failed loads; that is expected, they are the rule checks. If port 3000 is taken, npm start prints "successfully started" and THEN fails: the last line says the port is in use. Set PORT in .env and use that port in the URL. A missing .env does not matter: in development the app uses data/app.db by default. npm run db:seed puts the data back afterwards.';
 // Module 2 slide content, from the measured dry run (see the WORKLOG).
 const MODULE2_EXPECT = [
   'reads the installed SDK, not its memory',
@@ -244,10 +245,10 @@ const SLIDES = [
       'npm run verify       # read both Tests lines',
       'npm run lab 01       # the lab check: all green?',
       '# 2. then the app on the seeded data',
-      '#    (.env from setup; port busy? PORT=)',
+      '#    (port taken? the last line says so: PORT= in .env)',
       'npm run build',
       'npm start',
-      '# 3. open localhost:3000/playground',
+      '# 3. open localhost:3000/playground (or your PORT)',
       '#    and click Run all in order',
     ],
     playground: playground('Health', 'List users (seeded)', 'Create user', 'Create note', 'Mark done', 'Edit a done note → 422 (R2)', 'Share with a friend'),
@@ -603,7 +604,7 @@ async function buildPptx(file, track) {
       slide.addImage({ path: join(HERE, s.image), x: 0.5, y: 1.2, w, h, altText: s.alt });
       slide.addText('Look for', { x: 0.5 + w + 0.3, y: 1.2, w: 9.5 - (0.5 + w + 0.3), h: 0.4, fontSize: 16, bold: true, color: COL.text, margin: 0, isTextBox: true });
       s.points.forEach((pt, i) => {
-        const y = 1.7 + i * 0.85;
+        const y = 1.7 + i * Math.min(0.85, 3.3 / s.points.length);
         badge(slide, 0.5 + w + 0.3, y + 0.02, 0.3, COL.mint, icons.check);
         slide.addText(pt, { x: 0.5 + w + 0.7, y: y - 0.05, w: 9.5 - (0.5 + w + 0.7), h: 0.75, fontSize: 12, color: COL.slate, valign: 'top', margin: 0, isTextBox: true });
       });

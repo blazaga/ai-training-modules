@@ -8,6 +8,9 @@ import { z } from 'zod';
  * To add a variable: add it here, add its NAME to `.env.example`, read it with
  * `ConfigService.get('NAME', { infer: true })`. Never read `process.env` directly.
  */
+/** Where the seeded database lives: the default in development. */
+export const DEV_DATABASE_URL = 'file:./data/app.db';
+
 export const envSchema = z
   .object({
     NODE_ENV: z
@@ -16,7 +19,8 @@ export const envSchema = z
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     /** Serve OpenAPI docs at /api/docs. Unset: on, except in production. */
     SWAGGER_ENABLED: z.enum(['true', 'false']).optional(),
-    // A libSQL URL for an SQLite file, e.g. file:./data/app.db. Unset → in memory (dev/test only).
+    // A libSQL URL for an SQLite file, e.g. file:./data/app.db. Unset: the seeded file in
+    // development, an empty in-memory database in test, and an error in production.
     DATABASE_URL: z
       .string()
       .regex(/^file:./, 'must be a file: URL, e.g. file:./data/app.db')
@@ -28,6 +32,11 @@ export const envSchema = z
   })
   .transform(({ SWAGGER_ENABLED, ...env }) => ({
     ...env,
+    // A learner who skipped `cp .env.example .env` still gets the seeded data, instead of an
+    // empty in-memory database that answers every list with no rows (found in a dry run).
+    ...(env.DATABASE_URL === undefined && env.NODE_ENV === 'development'
+      ? { DATABASE_URL: DEV_DATABASE_URL }
+      : {}),
     SWAGGER_ENABLED:
       SWAGGER_ENABLED === undefined
         ? env.NODE_ENV !== 'production'

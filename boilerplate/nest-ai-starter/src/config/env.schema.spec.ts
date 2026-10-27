@@ -1,12 +1,17 @@
 import { validateEnv } from './env.schema.js';
 
 describe('validateEnv', () => {
-  it('applies defaults', () => {
+  it('applies defaults: development uses the seeded file', () => {
     expect(validateEnv({})).toEqual({
       NODE_ENV: 'development',
       PORT: 3000,
       SWAGGER_ENABLED: true,
+      DATABASE_URL: 'file:./data/app.db',
     });
+  });
+
+  it('test keeps an unset DATABASE_URL unset (an in-memory database)', () => {
+    expect(validateEnv({ NODE_ENV: 'test' }).DATABASE_URL).toBeUndefined();
   });
 
   /** The minimum a production start needs. */

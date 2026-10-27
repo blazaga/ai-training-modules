@@ -2,6 +2,21 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T14:46:55+08:00 - Dry run 2 of the module 1 check: the fixes hold
+
+- **Request (operator):** fix the issues the dry run found and run it again.
+- **Fixed in the starter** (see its WORKLOG): no `.env` → `data/app.db` in development; a
+  taken port → one line naming the fix, exit 1.
+- **Run 2** (agent, base + module 1 checkpoint, no `.env`): verify unit 44 / e2e 49, lab 01
+  15/15; port 3000 taken on the host → exit 1 with the new line; `.env` with only
+  `PORT=3100` → `driver: sqlite (file)`; Run all 19/19 ✓ (counted on the full-page shot:
+  the agent's own selector said 20 and its readout was truncated, so its figure was not used),
+  no page errors, List users `total` 25; seed restored byte for byte.
+- **Slide changes from run 2:** "the last line says so" (Nest prints "successfully started"
+  before the error), "(or your PORT)" in the URL step, and red DevTools lines called
+  expected. Run 2's screenshots replace run 1's; the dry-run README records both runs.
+- Deck: 23 slides, validator passed; slides 13 and 14 rendered and checked.
+
 ## 2026-10-27T14:13:10+08:00 - Dry run of the module 1 check; a playground screenshot slide
 
 - **Request (operator):** dry-run with a thread, screenshot the playground part (Playwright,

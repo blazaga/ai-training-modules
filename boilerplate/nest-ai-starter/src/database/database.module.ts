@@ -13,9 +13,10 @@ import { DB } from './database.types.js';
 const CONNECTION = Symbol('CONNECTION');
 
 /**
- * Provides DB (drizzle) app-wide. DATABASE_URL set → that SQLite file. Unset →
- * an in-memory SQLite database, migrated on boot (env validation forbids that in
- * production). Logs WHICH driver, never the URL.
+ * Provides DB (drizzle) app-wide. DATABASE_URL set → that SQLite file. Unset → in
+ * development the seeded data/app.db (env.schema.ts defaults it), in test an in-memory
+ * SQLite database migrated on boot; production refuses to start. Logs WHICH driver, never
+ * the URL.
  */
 @Global()
 @Module({

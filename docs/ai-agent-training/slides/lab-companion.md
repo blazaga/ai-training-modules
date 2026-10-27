@@ -209,10 +209,10 @@ Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first 
 npm run verify       # read both Tests lines
 npm run lab 01       # the lab check: all green?
 # 2. then the app on the seeded data
-#    (.env from setup; port busy? PORT=)
+#    (port taken? the last line says so: PORT= in .env)
 npm run build
 npm start
-# 3. open localhost:3000/playground
+# 3. open localhost:3000/playground (or your PORT)
 #    and click Run all in order
 ```
 
@@ -236,13 +236,14 @@ Tests first: verify and the lab check run on an empty in-memory database, so a g
 
 ![The playground after Run all in order: the four variables filled, Health and List users answered 200 with a check mark.](img/playground-run-all.png)
 
-- Every card has a ✓: 19 of 19 in our dry run
-- Variables filled: each id is carried to the next request
-- The 409 and 422 cards get a ✓ too: the rule refused, as the spec says
-- List users shows the seeded rows from data/app.db
+- 19 of 19 cards ✓ in our dry run
+- Variables filled: the ids carry over
+- 409 and 422 cards ✓ too: the rule said no
+- Red in DevTools for those: expected
+- List users shows the 25 seeded users
 
 <!--
-Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint, verify 43 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green in about 3 seconds, no page errors. With DevTools open the 409 and 422 requests show in red as failed loads; that is expected, they are the rule checks. If List users comes back empty, the app is on the in-memory database: .env is missing (copy .env.example, chapter 00). npm run db:seed puts the data back afterwards.
+Captured in a dry run of the previous slide, in Chromium at 1280x720: base plus the module 1 checkpoint and no .env, verify 44 unit / 49 e2e, lab 01 15/15, then Run all in order: 19 of 19 cards green, no page errors, List users showing the 25 seeded users. With DevTools open the two 409 and three 422 requests show in red as failed loads; that is expected, they are the rule checks. If port 3000 is taken, npm start prints "successfully started" and THEN fails: the last line says the port is in use. Set PORT in .env and use that port in the URL. A missing .env does not matter: in development the app uses data/app.db by default. npm run db:seed puts the data back afterwards.
 -->
 
 ---

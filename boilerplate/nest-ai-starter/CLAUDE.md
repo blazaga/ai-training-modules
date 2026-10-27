@@ -17,8 +17,10 @@ npm run verify                         # the gate
 The database is SQLite: the file `data/app.db`, **committed with seeded data** (users,
 notes and shares generated with faker; `scripts/seed.mjs`). `npm run db:seed` rebuilds it from
 scratch, reproducibly. The app never migrates a file database itself; `npm run db:migrate` does,
-and the seeded file is already migrated. Without `DATABASE_URL` the app and the tests use an
-empty in-memory database, migrated on connect, so tests never touch `data/app.db`.
+and the seeded file is already migrated. Without `DATABASE_URL` the app in development uses
+`data/app.db` anyway (the default in `env.schema.ts`), and the tests (`NODE_ENV=test`, which
+never read `.env`) use an empty in-memory database, migrated on connect, so tests never touch
+`data/app.db`. If the port is taken, the app exits 1 and says so: set `PORT` in `.env`.
 
 `package-lock.json` pins every dependency. `npm install` follows it; to
 change dependencies on purpose, `npm install <pkg>@<version>` and commit the lockfile.
@@ -51,7 +53,7 @@ src/
 ├── app.module.ts               ConfigModule (validated), global ZodValidationPipe + DomainExceptionFilter
 ├── bootstrap/configure-app.ts  prefix /api, URI versioning v1, swagger; shared by main.ts AND e2e
 ├── config/env.schema.ts        the ONLY place env vars are declared and validated
-├── database/                   DatabaseModule (DB token: the SQLite file in DATABASE_URL, else in memory), schema.ts, migrate.ts
+├── database/                   DatabaseModule (DB token: the SQLite file in DATABASE_URL; in memory under test), schema.ts, migrate.ts
 ├── users/users.table.ts        PROVIDED table (seeded); build the users resource on it
 ├── notes/notes.table.ts        PROVIDED tables (seeded): notes, and note-shares.table.ts (many users per note)
 ├── common/

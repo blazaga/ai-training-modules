@@ -2,6 +2,20 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T14:37:06+08:00 - No .env falls back to the seeded file; a taken port says so
+
+- **Found by the dry run of "Check it: module 1":** (1) without `.env` the app ran on an empty
+  in-memory database, so the playground showed none of the seeded rows; (2) on a taken port
+  `npm start` printed "successfully started" and then a stack trace, which reads like a
+  running app.
+- **Fix:** `env.schema.ts` defaults an unset `DATABASE_URL` to `file:./data/app.db` when
+  `NODE_ENV=development` (test keeps in-memory; production still requires it), with a unit
+  test for each side. `main.ts` catches `EADDRINUSE`, logs `port N is already in use: set
+another one in .env (PORT=3100) and use it in the URL`, and exits 1.
+- **Measured:** no `.env`, `node dist/main.js` → `driver: sqlite (file)`; a second start on the
+  same port → that line, exit 1. `npm run verify` exit 0, unit 21 (was 20), e2e 5; both
+  checkpoint patches still apply; `data/app.db` unchanged.
+
 ## 2026-10-27T13:59:22+08:00 - README quick start: tests first, playground instead of curl
 
 - **Request (operator):** no curl on Windows; tests before the playground.
