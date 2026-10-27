@@ -32,44 +32,34 @@ The AI does the building and the planning; the learner directs and checks. The i
 
 ---
 
-## NestJS: the path of one request
+## NestJS: request flow
 
 ```text
-Client → Middleware → Guards · Pipes → Controller → Service → Repository → SQLite
+[Request] → [Middleware] → [Controller] → [Service] → [Database]
 ```
 
-- **Client**: Postman, curl, a browser
-- **Middleware**: runs first, on the raw request: logging, CORS, headers
-- **Guards · Pipes**: may it run? then parse the body: the global zod pipe, 400 if invalid
-- **Controller**: the route: parse, delegate, return. No rules here
-- **Service**: the rules (R1–R4); throws a DomainError when one is broken
-- **Repository**: SQL through drizzle, behind a token
-- **SQLite**: data/app.db; unique keys and foreign keys enforce too
-
-_Response ← a thrown DomainError is turned into 404 / 409 / 422 by DomainExceptionFilter, on the way back_
+**Request**: from the client · **Middleware**: runs first · **Controller**: the route · **Service**: the rules · **Database**: SQLite
 
 <!--
-Middleware runs before Nest even picks the route, so it sees every request; guards and pipes run per route, then the controller. The controller never decides a business rule: it calls the service. The arrow back is the same for errors: services throw, the exception filter maps the error to one HTTP shape. In module 1 the learner's agent builds the controller, service and repository; the middleware, the global pipe and the filter already exist.
+Every request passes middleware first, then reaches a controller. The controller does no business logic: it calls a service. The service holds the rules and reads or writes the database (through a repository). The answer travels back the same way.
 -->
 
 ---
 
-## NestJS: how a module wires them
+## NestJS: who calls whom
 
 ```text
-AppModule ──imports──▶ NotesModule
-                         ├─ NotesController   (routes: parse, delegate, return)
-                         │     │ injects
-                         ├─ NotesService      (the rules; throws DomainError)
-                         │     │ injects the NOTES_REPOSITORY token
-                         └─ DrizzleNotesRepository ──▶ DatabaseModule (the DB token)
-Middleware: consumer.apply(fn).forRoutes(…), runs before the controller
+               ┌──────── Module ────────┐
+[Middleware] ──▶ │   [Controller]         │
+               │        ▼               │
+               │    [Service]           │
+               │        ▼               │
+               │   [Repository] ────────┼──▶ [Database]
+               └────────────────────────┘
 ```
 
-_Inject a token, not a class: the module decides the storage._
-
 <!--
-A module is the unit nest g resource creates. It declares the controller and the providers; Nest creates each once and hands them to whoever asks in a constructor (dependency injection). The controller asks for the service, the service asks for the repository TOKEN, not a class, so the storage can be swapped in the module alone. Middleware is attached in a module too, with configure(consumer). AppModule imports every feature module.
+A module groups one feature: its controller, its service and its repository. The controller calls the service; the service calls the repository; Nest connects them (dependency injection). Middleware sits outside the feature and runs before the controller. In module 1 your agent builds one module for users and one for notes.
 -->
 
 ---

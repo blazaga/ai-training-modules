@@ -150,24 +150,21 @@ const SLIDES = [
       'The AI does the building and the planning; the learner directs and checks. The instruction says what and when it is done, never how: the repo (CLAUDE.md, its skills, the specs) tells the agent how, and watching it find that out is part of the lab. Measured: fresh agents given only these instructions got every module\'s lab green. Hold the agent to evidence: counts, a failing run, the generated SQL.',
   },
   {
-    type: 'lifecycle',
-    title: 'NestJS: the path of one request',
-    steps: [
-      ['Client', 'Postman, curl, a browser'],
-      ['Middleware', 'runs first, on the raw request: logging, CORS, headers'],
-      ['Guards · Pipes', 'may it run? then parse the body: the global zod pipe, 400 if invalid'],
-      ['Controller', 'the route: parse, delegate, return. No rules here'],
-      ['Service', 'the rules (R1–R4); throws a DomainError when one is broken'],
-      ['Repository', 'SQL through drizzle, behind a token'],
-      ['SQLite', 'data/app.db; unique keys and foreign keys enforce too'],
+    type: 'blockflow',
+    title: 'NestJS: request flow',
+    blocks: [
+      ['Request', 'from the client'],
+      ['Middleware', 'runs first'],
+      ['Controller', 'the route'],
+      ['Service', 'the rules'],
+      ['Database', 'SQLite'],
     ],
-    back: 'Response ←  a thrown DomainError is turned into 404 / 409 / 422 by DomainExceptionFilter, on the way back',
-    notes: 'Middleware runs before Nest even picks the route, so it sees every request; guards and pipes run per route, then the controller. The controller never decides a business rule: it calls the service. The arrow back is the same for errors: services throw, the exception filter maps the error to one HTTP shape. In module 1 the learner\'s agent builds the controller, service and repository; the middleware, the global pipe and the filter already exist.',
+    notes: 'Every request passes middleware first, then reaches a controller. The controller does no business logic: it calls a service. The service holds the rules and reads or writes the database (through a repository). The answer travels back the same way.',
   },
   {
-    type: 'wiring',
-    title: 'NestJS: how a module wires them',
-    notes: 'A module is the unit nest g resource creates. It declares the controller and the providers; Nest creates each once and hands them to whoever asks in a constructor (dependency injection). The controller asks for the service, the service asks for the repository TOKEN, not a class, so the storage can be swapped in the module alone. Middleware is attached in a module too, with configure(consumer). AppModule imports every feature module.',
+    type: 'blockstack',
+    title: 'NestJS: who calls whom',
+    notes: 'A module groups one feature: its controller, its service and its repository. The controller calls the service; the service calls the repository; Nest connects them (dependency injection). Middleware sits outside the feature and runs before the controller. In module 1 your agent builds one module for users and one for notes.',
   },
   {
     type: 'rules',
@@ -530,53 +527,41 @@ async function buildPptx(file, track) {
         slide.addText(body, { x, y: 3.05, w, h: 1.2, fontSize: 14, color: COL.slate, align: 'center', valign: 'top', margin: 0, isTextBox: true });
       });
       slide.addText('Repeatable work → tools.  Judgement → the agent, fenced in.', { x: 0.5, y: 4.45, w: 9, h: 0.45, fontSize: 16, italic: true, color: COL.muted, margin: 0, isTextBox: true });
-    } else if (s.type === 'lifecycle') {
+    } else if (s.type === 'blockflow') {
+      // A simple block diagram: boxes left to right, one arrow between each.
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
-      // One row of boxes left to right (the request), captions under them, one line back.
-      const n = s.steps.length, gap = 0.16, w = (9.0 - gap * (n - 1)) / n, y = 1.35, h = 0.72;
-      const fills = { Controller: COL.mint, Service: COL.mint, Repository: COL.mint };
-      s.steps.forEach(([head, body], k) => {
+      const n = s.blocks.length, gap = 0.45, w = (9.0 - gap * (n - 1)) / n, y = 2.0, h = 1.1;
+      s.blocks.forEach(([head, sub], k) => {
         const x = 0.5 + k * (w + gap);
-        const fill = fills[head] ?? (head === 'Client' || head === 'SQLite' ? COL.slate : COL.ink);
-        slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color: fill }, line: { color: fill }, objectName: `step-${k + 1}` });
-        slide.addText(head, { x, y, w, h, fontSize: 12, bold: true, color: COL.paper, align: 'center', valign: 'middle', margin: 2, isTextBox: true });
+        const fill = head === 'Controller' || head === 'Service' ? COL.mint : COL.ink;
+        slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.1, fill: { color: fill }, line: { color: fill }, objectName: `block-${k + 1}` });
+        slide.addText(head, { x, y, w, h, fontSize: 16, bold: true, color: COL.paper, align: 'center', valign: 'middle', margin: 2, isTextBox: true });
+        slide.addText(sub, { x, y: y + h + 0.15, w, h: 0.4, fontSize: 13, color: COL.slate, align: 'center', margin: 0, isTextBox: true });
         if (k < n - 1)
-          slide.addShape(pres.shapes.LINE, { x: x + w, y: y + h / 2, w: gap, h: 0, line: { color: COL.muted, width: 1.5, endArrowType: 'triangle' } });
-        slide.addText(body, { x, y: y + h + 0.12, w, h: 1.55, fontSize: 11, color: COL.slate, align: 'center', valign: 'top', margin: 0, isTextBox: true });
+          slide.addShape(pres.shapes.LINE, { x: x + w + 0.06, y: y + h / 2, w: gap - 0.12, h: 0, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
       });
-      slide.addShape(pres.shapes.LINE, { x: 0.5 + w / 2, y: 3.85, w: 9.0 - w, h: 0, line: { color: COL.amber, width: 2, beginArrowType: 'triangle' } });
-      slide.addText(s.back, { x: 0.5, y: 3.98, w: 9.0, h: 0.5, fontSize: 13, italic: true, color: COL.text, align: 'center', margin: 0, isTextBox: true });
-      slide.addText('Mint: what your agent builds in module 1.  Dark: already in the base.', { x: 0.5, y: 4.55, w: 9.0, h: 0.35, fontSize: 12, color: COL.muted, margin: 0, isTextBox: true });
-    } else if (s.type === 'wiring') {
+    } else if (s.type === 'blockstack') {
+      // A simple block diagram: a module box holding controller → service → repository,
+      // with middleware outside, pointing at the controller.
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
-      const box = (x, y, w, h, head, body, fill, name) => {
-        slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color: fill }, line: { color: fill }, objectName: name });
-        slide.addText([{ text: head, options: { bold: true, fontSize: 13, color: COL.paper, breakLine: true } }, { text: body, options: { fontSize: 10, color: COL.paper } }], { x, y, w, h, align: 'center', valign: 'middle', margin: 3, isTextBox: true });
+      const block = (x, y, w, h, label, fill, name) => {
+        slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.1, fill: { color: fill }, line: { color: fill }, objectName: name });
+        slide.addText(label, { x, y, w, h, fontSize: 16, bold: true, color: COL.paper, align: 'center', valign: 'middle', margin: 2, isTextBox: true });
       };
-      const arrow = (x, y, w, h, label, lx, ly, lw) => {
-        slide.addShape(pres.shapes.LINE, { x, y, w, h, line: { color: COL.muted, width: 1.5, endArrowType: 'triangle' } });
-        if (label) slide.addText(label, { x: lx, y: ly, w: lw, h: 0.3, fontSize: 10, italic: true, color: COL.muted, margin: 0, isTextBox: true });
-      };
-      // AppModule on the left imports the feature module in the middle.
-      box(0.5, 2.1, 1.7, 0.9, 'AppModule', 'imports every feature module', COL.slate, 'app-module');
-      arrow(2.2, 2.55, 0.55, 0, 'imports', 2.2, 2.2, 0.6);
-      // The feature module: a container with controller → service → repository inside.
-      slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 2.8, y: 1.2, w: 3.6, h: 3.6, rectRadius: 0.1, fill: { color: COL.mist }, line: { color: COL.soft, width: 1 }, objectName: 'notes-module' });
-      slide.addText('NotesModule  (src/notes/notes.module.ts)', { x: 2.95, y: 1.25, w: 3.3, h: 0.32, fontSize: 11, bold: true, color: COL.text, margin: 0, isTextBox: true });
-      box(3.3, 1.65, 2.6, 0.8, 'NotesController', 'routes: parse, delegate, return', COL.mint, 'controller');
-      arrow(4.6, 2.45, 0, 0.3, 'injects', 4.7, 2.47, 0.8);
-      box(3.3, 2.75, 2.6, 0.8, 'NotesService', 'the rules; throws DomainError', COL.mint, 'service');
-      arrow(4.6, 3.55, 0, 0.3, 'injects the token', 4.7, 3.57, 1.6);
-      box(3.3, 3.85, 2.6, 0.8, 'DrizzleNotesRepository', 'provided for NOTES_REPOSITORY', COL.mint, 'repository');
-      // Middleware on the right: attached in a module, runs before the controller.
-      box(7.0, 1.65, 2.5, 0.8, 'Middleware', 'consumer.apply(fn).forRoutes(…)', COL.ink, 'middleware');
-      slide.addShape(pres.shapes.LINE, { x: 5.9, y: 2.05, w: 1.1, h: 0, line: { color: COL.amber, width: 1.5, beginArrowType: 'triangle' } });
-      slide.addText('runs first', { x: 6.05, y: 1.72, w: 0.9, h: 0.3, fontSize: 10, italic: true, color: COL.amber, margin: 0, isTextBox: true });
-      box(7.0, 3.85, 2.5, 0.8, 'DatabaseModule', 'the DB token, global', COL.ink, 'database-module');
-      slide.addShape(pres.shapes.LINE, { x: 5.9, y: 4.25, w: 1.1, h: 0, line: { color: COL.muted, width: 1.5, beginArrowType: 'triangle' } });
-      slide.addText('Inject a token, not a class: the module decides the storage.', { x: 0.5, y: 4.88, w: 9.0, h: 0.3, fontSize: 12, italic: true, color: COL.muted, margin: 0, isTextBox: true });
+      const down = (x, y) => slide.addShape(pres.shapes.LINE, { x, y, w: 0, h: 0.32, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
+      slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 4.0, y: 1.15, w: 3.4, h: 3.75, rectRadius: 0.12, fill: { color: COL.mist }, line: { color: COL.soft, width: 1 }, objectName: 'module' });
+      slide.addText('Module', { x: 4.15, y: 1.2, w: 3.1, h: 0.4, fontSize: 14, bold: true, color: COL.text, margin: 0, isTextBox: true });
+      block(4.45, 1.65, 2.5, 0.75, 'Controller', COL.mint, 'controller');
+      down(5.7, 2.43);
+      block(4.45, 2.78, 2.5, 0.75, 'Service', COL.mint, 'service');
+      down(5.7, 3.56);
+      block(4.45, 3.91, 2.5, 0.75, 'Repository', COL.mint, 'repository');
+      block(1.0, 1.65, 2.3, 0.75, 'Middleware', COL.ink, 'middleware');
+      slide.addShape(pres.shapes.LINE, { x: 3.33, y: 2.03, w: 1.09, h: 0, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
+      block(8.0, 3.91, 1.5, 0.75, 'Database', COL.ink, 'database');
+      slide.addShape(pres.shapes.LINE, { x: 6.98, y: 4.29, w: 0.99, h: 0, line: { color: COL.muted, width: 2, endArrowType: 'triangle' } });
     } else if (s.type === 'rules') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
@@ -670,8 +655,8 @@ function buildMarkdown(track) {
     }
     if (s.type === 'stuck') p.push(`## ${s.title}`, '', ...s.rows.map(([h, b]) => `- **${h}**: ${b}`));
     if (s.type === 'flow') p.push(`## ${s.title}`, '', ...s.steps.map(([h, b], i) => `${i + 1}. **${h}**: ${b}`), '', '_Repeatable work → tools. Judgement → the agent, fenced in._');
-    if (s.type === 'lifecycle') p.push(`## ${s.title}`, '', '```text', s.steps.map(([h]) => h).join(' → '), '```', '', ...s.steps.map(([h, b]) => `- **${h}**: ${b}`), '', `_${s.back}_`);
-    if (s.type === 'wiring') p.push(`## ${s.title}`, '', '```text', 'AppModule ──imports──▶ NotesModule', '                         ├─ NotesController   (routes: parse, delegate, return)', '                         │     │ injects', '                         ├─ NotesService      (the rules; throws DomainError)', '                         │     │ injects the NOTES_REPOSITORY token', '                         └─ DrizzleNotesRepository ──▶ DatabaseModule (the DB token)', 'Middleware: consumer.apply(fn).forRoutes(…), runs before the controller', '```', '', '_Inject a token, not a class: the module decides the storage._');
+    if (s.type === 'blockflow') p.push(`## ${s.title}`, '', '```text', s.blocks.map(([h]) => `[${h}]`).join(' → '), '```', '', s.blocks.map(([h, sub]) => `**${h}**: ${sub}`).join(' · '));
+    if (s.type === 'blockstack') p.push(`## ${s.title}`, '', '```text', '               ┌──────── Module ────────┐', '[Middleware] ──▶ │   [Controller]         │', '               │        ▼               │', '               │    [Service]           │', '               │        ▼               │', '               │   [Repository] ────────┼──▶ [Database]', '               └────────────────────────┘', '```');
     if (s.type === 'rules') p.push(`## ${s.title}`, '', ...s.rows.map(([, h, b]) => `- **${h}**: ${b}`));
     if (s.type === 'agenda') p.push(`## ${s.title}`, '', ...table([[track.unit === 'MODULE' ? 'mod' : 'ch', track.unit.toLowerCase(), 'lab'], ...track.units.map((c) => [c.n, c.title, `${c.minutes}'`])]));
     if (s.type === 'capstone') p.push(`## ${s.title}`, '', ...s.items.map((t, i) => `${i + 1}. ${t}`));
