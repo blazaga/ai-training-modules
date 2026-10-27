@@ -14,16 +14,23 @@ import {
  */
 describe('Lab 02 · MCP server on the database', () => {
   let mcp: LabMcp;
-  const TOOLS = [
-    'create-note',
+  const READ_TOOLS = [
     'describe-table',
     'list-tables',
     'notes-for-user',
     'query',
+  ];
+  const WRITE_TOOLS = [
+    'create-note',
+    'create-user',
+    'delete-note',
+    'execute',
     'share-note',
     'unshare-note',
     'update-note',
   ];
+  const DESTRUCTIVE = ['delete-note', 'execute', 'unshare-note'];
+  const NIL = '00000000-0000-4000-8000-000000000000';
 
   beforeAll(async () => {
     mcp = await startMcpServer();
@@ -43,10 +50,25 @@ describe('Lab 02 · MCP server on the database', () => {
       ),
     );
 
-  it('identifies as notes-db and lists exactly the eight tools', async () => {
+  it('identifies as notes-db and lists exactly the read and write tools of the spec', async () => {
     expect(mcp.client.getServerVersion()?.name).toBe('notes-db');
     const { tools } = await mcp.client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
+    expect(tools.map((t) => t.name).sort()).toEqual(
+      [...READ_TOOLS, ...WRITE_TOOLS].sort(),
+    );
+  });
+
+  it('annotates which tools only read and which write or destroy', async () => {
+    const { tools } = await mcp.client.listTools();
+    for (const t of tools) {
+      const a = t.annotations ?? {};
+      expect(a.readOnlyHint, `${t.name} readOnlyHint`).toBe(
+        READ_TOOLS.includes(t.name),
+      );
+      if (DESTRUCTIVE.includes(t.name)) {
+        expect(a.destructiveHint, `${t.name} destructiveHint`).toBe(true);
+      }
+    }
   });
 
   it('list-tables reports the three tables with their real row counts', async () => {
@@ -84,6 +106,8 @@ describe('Lab 02 · MCP server on the database', () => {
       'update notes set title = 1',
       'drop table note_shares',
       'select 1; delete from notes',
+      // a write behind a read-looking start: only the database itself can refuse this one
+      'with x as (select 1) delete from notes',
     ]) {
       const r = await call('query', { sql });
       expect(r.isError, `"${sql}" must be refused`).toBe(true);
@@ -129,7 +153,7 @@ describe('Lab 02 · MCP server on the database', () => {
       ]),
     ).toBe('2026-11-01T01:00:00.000Z');
     const bad = await call('create-note', {
-      ownerId: '00000000-0000-4000-8000-000000000000',
+      ownerId: NIL,
       title: 'x',
     });
     expect(bad.isError).toBe(true);
@@ -150,10 +174,7 @@ describe('Lab 02 · MCP server on the database', () => {
     expect(
       await scalar(mcp.db, 'select status from notes where id = ?', [id]),
     ).toBe('open');
-    const missing = await call('update-note', {
-      id: '00000000-0000-4000-8000-000000000000',
-      title: 'x',
-    });
+    const missing = await call('update-note', { id: NIL, title: 'x' });
     expect(textOf(missing)).toMatch(/^NOT_FOUND: /);
   });
 
@@ -186,6 +207,105 @@ describe('Lab 02 · MCP server on the database', () => {
     expect(await isShared()).toBe(0);
     const own = await call('share-note', { noteId, userId: ownerId });
     expect(textOf(own)).toMatch(/^RULE_VIOLATION: /);
+  });
+
+  it('create-user stores a lower-cased email; a taken email is CONFLICT', async () => {
+    const email = `Lab.User.${Date.now()}@Example.com`;
+    const created = jsonOf<{ id: string; email: string }>(
+      await call('create-user', { email, name: 'Lab User' }),
+    );
+    expect(created.email).toBe(email.toLowerCase());
+    expect(
+      await scalar(mcp.db, 'select email from users where id = ?', [
+        created.id,
+      ]),
+    ).toBe(email.toLowerCase());
+    const before = await count('users');
+    const twin = await call('create-user', { email, name: 'Twin' });
+    expect(twin.isError).toBe(true);
+    expect(textOf(twin)).toMatch(/^CONFLICT: /);
+    expect(await count('users')).toBe(before);
+  });
+
+  it('delete-note removes the note and its shares; a missing note is NOT_FOUND', async () => {
+    const noteId = String(
+      await scalar(mcp.db, 'select note_id from note_shares limit 1'),
+    );
+    const res = jsonOf<{ id: string; deleted: boolean }>(
+      await call('delete-note', { id: noteId }),
+    );
+    expect(res).toEqual({ id: noteId, deleted: true });
+    expect(await count(`notes where id = '${noteId}'`)).toBe(0);
+    expect(await count(`note_shares where note_id = '${noteId}'`)).toBe(0);
+    const missing = await call('delete-note', { id: NIL });
+    expect(textOf(missing)).toMatch(/^NOT_FOUND: /);
+  });
+
+  it('execute runs one INSERT, UPDATE or DELETE and reports rowsAffected', async () => {
+    const id = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+    const now = new Date().toISOString();
+    const inserted = jsonOf<{ rowsAffected: number }>(
+      await call('execute', {
+        sql: `insert into users (id, email, name, created_at, updated_at) values ('${id}', 'sql.lab@example.com', 'SQL Lab', '${now}', '${now}')`,
+      }),
+    );
+    expect(inserted.rowsAffected).toBe(1);
+    expect(await count(`users where id = '${id}'`)).toBe(1);
+    const updated = jsonOf<{ rowsAffected: number }>(
+      await call('execute', {
+        sql: `update users set name = 'Renamed by SQL' where id = '${id}'`,
+      }),
+    );
+    expect(updated.rowsAffected).toBe(1);
+    expect(
+      await scalar(mcp.db, 'select name from users where id = ?', [id]),
+    ).toBe('Renamed by SQL');
+    const deleted = jsonOf<{ rowsAffected: number }>(
+      await call('execute', { sql: `delete from users where id = '${id}'` }),
+    );
+    expect(deleted.rowsAffected).toBe(1);
+    expect(await count(`users where id = '${id}'`)).toBe(0);
+  });
+
+  it('execute refuses everything else with NOT_ALLOWED, and nothing changes', async () => {
+    const tables = async () => ({
+      users: await count('users'),
+      notes: await count('notes'),
+      shares: await count('note_shares'),
+      schema: Number(
+        await scalar(mcp.db, 'select count(*) from sqlite_master'),
+      ),
+    });
+    const before = await tables();
+    for (const sql of [
+      'delete from notes',
+      "update notes set status = 'done'",
+      'drop table note_shares',
+      'create table x (a)',
+      'alter table notes add column x text',
+      'pragma foreign_keys = off',
+      'select * from users',
+      // each has a WHERE, so only the statement-type check refuses it
+      'select * from users where 1 = 1',
+      'create view open_notes as select * from notes where 1 = 1',
+      "delete from note_shares where note_id = 'x'; delete from notes where 1 = 1",
+    ]) {
+      const r = await call('execute', { sql });
+      expect(r.isError, `"${sql}" must be refused`).toBe(true);
+      expect(textOf(r), sql).toMatch(/^NOT_ALLOWED: /);
+    }
+    expect(await tables()).toEqual(before);
+  });
+
+  it('execute keeps foreign keys on: an unknown owner is CONSTRAINT', async () => {
+    const before = await count('notes');
+    const now = new Date().toISOString();
+    const r = await call('execute', {
+      sql: `insert into notes (id, owner_id, title, body, status, created_at, updated_at) values ('bbbbbbbb-cccc-4ddd-8eee-ffffffffffff', '${NIL}', 'orphan', '', 'open', '${now}', '${now}')`,
+    });
+    expect(r.isError).toBe(true);
+    expect(textOf(r)).toMatch(/^CONSTRAINT: /);
+    expect(await count('notes')).toBe(before);
   });
 
   it('bad input is a tool error naming the field, not a crash', async () => {

@@ -2,6 +2,25 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T12:44:57+08:00 - Module 2: Claude Desktop reads AND writes the SQLite data
+
+- **Request (operator):** both read and write tools on the SQL MCP; the goal is Claude
+  Desktop querying and inserting on the learner's own machine.
+- **What:** `specs/mcp.md` and lab 02 (16 checks) extended with `create-user`, `delete-note`
+  and a guarded `execute`, plus read-only / destructive annotations. A fresh agent rebuilt
+  module 2 from the module 1 checkpoint (instruction now asks for a question and a change);
+  `checkpoints/module-2-mcp-server.patch` regenerated. Chapter 04 rewritten from new
+  measurements: a five-row guard table, each row measured by removing that guard (the
+  agent's own e2e missed two of the five; lab 02 catches all five); the "rules live once"
+  control (R4 removed from `NotesService` → MCP e2e and lab 02 red). Deck module 2 slides
+  updated and rebuilt (21 slides, validator passed).
+- **Measured:** recipe from a clean copy with `npm ci`: base 20/5, module 1 43/49 (lab 01
+  15/15), module 2 46/58 (labs 31/31), seed unchanged. Claude Desktop simulated by
+  starting the printed entry from `/` with only its own environment: read, `create-user`,
+  `create-note`, `share-note`, `execute` update (1 row), `update-note`, read-back join; then
+  `delete from notes` refused by `query` (`READ_ONLY`) and `execute` (`NOT_ALLOWED`). Not run
+  on Windows or in Claude Desktop itself.
+
 ## 2026-10-27T12:27:12+08:00 - npm instead of pnpm
 
 - **Request (operator):** npm rather than pnpm, for a newer audience.

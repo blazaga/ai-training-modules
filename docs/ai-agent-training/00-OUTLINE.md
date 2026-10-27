@@ -32,10 +32,10 @@ Every module runs the same loop:
 proctor → instruct → agent → check → review
 ```
 
-| module                       | reading            | your agent builds                                                                       | you check                                  | lab |
-| ---------------------------- | ------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------ | --- |
-| 1 Users and notes            | ch00 + ch01 + ch02 | sets the project up, then users and notes (with sharing) on the tables                  | lab 01 · break a rule, see red             | 60' |
-| 2 An MCP server on your data | ch03 + ch04        | a stdio MCP server that reads and writes the database; you connect it to Claude Desktop | lab 02 · ask Claude Desktop about the data | 45' |
+| module                       | reading            | your agent builds                                                                          | you check                                          | lab |
+| ---------------------------- | ------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------- | --- |
+| 1 Users and notes            | ch00 + ch01 + ch02 | sets the project up, then users and notes (with sharing) on the tables                     | lab 01 · break a rule, see red                     | 60' |
+| 2 An MCP server on your data | ch03 + ch04        | a stdio MCP server that queries and changes the database; you connect it to Claude Desktop | lab 02 · Claude Desktop reads and writes your data | 45' |
 
 Both lab times are estimates; nobody has run the course with an audience yet.
 

@@ -7,7 +7,7 @@ went somewhere you cannot recover from in the time, and the next module is start
 | patch                        | after    | adds                                                                                      |
 | ---------------------------- | -------- | ----------------------------------------------------------------------------------------- |
 | `module-1-users-notes.patch` | module 1 | `src/users/`, `src/notes/` (schemas, repositories, services, controllers, sharing), tests |
-| `module-2-mcp-server.patch`  | module 2 | `src/mcp-server.ts`, `src/mcp/` (eight tools, the read-only query guard), its e2e test    |
+| `module-2-mcp-server.patch`  | module 2 | `src/mcp-server.ts`, `src/mcp/` (read and write tools, the SQL guards), its e2e test      |
 
 These patches are the build in the course repository's **`modules-done`** branch: an AI agent
 built both modules from the proctor's instructions alone, and a reviewer fixed two things in
@@ -46,7 +46,8 @@ really changed.
 
 ## What each checkpoint was checked against
 
-Every checkpoint was exported clean and run through `npm run verify` and both lab checks. A copy
+Every checkpoint was exported clean, installed with `npm ci`, and run through `npm run verify`
+and both lab checks. A copy
 of the base with both patches applied is identical to the `modules-done` branch apart from
 `WORKLOG.md`: the patches leave it out, so they keep applying as the base's log grows. No
 checkpoint changes `data/app.db`.
@@ -55,7 +56,7 @@ checkpoint changes `data/app.db`.
 | ---------- | -------------- | ------------- | ---------------- | ------------- |
 | base       | 20             | 5             | none             | 0             |
 | module 1   | 43             | 49            | 01               | 4             |
-| module 2   | 60             | 58            | 01, 02           | 4             |
+| module 2   | 46             | 58            | 01, 02           | 4             |
 
 The four lint warnings (`no-misused-spread` in `src/notes/notes.service.spec.ts`) are in the
 agent's module 1 tests; `verify` does not fail on warnings. Fixing them is a good first

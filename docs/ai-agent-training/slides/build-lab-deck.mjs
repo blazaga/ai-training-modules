@@ -81,7 +81,7 @@ const INSPECTOR = '6D4AE8'; // the Inspector UI panel
 const MOD = (n, title, minutes, goal, covers) => ({ n, title, minutes, goal, covers });
 const MODULES = [
   MOD('1', 'Users and notes', 60, 'Your agent sets the project up, then builds the users and notes resources (notes shareable between users) on the seeded tables.', '00 + 01 + 02'),
-  MOD('2', 'An MCP server on your data', 45, 'Your agent builds an MCP server that reads and writes the database; you connect it to Claude Desktop and ask Claude about the data.', '03 + 04'),
+  MOD('2', 'An MCP server on your data', 45, 'Your agent builds an MCP server that queries and changes the database; you connect it to Claude Desktop and have Claude read and write your data.', '03 + 04'),
 ];
 // An instruction as card lines: words unchanged, at most 58 characters per line (fitCode
 // refuses a code block that does not fit, so a longer line would fail the build).
@@ -99,26 +99,26 @@ function WRAP(text, n = 58) {
 // Module 2 slide content, from the measured dry run (see the WORKLOG).
 const MODULE2_EXPECT = [
   'reads the installed SDK, not its memory',
-  'write tools call NotesService: no rule copied',
-  'query read-only in two layers',
+  'typed write tools call the module 1 services',
+  'query and execute each guarded in layers',
   'gives the Claude Desktop entry with absolute paths',
 ];
 const MODULE2_NOTES =
-  'Measured: a fresh agent got lab 02 10/10 (lab 01 still 15/15) and verify 60 unit / 55 e2e. Its query guard has two layers, each proven by removing it: one SELECT/WITH statement (libSQL silently runs only the first of two), and a query_only connection (a delete hidden in a WITH emptied the copy without it). It also found that the default database path is relative to the working directory.';
+  'Measured: a fresh agent got labs 31/31 and verify 46 unit / 58 e2e. Five SQL guards, each removed once and caught by lab 02: query is one SELECT/WITH statement (libSQL silently drops a second) run under PRAGMA query_only (a WITH can hide a delete); execute is one statement, only INSERT/UPDATE/DELETE, and UPDATE/DELETE need a WHERE. Its own e2e test missed two of the five: the lab checks come from the spec, not the code. The typed write tools call UsersService and NotesService, so removing a rule there turns the MCP checks red too. execute keeps foreign keys on but does not apply the service rules; its description says so.';
 const MODULE2_OUTPUT = [
-  '# npm run verify; npm run lab 01 02',
-  'Tests  60 passed (60) · 58 passed (58)',
-  'Tests  25 passed (25)',
+  '# npm run verify; npm run lab',
+  'Tests  46 passed (46) · 58 passed (58)',
+  'Tests  31 passed (31)',
   '# started as Claude Desktop does it',
-  'server: notes-db',
-  'users 25 · notes 200 · note_shares 120',
-  '# query: delete from notes',
-  'READ_ONLY: only a single SELECT …',
+  'create-user · create-note · share-note',
+  'execute update … where id = … → 1 row',
+  '# execute: delete from notes',
+  'NOT_ALLOWED: DELETE without a WHERE …',
 ];
 const MODULE2_STUCK = [
-  ['query checks the SQL string only', 'A write can hide inside a WITH. Ask for a query_only connection too, and a test that tries it.'],
+  ['query checks the SQL string only', 'A write can hide inside a WITH. Ask for PRAGMA query_only too, and a test that tries it.'],
+  ['execute runs any SQL it is given', 'One statement, INSERT/UPDATE/DELETE only, a WHERE on UPDATE and DELETE. Ask for a test per refusal.'],
   ['Claude sees no tables', 'The server started in another folder and got an empty database. Use absolute paths; the server should exit when the file is missing.'],
-  ['It copies the notes rules into the tools', 'One rule, two copies, one will drift. The tools should call NotesService.'],
   ['Claude Desktop shows no notes-db tools', 'A relative path or a bare node in the entry. Use the script\'s absolute paths, then quit Claude Desktop fully and reopen.'],
 ];
 const cutNote = (m, cut) =>
@@ -267,8 +267,8 @@ const SLIDES = [
   { type: 'section', ch: '2', notes: cutNote(MODULES[1], 'the stdio framing lab (chapter 03): reading one exchange covers it.') },
   {
     type: 'prompt', ch: '2', title: 'Instruction: an MCP server on your data',
-    proctor: 'The goal: your Claude Desktop app answers questions from this database. The model writes the SQL, so the server decides what may run.',
-    prompt: WRAP('I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when npm run lab 02 and npm run verify are green; then show me how to connect it to Claude Desktop, and two questions I could ask it.'),
+    proctor: 'The goal: your Claude Desktop app queries and changes this database. The model writes the SQL, so the server decides what may run.',
+    prompt: WRAP('I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when npm run lab 02 and npm run verify are green; then show me how to connect it to Claude Desktop, one question I could ask it and one change I could ask it to make.'),
     expect: MODULE2_EXPECT,
     notes: MODULE2_NOTES,
   },
@@ -282,6 +282,8 @@ const SLIDES = [
       '# quit and reopen Claude Desktop, then ask:',
       '# "Which open notes are shared with more',
       '#   than one person?"',
+      '# "Add a user Ada, ada@example.com, with',
+      '#   a note due next Friday"',
     ],
     notes: 'Claude Desktop starts the server from its own folder with a minimal PATH, so the entry needs absolute paths for node, the server and the database: the script prints them. Quit Claude Desktop completely (not just the window) before reopening. The lab runs on a COPY of data/app.db; Claude Desktop writes to the real one, and npm run db:seed puts it back.',
   },
@@ -290,8 +292,8 @@ const SLIDES = [
     outputSource: 'captured',
     output: MODULE2_OUTPUT,
     done: [
-      'a write sent to query is READ_ONLY',
-      'Claude Desktop answers a question about the data',
+      'query refuses a write, execute an unbounded one',
+      'Claude Desktop answers a question and makes a change',
     ],
   },
   {

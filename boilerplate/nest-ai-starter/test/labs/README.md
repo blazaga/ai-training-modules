@@ -43,10 +43,14 @@ The specs are the contracts: `specs/users.md`, `specs/notes.md` (module 1) and
   only be reopened (422); `dueAt` stored as UTC `toISOString()`; list filters `ownerId`,
   `sharedWith`, `status`; sharing is idempotent, never with the owner (422), and cascades
   when the note or the friend is deleted.
-- **02:** the server identity `notes-db` and exactly eight tools; real row counts; `query`
-  runs reads and refuses every write with `READ_ONLY` (the data stays unchanged); the write
-  tools keep the notes rules (`RULE_VIOLATION`, `NOT_FOUND`); bad input is a tool error that
-  names the field.
+- **02:** the server identity `notes-db` and exactly the spec's read and write tools, each
+  annotated read-only or destructive; real row counts; `query` runs reads and refuses every
+  write with `READ_ONLY`; the typed write tools keep the users and notes rules
+  (`CONFLICT`, `RULE_VIOLATION`, `NOT_FOUND`); `execute` runs one `INSERT`/`UPDATE`/`DELETE`
+  with its `rowsAffected`, refuses DDL, `PRAGMA`, a `SELECT`, several statements and an
+  unbounded `UPDATE`/`DELETE` with `NOT_ALLOWED`, and keeps foreign keys on (`CONSTRAINT`);
+  refused statements leave the data unchanged; bad input is a tool error that names the
+  field.
 
 ## When a check fails and you think you are right
 

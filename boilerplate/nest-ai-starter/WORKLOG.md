@@ -2,6 +2,26 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T12:44:57+08:00 - The MCP server writes as well as reads: create-user, delete-note, execute
+
+- **Request (operator):** the SQL MCP needs read and write tools, so a learner can query and
+  insert from Claude Desktop on their own machine.
+- **Spec (`specs/mcp.md`):** read tools unchanged; write tools are now `create-user`
+  (unique, lower-cased email: `CONFLICT`), `create-note`, `update-note`, `delete-note` (shares
+  cascade), `share-note`, `unshare-note`, and `execute`: one SQL `INSERT`, `UPDATE` or
+  `DELETE` → `{ rowsAffected }`, refused with `NOT_ALLOWED` for DDL, `PRAGMA`, `SELECT`,
+  several statements and an `UPDATE`/`DELETE` without `WHERE`; foreign keys on
+  (`CONSTRAINT`). Every tool annotated `readOnlyHint` / `destructiveHint`. The Claude Desktop
+  section asks for a change as well as a question.
+- **Lab 02:** 16 checks (was 10). Against the previous module 2 build the 9 unchanged checks
+  passed and the 7 new ones failed. Each of the 5 SQL guards, removed one at a time from the
+  new build, turns lab 02 red; the first version missed two (a write hidden in `WITH` sent to
+  `query`, and the statement-type check, masked because every refused statement also lacked
+  a `WHERE`), so three cases were added.
+- **Measured:** a fresh agent rebuilt module 2 from the module 1 checkpoint with only the
+  learner's instruction: `npm run verify` unit 46, e2e 58; labs 31/31; `data/app.db`
+  unchanged. The base + both patches after `npm ci` reproduce those counts.
+
 ## 2026-10-27T12:27:12+08:00 - npm instead of pnpm
 
 - **Request (operator):** use npm, the package manager that ships with Node, so newer learners
