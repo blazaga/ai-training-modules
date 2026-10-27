@@ -49,7 +49,8 @@ const STEP = (file) => {
   const md = readFileSync(join(STEPS_DIR, file), 'utf8');
   const [, after] = md.split('\n## Instruction\n');
   if (after === undefined) throw new Error(`steps/${file} has no "## Instruction" section`);
-  const text = after.split('\n## ')[0].replace(/\s+/g, ' ').trim();
+  // Markdown code marks read as stray characters in the slide's terminal box: drop them there.
+  const text = after.split('\n## ')[0].replace(/`/g, '').replace(/\s+/g, ' ').trim();
   // Every instruction ends with the stop; a truncated read would lose it first.
   if (!text.endsWith('Then stop and wait for my next instruction.'))
     throw new Error(`steps/${file}: the instruction does not end with the stop sentence`);

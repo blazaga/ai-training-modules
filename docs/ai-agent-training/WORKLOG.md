@@ -2,6 +2,15 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T15:32:10+08:00 - Step 01 tells Claude Code to copy .env
+
+- **Request (operator):** add the instruction to copy `.env` during setup for Claude Code.
+- **What:** `steps/01-set-up.md` now says: install it, and create your local `.env` by
+  copying `.env.example` (`Copy-Item .env.example .env` on Windows PowerShell). The slide
+  reads the text from that file, so Instruction 1 shows it too (code marks are dropped in the
+  slide's terminal box only). `CLAUDE.md`'s quick start already said the same.
+- Deck: 23 slides, validator passed; slide 10 checked.
+
 ## 2026-10-27T15:29:07+08:00 - The local .env is part of the agent's setup, not its own slide
 
 - **Request (operator):** the "Before you start: your local .env" slide is unnecessary; it

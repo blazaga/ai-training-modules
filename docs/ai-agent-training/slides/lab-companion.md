@@ -142,8 +142,10 @@ Read steps/01-set-up.md and do what it says.
 It says (paste it, or say it in your own words, if you prefer):
 
 ```text
-Set this project up on this machine and prove it works:
-counts, not "it works". Then show me what is in the
+Set this project up on this machine: install it, and
+create your local .env by copying .env.example (on Windows
+PowerShell: Copy-Item .env.example .env). Then prove it
+works: counts, not "it works". Then show me what is in the
 database. Then stop and wait for my next instruction.
 ```
 

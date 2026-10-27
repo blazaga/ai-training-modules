@@ -2,6 +2,11 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T15:32:10+08:00 - steps/01: create the local .env during setup
+
+- **What:** the step 01 instruction names the `.env` copy explicitly (with the PowerShell
+  command), so it does not depend on the agent noticing it in `CLAUDE.md`.
+
 ## 2026-10-27T15:29:07+08:00 - CLAUDE.md: setup includes the local .env
 
 - **What:** the quick start says plainly that setting the project up includes creating `.env`
