@@ -2,6 +2,22 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T15:01:53+08:00 - Stopping points: one instruction at a time
+
+- **Request (operator):** agents must stop at each module, not bulldoze through the course;
+  this is a guided run.
+- **What:** the starter's `CLAUDE.md` gains "Guided run: one instruction at a time" (finish
+  the current instruction, write the WORKLOG entry, report, stop; later specs and red later
+  labs are not work until named). Every instruction on the slides ends "Then stop and wait
+  for my next instruction." Both checkpoints gain a "your agent stopped" done item; the flow
+  slide and the outline say the agent stops.
+- **Measured with fresh agents** (base copy, `.env` copied, diffs read afterwards):
+  Instruction 1 → checks run (21/5), database described, no tracked file changed.
+  Instruction 2 → users resource only (no notes resource, no MCP server), seed unchanged;
+  but it skipped its WORKLOG entry, reading "stop" as overriding it. `CLAUDE.md` now says the
+  entry is part of finishing; re-run → users only, WORKLOG entry written, stopped.
+- Deck: 24 slides, validator passed; instruction and checkpoint slides checked.
+
 ## 2026-10-27T14:54:17+08:00 - A slide for the local .env, and the counts after the settings test
 
 - **Request (operator):** an instruction to copy `.env.example` to a local `.env` so their

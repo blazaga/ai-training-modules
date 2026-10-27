@@ -15,7 +15,9 @@ from the first minute. In **two modules** your agent builds on it:
 The proctor gives each step as an **instruction**: the goal, where the requirements are, and
 when it is done, never the steps. You give it to your agent, in your own words or as
 written; the agent works out how (from the repo's `CLAUDE.md`, its skills and its specs) and
-you watch its approach. Then you **check** the result with a lab check and `npm run verify`, and
+you watch its approach. **It stops when that instruction is done** (every instruction ends
+"Then stop and wait for my next instruction", and the starter's `CLAUDE.md` says the same), so
+the room moves one step at a time. Then you **check** the result with a lab check and `npm run verify`, and
 **review** what it wrote. It runs on Node 24 and npm (chapter 00); the database is one file,
 so there is no database server to install.
 

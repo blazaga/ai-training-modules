@@ -20,7 +20,7 @@ Keep this deck on screen during lab work. Each module has: a divider (goal + tim
 
 1. **Proctor**: the goal, where the requirements are, when it is done
 2. **Instruct**: you give that to your agent, never the steps
-3. **Agent**: works out how from the repo, then builds it
+3. **Agent**: works out how from the repo, builds it, then stops
 4. **Check**: npm run verify + npm run lab NN: read the counts
 5. **Review**: ask it to show, not tell: the red run, the SQL
 
@@ -157,7 +157,7 @@ The repository ships .env.example: the variable names and safe defaults, never a
 ```text
 Set this project up on this machine and prove it works:
 counts, not "it works". Then show me what is in the
-database.
+database. Then stop and wait for my next instruction.
 ```
 
 **Watch its approach**
@@ -181,7 +181,8 @@ Measured: a fresh agent given only this instruction installed, built, started th
 
 ```text
 Build the users resource on the provided users table:
-specs/users.md. Done when npm run verify is green.
+specs/users.md. Done when npm run verify is green. Then
+stop and wait for my next instruction.
 ```
 
 **Watch its approach**
@@ -205,7 +206,8 @@ Measured: a fresh agent found the resource-spec and nest-resource-scaffold skill
 
 ```text
 Now the notes resource, with sharing: specs/notes.md. Done
-when npm run lab 01 and npm run verify are green.
+when npm run lab 01 and npm run verify are green. Then
+stop and wait for my next instruction.
 ```
 
 **Watch its approach**
@@ -287,6 +289,7 @@ notes?status=done total=85
 - [ ] `npm run lab 01`: every test passes
 - [ ] deleting a rule turns a test red
 - [ ] the app lists the seeded rows
+- [ ] your agent stopped: no MCP server yet, lab 02 still red
 
 ---
 
@@ -347,7 +350,8 @@ I want to use this data from Claude Desktop. Build the MCP
 server in specs/mcp.md. Done when npm run lab 02 and npm
 run verify are green; then show me how to connect it to
 Claude Desktop, one question I could ask it and one change
-I could ask it to make.
+I could ask it to make. Then stop and wait for my next
+instruction.
 ```
 
 **Watch its approach**
@@ -404,6 +408,7 @@ NOT_ALLOWED: DELETE without a WHERE …
 - [ ] `npm run lab 02`: every test passes
 - [ ] query refuses a write, execute an unbounded one
 - [ ] Claude Desktop answers a question and makes a change
+- [ ] your agent stopped and is waiting
 
 ---
 

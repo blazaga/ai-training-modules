@@ -27,6 +27,21 @@ change dependencies on purpose, `npm install <pkg>@<version>` and commit the loc
 `package.json` turns off the install-time telemetry of `@scarf/scarf` (`scarfSettings`); keep
 it off.
 
+## Guided run: one instruction at a time
+
+This repository is used in a guided workshop. A proctor gives one instruction at a time,
+and everyone checks the result together before the next one.
+
+- Do what the **current** instruction asks, until its done-condition holds (the checks it
+  names), then add your `WORKLOG.md` entry (skill `worklog-handoff`), report the counts and
+  **stop**. Wait for the next instruction. The entry is part of finishing, not extra work.
+- Do not start the next step or module on your own, even though you can see it here: the
+  specs of later steps (`specs/notes.md` before notes, `specs/mcp.md` before the MCP server)
+  and the red lab checks of later modules (`npm run lab 02` before module 2) are expected,
+  and are not work for you until an instruction names them.
+- "Prove it works" means run the checks and show the counts, not build more features.
+- Unsure what the instruction covers? Ask one question instead of guessing wider.
+
 ## Skills: load before acting
 
 Skills live in `.claude/skills/`.

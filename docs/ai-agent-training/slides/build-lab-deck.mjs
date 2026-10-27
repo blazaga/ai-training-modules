@@ -152,7 +152,7 @@ const SLIDES = [
     steps: [
       ['Proctor', 'the goal, where the requirements are, when it is done'],
       ['Instruct', 'you give that to your agent, never the steps'],
-      ['Agent', 'works out how from the repo, then builds it'],
+      ['Agent', 'works out how from the repo, builds it, then stops'],
       ['Check', 'npm run verify + npm run lab NN: read the counts'],
       ['Review', 'ask it to show, not tell: the red run, the SQL'],
     ],
@@ -234,21 +234,21 @@ const SLIDES = [
   {
     type: 'prompt', ch: '1', title: 'Instruction 1/3: set the project up',
     proctor: 'The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.',
-    prompt: WRAP('Set this project up on this machine and prove it works: counts, not "it works". Then show me what is in the database.'),
+    prompt: WRAP('Set this project up on this machine and prove it works: counts, not "it works". Then show me what is in the database. Then stop and wait for my next instruction.'),
     expect: ['reads CLAUDE.md before running anything', 'counts: 21 unit, 5 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares', 'passes script flags after --'],
     notes: 'Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground\'s test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).',
   },
   {
     type: 'prompt', ch: '1', title: 'Instruction 2/3: the users resource',
     proctor: 'Do not tell your agent how. The repo says how resources are built; watch whether it finds that out.',
-    prompt: WRAP('Build the users resource on the provided users table: specs/users.md. Done when npm run verify is green.'),
+    prompt: WRAP('Build the users resource on the provided users table: specs/users.md. Done when npm run verify is green. Then stop and wait for my next instruction.'),
     expect: ['finds the steps: generate, template, fill', 'keeps the provided table, 14 markers', 'no migration for a provided table', '409s left to the database, not re-coded'],
     notes: 'Measured: a fresh agent found the resource-spec and nest-resource-scaffold skills from CLAUDE.md on its own; the template kept users.table.ts and left 14 markers; verify went to 29 unit / 18 e2e. Lab 01 stays red until notes exist. Ask: which instruction told it to use the skill? None did.',
   },
   {
     type: 'prompt', ch: '1', title: 'Instruction 3/3: notes, with sharing',
     proctor: 'A user owns many notes; a note can be shared with many users. The rules decide where each piece goes.',
-    prompt: WRAP('Now the notes resource, with sharing: specs/notes.md. Done when npm run lab 01 and npm run verify are green.'),
+    prompt: WRAP('Now the notes resource, with sharing: specs/notes.md. Done when npm run lab 01 and npm run verify are green. Then stop and wait for my next instruction.'),
     expect: ['stored-state rules in the service (422)', 'filters and /shares routes, with e2e tests', 'a bad dueAt is 400, not 500', 'every rule broken once to see red'],
     notes: 'Measured: a fresh agent got lab 01 15/15 and verify 43 unit / 46 e2e. Its first dueAt answered 500 for "next tuesday" (zod 4 runs a transform after a failed format check); it found and fixed it. The filters and share routes go outside the markers, on purpose.',
   },
@@ -291,6 +291,7 @@ const SLIDES = [
     done: [
       'deleting a rule turns a test red',
       'the app lists the seeded rows',
+      'your agent stopped: no MCP server yet, lab 02 still red',
     ],
   },
   {
@@ -313,7 +314,7 @@ const SLIDES = [
   {
     type: 'prompt', ch: '2', title: 'Instruction: an MCP server on your data',
     proctor: 'The goal: your Claude Desktop app queries and changes this database. The model writes the SQL, so the server decides what may run.',
-    prompt: WRAP('I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when npm run lab 02 and npm run verify are green; then show me how to connect it to Claude Desktop, one question I could ask it and one change I could ask it to make.'),
+    prompt: WRAP('I want to use this data from Claude Desktop. Build the MCP server in specs/mcp.md. Done when npm run lab 02 and npm run verify are green; then show me how to connect it to Claude Desktop, one question I could ask it and one change I could ask it to make. Then stop and wait for my next instruction.'),
     expect: MODULE2_EXPECT,
     notes: MODULE2_NOTES,
   },
@@ -340,6 +341,7 @@ const SLIDES = [
     done: [
       'query refuses a write, execute an unbounded one',
       'Claude Desktop answers a question and makes a change',
+      'your agent stopped and is waiting',
     ],
   },
   {

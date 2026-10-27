@@ -2,6 +2,15 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T15:01:53+08:00 - CLAUDE.md: a guided run stops after each instruction
+
+- **Why:** in the workshop every learner's agent must stop when its instruction is done, so
+  the room moves one step at a time; the repo shows later specs and red later labs from the
+  start, which invite an agent to carry on.
+- **What:** new section "Guided run: one instruction at a time". Measured with fresh agents
+  on Instructions 1 and 2: both stopped at their own scope; the second, after the WORKLOG
+  clarification, also wrote its entry. No code changed.
+
 ## 2026-10-27T14:37:06+08:00 - No .env falls back to the seeded file; a taken port says so
 
 - **Found by the dry run of "Check it: module 1":** (1) without `.env` the app ran on an empty
