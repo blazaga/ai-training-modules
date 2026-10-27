@@ -2,6 +2,20 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T15:29:07+08:00 - The local .env is part of the agent's setup, not its own slide
+
+- **Request (operator):** the "Before you start: your local .env" slide is unnecessary; it
+  belongs in the Claude Code setup.
+- **What:** slide removed (23 slides). The starter's `CLAUDE.md` quick start now says setting
+  the project up includes creating `.env` from `.env.example` (with the PowerShell command),
+  never putting local settings in `.env.example`, and `PORT` in `.env` when 3000 is taken.
+  Instruction 1's "Watch its approach" gains "copies .env.example to .env (git ignores it)";
+  chapter 00 says the agent does it in step 01.
+- **Measured:** a fresh agent on a copy with NO `.env`, told only "Read steps/01-set-up.md and
+  do what it says": created `.env` from `.env.example` (only `PORT` changed, to 3100, as 3000
+  was taken), verify 21/5, described the data, wrote its WORKLOG entry, stopped; `.env`
+  git-ignored, `data/app.db` unchanged.
+
 ## 2026-10-27T15:15:16+08:00 - The instructions as files in steps/, referenced from the slides
 
 - **Request (operator):** every instruction in the deck should also be a markdown file in a

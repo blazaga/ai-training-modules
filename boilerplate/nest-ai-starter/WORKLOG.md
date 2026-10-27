@@ -2,6 +2,12 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T15:29:07+08:00 - CLAUDE.md: setup includes the local .env
+
+- **What:** the quick start says plainly that setting the project up includes creating `.env`
+  from `.env.example` (PowerShell: `Copy-Item .env.example .env`), and `PORT` there if 3000
+  is taken. Measured: an agent given steps/01 on a copy without `.env` created it and stopped.
+
 ## 2026-10-27T15:15:16+08:00 - steps/: the workshop instructions as files; the zod trap named right
 
 - **What:** `steps/01-set-up.md` … `04-mcp-server.md` + README (one instruction per file, read

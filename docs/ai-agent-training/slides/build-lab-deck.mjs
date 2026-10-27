@@ -233,24 +233,10 @@ const SLIDES = [
   // ---------------------------------------------------------------- module 1
   { type: 'section', ch: '1', notes: cutNote(MODULES[0], 'nothing: the two stretch exercises of chapter 01 are for fast groups.') },
   {
-    type: 'run', ch: '1', title: 'Before you start: your local .env',
-    code: [
-      '# in boilerplate\\nest-ai-starter, BEFORE you start Claude Code',
-      'Copy-Item .env.example .env',
-      '',
-      '# .env = your local settings: PORT, DATABASE_URL',
-      '# git ignores it, so it stays on your machine',
-      '# the app reads it on start: you and your agent',
-      '#   run it with the same settings (tests never do)',
-      '# port 3000 taken? change PORT in .env',
-    ],
-    notes: 'The repository ships .env.example: the variable names and safe defaults, never a secret. Each learner copies it to .env, which git ignores, so local changes such as a different PORT never get committed. Do it before starting Claude Code, so the agent finds it already in place: npm start, npm run db:migrate and the module 2 server (npm run mcp) read .env, whichever of you runs them. The tests and lab checks deliberately never read it: they use an empty in-memory database, so they cannot touch data/app.db. Without .env the app still serves data/app.db in development, but a changed port has nowhere to live.',
-  },
-  {
     type: 'prompt', ch: '1', title: 'Instruction 1/3: set the project up',
     proctor: 'The data is already there. Have your agent set the project up, prove it works, and show you what is in the database.',
     step: STEP('01-set-up.md'),
-    expect: ['reads CLAUDE.md before running anything', 'counts: 21 unit, 5 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares', 'passes script flags after --'],
+    expect: ['reads CLAUDE.md before running anything', 'copies .env.example to .env (git ignores it)', 'counts: 21 unit, 5 e2e, a red lab 01', 'data: 25 users, 200 notes, 120 shares'],
     notes: 'Measured: a fresh agent given only this instruction installed, built, started the app, and reported 20 unit / 2 e2e (5 e2e now, with the playground\'s test), lab 01 red, and the table counts (115 open and 85 done notes, 120 shares, none with its owner). If port 3000 is busy, PORT in .env (chapter 00).',
   },
   {

@@ -17,10 +17,11 @@ npm install                      # installs what package-lock.json lists
 Copy-Item .env.example .env      # DATABASE_URL=file:./data/app.db, PORT=3000
 ```
 
-- **Copy `.env.example` to `.env` before you start Claude Code.** `.env` holds your local
+- **`.env` is part of setting the project up.** In the workshop your agent creates it from
+  `.env.example` in step 01 (the starter's `CLAUDE.md` says so). `.env` holds your local
   settings (`PORT`, `DATABASE_URL`); git ignores it, so it never leaves your machine. The app,
-  `npm run db:migrate` and the module 2 server read it, so you and your agent run them with
-  the same settings. The tests never read it: they use an empty in-memory database.
+  `npm run db:migrate` and the module 2 server read it; the tests never do (they use an empty
+  in-memory database).
 - **Scripts run as `npm run <name>`** (`npm run verify`, `npm run lab 01`). A flag meant for
   the script goes after `--`, or npm keeps it for itself:
   `npm run resource:template -- --name note --plural notes`. `npm start` and `npm test` work

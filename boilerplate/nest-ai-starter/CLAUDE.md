@@ -14,6 +14,11 @@ npm run build && npm start             # app on :3000
 npm run verify                         # the gate
 ```
 
+**Setting the project up includes the local `.env`:** if there is no `.env`, create it from
+`.env.example` (on Windows PowerShell: `Copy-Item .env.example .env`). `.env` holds this
+machine's settings (`PORT`, `DATABASE_URL`) and git ignores it; never put a local setting in
+`.env.example`. If port 3000 is taken, set `PORT` in `.env`.
+
 The database is SQLite: the file `data/app.db`, **committed with seeded data** (users,
 notes and shares generated with faker; `scripts/seed.mjs`). `npm run db:seed` rebuilds it from
 scratch, reproducibly. The app never migrates a file database itself; `npm run db:migrate` does,
