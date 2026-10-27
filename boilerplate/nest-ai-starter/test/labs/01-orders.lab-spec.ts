@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { type LabApp, signUp, startApp } from './lab-harness.js';
+import { hasAuth, type LabApp, signUp, startApp } from './lab-harness.js';
 
 /**
  * Lab 01 (module 1): an `orders` resource built the house way:
@@ -36,14 +36,14 @@ describe('Lab 01 · orders resource', () => {
     lab = await startApp();
     auth = (await signUp(lab, 'lab01@example.com')).auth;
   });
-  afterAll(() => lab.close());
+  afterAll(() => lab?.close());
 
-  it('the orders routes exist and need credentials (401, not 404)', async () => {
+  it('the orders routes exist (not 404); once the app has auth, they need credentials (401)', async () => {
     const res = await lab.rest().get(base);
     expect(
       res.status,
       'a 404 here means OrdersModule is not registered (did `nest g resource orders` run?)',
-    ).toBe(401);
+    ).toBe((await hasAuth(lab)) ? 401 : 200);
   });
 
   it('POST creates an order with the defaults: quantity 1, status open', async () => {

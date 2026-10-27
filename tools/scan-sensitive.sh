@@ -27,7 +27,7 @@ for r in "${ROOTS[@]}"; do test -d "$r" || { echo "scan: $r missing" >&2; exit 2
 
 mapfile -t FILES < <(find "${ROOTS[@]}" -type f \
   \( -name '*.md' -o -name '*.ts' -o -name '*.mjs' -o -name '*.js' -o -name '*.json' \
-     -o -name '*.tpl' -o -name '*.yaml' -o -name '*.yml' -o -name '*.sh' -o -name Dockerfile \
+     -o -name '*.tpl' -o -name '*.yaml' -o -name '*.yml' -o -name '*.sh' -o -name '*.patch' -o -name '*.sql' -o -name Dockerfile \
      -o -name '.env*' -o -name '.npmrc' -o -name '.dockerignore' \) \
   -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name WORKLOG.md)
 test "${#FILES[@]}" -gt 0 || { echo "scan: no files found" >&2; exit 2; }

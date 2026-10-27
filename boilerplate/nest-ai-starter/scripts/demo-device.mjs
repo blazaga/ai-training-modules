@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Lab helper: on a RUNNING app, sign up (or reuse) a demo user, create a fresh
-// device, issue its credentials and activate it, then print shell exports.
+// Lab helper: on a RUNNING app, sign up (or reuse) a demo user, log in, provision a fresh
+// device, then print shell exports.
 //
 //   eval "$(node scripts/demo-device.mjs)"
-//   curl … -H "X-Access-Key-Id: $MCP_KEY_ID" -H "X-Secret-Key: $MCP_SECRET"
-//   curl … -H "Authorization: $DEMO_BASIC"   # the whole header value, "Basic …"
+//   curl … -H "X-Device-Key: $DEVICE_KEY" -H "X-Device-Secret: $DEVICE_SECRET"   # MCP
+//   curl … -H "Authorization: $AUTH"   # REST: the whole header value, "Bearer …"
 //
 // Base URL: argv[2], else APP_URL, else http://localhost:<PORT>, with PORT read from the
 // environment or from .env (the file the app reads), else 3000. So an app moved to another
@@ -32,12 +32,12 @@ const user = {
 };
 const basic = `Basic ${Buffer.from(`${user.email}:${user.password}`).toString('base64')}`;
 
-async function call(method, path, body, auth = true) {
+async function call(method, path, body, authorization) {
   const res = await fetch(base + path, {
     method,
     headers: {
       'content-type': 'application/json',
-      ...(auth ? { authorization: basic } : {}),
+      ...(authorization ? { authorization } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -52,25 +52,25 @@ function fail(step, res) {
   process.exit(1);
 }
 
-const signup = await call('POST', '/api/v1/users', user, false);
+const signup = await call('POST', '/api/v1/users', user);
 if (signup.status !== 201 && signup.status !== 409) fail('sign-up', signup);
 
-const device = await call('POST', '/api/v1/devices', {
-  name: `lab device ${new Date().toISOString()}`,
-});
-if (device.status !== 201) fail('create device', device);
-const creds = await call(
+const login = await call('POST', '/api/v1/auth/login', undefined, basic);
+if (login.status !== 200) fail('log in', login);
+const bearer = `Bearer ${login.body.accessToken}`;
+
+const device = await call(
   'POST',
-  `/api/v1/devices/${device.body.id}/credentials`,
+  '/api/v1/devices/provision',
+  { name: `lab device ${new Date().toISOString()}` },
+  bearer,
 );
-if (creds.status !== 200) fail('issue credentials', creds);
-const active = await call('POST', `/api/v1/devices/${device.body.id}/activate`);
-if (active.status !== 200) fail('activate', active);
+if (device.status !== 201) fail('provision device', device);
 
 console.log(
   `# demo device ${device.body.id} (owner ${user.email}). The secret is shown once.`,
 );
 console.log(`export DEVICE_ID=${device.body.id}`);
-console.log(`export MCP_KEY_ID=${creds.body.accessKeyId}`);
-console.log(`export MCP_SECRET=${creds.body.secret}`);
-console.log(`export DEMO_BASIC='${basic}'`);
+console.log(`export DEVICE_KEY=${device.body.deviceKey}`);
+console.log(`export DEVICE_SECRET=${device.body.secret}`);
+console.log(`export AUTH='${bearer}'`);

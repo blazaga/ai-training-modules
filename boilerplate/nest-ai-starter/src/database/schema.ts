@@ -4,4 +4,3 @@
  * When you add a table, export it here, then run `pnpm db:generate`.
  */
 export * from '../users/users.table.js';
-export * from '../devices/devices.table.js';

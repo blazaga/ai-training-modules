@@ -16,22 +16,6 @@ export const envSchema = z
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     /** Serve OpenAPI docs at /api/docs. Unset: on, except in production. */
     SWAGGER_ENABLED: z.enum(['true', 'false']).optional(),
-    /**
-     * ch08: Host names the MCP HTTP endpoint accepts (comma-separated). Unset →
-     * 'localhost' (measured: localhost and 127.0.0.1 pass, the machine's hostname gets
-     * 403; DNS-rebinding protection). Set it when deployed.
-     */
-    MCP_ALLOWED_HOSTS: z
-      .string()
-      .optional()
-      .transform((v) =>
-        v
-          ? v
-              .split(',')
-              .map((h) => h.trim())
-              .filter(Boolean)
-          : ('localhost' as const),
-      ),
     // A libSQL URL for an SQLite file, e.g. file:./data/app.db. Unset → in memory (dev/test only).
     DATABASE_URL: z
       .string()

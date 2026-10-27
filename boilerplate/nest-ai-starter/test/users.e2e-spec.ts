@@ -6,7 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/bootstrap/configure-app.js';
 import { UserResponseSchema } from '../src/users/user.schema.js';
 
-/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
+/** Through the real HTTP stack: routing, validation pipe, error filter. */
 describe('users (e2e)', () => {
   let app: INestApplication<App>;
   const base = '/api/v1/users';
@@ -20,19 +20,12 @@ describe('users (e2e)', () => {
     password: 'correct horse battery',
   });
 
-  /** Headers that authenticate a request (set by e2e-setup). */
-  let authHeaders: Record<string, string> = {};
-
-  /** Every request in this file is authenticated unless it uses `request` directly. */
+  /** Shorthand for requests through the real HTTP server. */
   const http = {
-    get: (url: string) =>
-      request(app.getHttpServer()).get(url).set(authHeaders),
-    post: (url: string) =>
-      request(app.getHttpServer()).post(url).set(authHeaders),
-    patch: (url: string) =>
-      request(app.getHttpServer()).patch(url).set(authHeaders),
-    delete: (url: string) =>
-      request(app.getHttpServer()).delete(url).set(authHeaders),
+    get: (url: string) => request(app.getHttpServer()).get(url),
+    post: (url: string) => request(app.getHttpServer()).post(url),
+    patch: (url: string) => request(app.getHttpServer()).patch(url),
+    delete: (url: string) => request(app.getHttpServer()).delete(url),
   };
 
   beforeAll(async () => {
@@ -42,27 +35,11 @@ describe('users (e2e)', () => {
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
-    // Routes are authenticated by default: sign up (public), then use Basic auth.
-    const owner = {
-      email: 'e2e-owner@example.com',
-      name: 'E2E Owner',
-      password: 'e2e owner passphrase',
-    };
-    await request(app.getHttpServer())
-      .post('/api/v1/users')
-      .send(owner)
-      .expect(201);
-    authHeaders = {
-      Authorization: `Basic ${Buffer.from(`${owner.email}:${owner.password}`).toString('base64')}`,
-    };
   });
 
   afterAll(async () => {
     await app.close();
   });
-
-  it('rejects requests without credentials (401)', () =>
-    request(app.getHttpServer()).get(base).expect(401));
 
   it('POST creates (201) and GET reads it back (200)', async () => {
     const created = await http.post(base).send(valid()).expect(201);

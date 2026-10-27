@@ -55,8 +55,13 @@ answer.
 **Worktree.** A separate working directory on its own branch (`git worktree add`), used to
 isolate one agent's batch from everyone else's.
 
-**Device access key.** A device's `AccessKeyId` (an identifier, safe to show) plus a secret
-(shown once, stored only as a hash). It authenticates MCP calls over HTTP (chapter 09).
+**Device key and secret.** What `POST /devices/provision` returns: a `deviceKey` (an
+identifier, safe to show) and a secret (shown once, stored only as a hash). A device sends
+them as `X-Device-Key` and `X-Device-Secret` to authenticate MCP calls over HTTP (chapter 09).
+
+**JWT (access token).** What `POST /auth/login` returns after a Basic login: a signed token
+the client sends as `Authorization: Bearer <token>` on every other REST request until it
+expires (chapter 03).
 
 **JSON-RPC 2.0.** The message envelope MCP uses: requests (`id`, `method`, `params`),
 responses (the same `id`, `result` or `error`) and notifications (no `id`).

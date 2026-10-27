@@ -1,13 +1,14 @@
-# Chapter 04 — Devices: credentials first, then merged with users
+# Chapter 04 — Devices: provisioned with a key and a secret
 
-**You will:** build a device service whose credentials (an access key id + a secret) will
-authenticate the MCP server in chapter 09. Build it standalone first, then merge it with
-users. **Commits:** `course(ch04a)`, `course(ch04b)`. **Spec:** `specs/devices.md`.
+**Your agent will:** build devices (the third instruction of module 3), the non-human clients
+(an AI agent, say) that call the MCP server in chapter 09. A user provisions a device with
+one call and gets back a key and a secret; the device then sends them as `X-Device-Key` and
+`X-Device-Secret`. **Spec:** `specs/devices.md`.
 
-## Modelled on dna_forms, corrected
+## Modelled on a production portal, corrected
 
-In the dna_forms portal a device is a non-human account owned by the user who registered
-it; it sends an app id + secret as request headers. A read-only survey of that code also
+In a production portal we surveyed, a device is a non-human account owned by the user who
+registered it; it sends an app id + secret as request headers. A read-only survey of that code also
 found things **not** to copy, so the spec corrects them:
 
 | measured there                                                         | here                                                             |
@@ -17,32 +18,42 @@ found things **not** to copy, so the spec corrects them:
 | rotation left a cached secret valid for minutes                        | rotation replaces the hash; the old secret fails **immediately** |
 | detailed failure reasons returned to the client                        | one identical 401                                                |
 
-## Step 1 (ch04a): the device resource and its credentials
+## Step 1: provisioning
 
 One more template upgrade first: **`server-fields`**, fields that are returned but never
-accepted (`status`, `accessKeyId`, timestamps). Only actions change them: a client
-sending `status: 'active'` gets a draft. `remove-rules` joins create/update.
+accepted (`status`, `deviceKey`, timestamps). A client sending `status: 'archived'` to
+provision still gets an active device.
 
 ```bash
 pnpm exec nest g resource devices --type rest --crud
-pnpm resource:template --name device --plural devices --storage drizzle   # 17 markers
+pnpm resource:template --name device --plural devices --storage drizzle
 ```
 
-- `accessKeyId = 'AKID' + base32(10 random bytes)`: an identifier, safe to show.
-- `secret = 'dsk_' + base64url(32 random bytes)`: 256 bits. The prefix lets secret
-  scanners find a leak.
+```bash
+curl -s -X POST localhost:3000/api/v1/devices/provision \
+  -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"name":"my agent"}'
+# {"id":"…","status":"active","deviceKey":"DK…","secret":"dsk_…","secretLast4":"…",…}
+```
+
+- `POST /devices/provision` creates an **active** device for the caller and returns it with
+  `deviceKey` and `secret`. **That response, and rotate's, are the only ones that ever
+  contain the secret.**
+- `deviceKey = 'DK' + base32(10 random bytes)`: an identifier, safe to show.
+- `secret = 'dsk_' + base64url(32 random bytes)`: 256 bits. The prefix lets secret scanners
+  find a leak.
 - `sha256` at rest is right for a 256-bit random secret (nothing to brute-force) and wrong
   for human passwords (chapter 02 uses scrypt). Comparison is timing-safe.
-- Lifecycle: `POST /:id/credentials` (issue/rotate; **the only response that ever
-  contains the secret**), `/activate` (needs credentials), `/archive` (soft delete).
-  `DELETE` only removes drafts.
-- `verifyAccessKey()` (used in chapter 09) authenticates only **active** devices and
+- `POST /devices/:id/rotate` gives a new secret for the same key. `DELETE` archives the
+  device (a soft delete): the row stays, and its key stops working at once.
+- `verifyDeviceKey()` (used in chapter 09) authenticates only **active** devices and
   records `lastUsedAt`.
 
-Mutations: rotation keeping the old hash → 1 fails; non-active devices authenticating →
-2 fail; a comparison that always matches → 4 fail.
+Mutations (each must turn something red, measured): rotation keeping the old hash → 1 unit
+and 1 e2e test fail; archived devices authenticating → 1 + 1; a comparison that always
+matches → 4 unit + 1 e2e.
 
-## Step 2 (ch04b): merge with users
+## Step 2: devices belong to users
 
 - `ownerUserId` (server-owned, FK → users, `ON DELETE RESTRICT`). Every service method
   takes the owner, and `findOne` enforces it, so every other method inherits the check.
@@ -55,10 +66,15 @@ tested.
 
 ### Three measurements that changed the code
 
+The first two were measured when devices were built in two steps, ownership added to an
+existing table. In the workshop your agent creates the table with its owner in one
+migration (`CREATE TABLE … FOREIGN KEY … ON DELETE restrict`), so neither arises there.
+Keep them for the next column you add to a table that already has rows.
+
 1. **drizzle-kit's migration fails on a populated table.** It generated
    ``ALTER TABLE `devices` ADD `owner_user_id` text NOT NULL REFERENCES users(id)`` with no
    warning. On an empty table it applies, so a fresh test database hides the problem;
-   applied to a table with a ch04a device it failed with `Cannot add a NOT NULL column with
+   applied to a table that already had a device it failed with `Cannot add a NOT NULL column with
 default value NULL`. The migration was hand-edited to remove the unattributable
    pre-ownership devices first (assigning them would hand someone else's credentials to an
    arbitrary user), after which SQLite accepts the NOT NULL column. The reasoning is in a
@@ -76,17 +92,24 @@ default value NULL`. The migration was hand-edited to remove the unattributable
 
 ## Verify
 
-Unit `Tests 66 passed`, e2e `Tests 47 passed`. Removing the owner check fails 1 unit and
-1 e2e test.
+Removing the owner check fails 1 unit and 1 e2e test (measured). At the module 3
+checkpoint (`checkpoints/`), `pnpm verify` reports 66 unit and 72 e2e tests, and
+`pnpm lab 03 04` is green.
 
 ## Labs
 
-Lab 1 is checked: `pnpm lab 04`. The contract (the optional body, 400 for a past
-date, `null` when not given, the 401 after expiry) is in
+`pnpm lab 04` checks what your agent built in module 3: provision returns an active device
+with a key and a one-time secret, rotate keeps the key and changes the secret, archive keeps
+the row, and another user's device is 404. It is red on the base.
+
+Lab 12 is a stretch for after module 6 (it needs `/mcp`), checked with `pnpm lab 12`. The
+contract (an optional `expiresAt` on provision and rotate, 400 for a past date, `null` when
+not given, the 401 on `/mcp` after expiry) is in
 `boilerplate/nest-ai-starter/test/labs/README.md`.
 
-1. Add `expiresAt` to credentials, so an expired secret fails `verifyAccessKey`. Where does
-   the rule live?
+1. Have your agent add `expiresAt`, so an expired secret fails `verifyDeviceKey`. Where did
+   it put the rule, and does `/mcp` answer an expired secret with the same 401 as every other
+   failure?
 2. Write the migration for a NOT NULL column with a sensible default instead of a delete.
    Probe it on a populated table.
 3. Why 404 rather than 403 for someone else's device? Write the e2e test that would

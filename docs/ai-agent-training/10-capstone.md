@@ -2,6 +2,9 @@
 
 **You will:** use agents and the starter's skills to deliver one feature that touches a
 resource, auth, ownership and MCP. The grade is the **evidence package**, not the feature.
+Start from your own module 6 state, or from the module 6 checkpoint (`checkpoints/README.md`)
+if yours did not get there. This time the proctor gives no instruction: writing the brief
+for your agent is part of the work.
 
 ## The feature
 

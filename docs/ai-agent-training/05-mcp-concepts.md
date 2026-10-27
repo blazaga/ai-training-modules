@@ -88,8 +88,12 @@ Two facts from measuring, not from the spec:
 
 ## Labs
 
-1. Send the raw `initialize` with `curl` (chapter 08 shows the command). Identify request,
-   response, `id` matching, and the SSE framing.
+These are reading labs; your agent builds nothing here. In module 4 you see the envelopes
+through the Inspector CLI over stdio; the raw HTTP exchange arrives with module 5.
+
+1. Once your agent serves `/mcp` (module 5), send the raw `initialize` with `curl`
+   (chapter 08 shows the command) or Postman. Identify request, response, `id` matching,
+   and the SSE framing.
 2. Classify: unknown tool name, a rule violation, invalid JSON. Tool error or protocol
    error? Check against the server.
 3. Why must a stdio server never write logs to stdout? (Chapter 06 measures what actually

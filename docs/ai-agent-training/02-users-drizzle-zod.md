@@ -27,8 +27,9 @@ pnpm build && pnpm db:migrate   # apply to DATABASE_URL, then PRINT THE LEDGER
 
 Verify a migration by reading the **ledger** (the `__drizzle_migrations` table), never
 drizzle's log, which reads the same for nine migrations and for zero.
-`src/database/connect.spec.ts` asserts that ledger rows == journal entries. We read 3
-rows after the first run and still 3 after the second (idempotent).
+`src/database/connect.spec.ts` asserts that ledger rows == journal entries. On the base we
+read 1 row after the first run and still 1 after the second (idempotent); after your agent's
+module 2 migration it is 2, and 3 once devices arrive in module 3.
 
 ## Upgrading the templates (once, for every future resource)
 
@@ -88,11 +89,15 @@ migrations`.
 
 ## Labs
 
-Lab 1 is checked: `pnpm lab 02`. The contract (E.164, `null` when absent, the
-migration) is in `boilerplate/nest-ai-starter/test/labs/README.md`.
+Lab 1 is module 2, built by your agent from the proctor's instruction and checked with
+`pnpm lab 02`. The contract (E.164, `null` when absent, the migration) is in
+`boilerplate/nest-ai-starter/test/labs/README.md`.
 
-1. Add `phone` (optional, E.164) to users: schema, table, migration. Watch
-   `check:migrations` fail before `db:generate` and pass after.
+1. **Your agent adds `phone`** (optional, E.164) to users: schema, table, migration. You
+   check: `check:migrations` failed before `db:generate` and passes after (ask the agent to
+   show you both), the ledger went from 1 row to 2, and the generated SQL is a nullable
+   `ADD` that is safe on a table that already has rows. Ask the agent why it is safe, and
+   check its answer against the SQL.
 2. Add a `findByEmail` unit test for case differences. Which layer lower-cases?
 3. Explain why a fast hash (sha256) is fine for chapter 04's device secrets but wrong for
    passwords.

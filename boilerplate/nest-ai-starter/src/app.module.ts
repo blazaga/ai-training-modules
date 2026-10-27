@@ -6,11 +6,8 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter.
 import { validateEnv } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
-import { McpToolsModule } from './mcp/mcp-tools.module.js';
 import { NotesModule } from './notes/notes.module.js';
 import { UsersModule } from './users/users.module.js';
-import { AuthModule } from './auth/auth.module.js';
-import { DevicesModule } from './devices/devices.module.js';
 
 @Module({
   imports: [
@@ -24,12 +21,9 @@ import { DevicesModule } from './devices/devices.module.js';
     }),
     DatabaseModule,
     HealthModule,
-    McpToolsModule, // ch08: MCP tool controllers, served at /mcp
     // Feature modules. `nest g resource <name>` appends new ones here.
     NotesModule,
     UsersModule,
-    AuthModule,
-    DevicesModule,
   ],
   providers: [
     // Every @Body/@Query/@Param typed with a createZodDto class is validated.

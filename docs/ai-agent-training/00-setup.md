@@ -4,6 +4,11 @@
 pnpm through corepack, which ships with Node. **You don't need** a database server: the
 database is **SQLite**, a single file, `data/app.db`, created for you.
 
+In the workshop your agent works these steps out from the module 1 instruction; this chapter is what it
+should do and what you check afterwards. The base you start from has setup, `notes` and
+`users` only: auth, devices and MCP arrive module by module, so the sections below that need
+them say from which module on.
+
 ## Install
 
 ```bash
@@ -25,8 +30,8 @@ Inspector and in curl. The lab helper below reads `PORT` from `.env` by itself.
 
 ```bash
 pnpm build                          # compile to dist/
-pnpm db:migrate                     # create data/app.db and apply drizzle/; prints the ledger: 3 rows
-pnpm start                          # http://localhost:3000, docs at /api/docs, MCP at /mcp
+pnpm db:migrate                     # create data/app.db and apply drizzle/; prints the ledger: 1 row
+pnpm start                          # http://localhost:3000, docs at /api/docs
 curl localhost:3000/api/health      # {"status":"ok"}
 ```
 
@@ -37,8 +42,9 @@ first, and again after every new migration. Running it twice is harmless.
 
 What we measured on this file:
 
-- **Migrate:** `pnpm db:migrate` created `data/app.db` and printed `ledger rows: 3`; a
-  second run applied nothing and still printed 3.
+- **Migrate:** `pnpm db:migrate` created `data/app.db` and printed `ledger rows: 1` (the
+  base has one migration; each one your agent adds is one more row). A second run applied
+  nothing: the same single row.
 - **Persistence:** after stopping and restarting the app, signing up the same user again
   answered 409 (the row was still in the file).
 - **A clean wipe:** stop the app and delete `data/`. The next `pnpm db:migrate` starts from
@@ -54,7 +60,7 @@ What we measured on this file:
 pnpm verify      # typecheck, lint, format, AI-FILL markers, migrations, unit, e2e
 ```
 
-Measured: exit 0, unit `Tests 69 passed`, e2e `Tests 61 passed`. No test touches
+Measured on the base: exit 0, unit `Tests 40 passed`, e2e `Tests 26 passed`. No test touches
 `data/app.db`: under test the app ignores `.env` (the vitest configs set `NODE_ENV=test`), so
 the tests use an in-memory SQLite database, migrated from the same committed SQL. So you can
 run `pnpm verify` while the app is running, which we did.
@@ -75,28 +81,31 @@ two are interchangeable.
 
 ## Lab helper: a demo device in one command
 
-From chapter 04 on, the labs need a user with an active device. With the app running:
+Once your agent has built devices (module 3), the labs need a user with an active device.
+With the app running:
 
 ```bash
 eval "$(node scripts/demo-device.mjs)"
 ```
 
-This signs up (or reuses) `demo@example.com`, creates a fresh device, issues its
-credentials, activates it, and sets `DEVICE_ID`, `MCP_KEY_ID`, `MCP_SECRET` and
-`DEMO_BASIC` in your shell. The secret is printed once, for your terminal only.
+This signs up (or reuses) `demo@example.com`, logs in, provisions a fresh device, and sets
+`DEVICE_ID`, `DEVICE_KEY`, `DEVICE_SECRET` and `AUTH` in your shell. The secret is printed
+once, for your terminal only.
 
-`DEMO_BASIC` is the whole header value, `Basic …`, so use it as
-`curl -H "Authorization: $DEMO_BASIC" …`. The helper finds the app on the `PORT` in `.env`
+`AUTH` is the whole header value for REST calls, `Bearer <token>`, so use it as
+`curl -H "Authorization: $AUTH" …`. MCP calls use the device instead:
+`-H "X-Device-Key: $DEVICE_KEY" -H "X-Device-Secret: $DEVICE_SECRET"`. The helper finds the app on the `PORT` in `.env`
 (else 3000); to point it elsewhere, `APP_URL=http://<HOST>:<PORT> node scripts/demo-device.mjs`.
 
 ## The MCP Inspector
 
-The **CLI** is a real MCP client in your terminal (chapters 07 and 09):
+Once your agent serves `/mcp` (module 5; the device headers from module 6), the Inspector is
+how you drive it. The **CLI** is a real MCP client in your terminal (chapters 07 and 09):
 
 ```bash
 npx -y @modelcontextprotocol/inspector@2.12.0 --cli \
   http://localhost:3000/mcp --method tools/call --tool-name whoami \
-  --header "X-Access-Key-Id: $MCP_KEY_ID" --header "X-Secret-Key: $MCP_SECRET"
+  --header "X-Device-Key: $DEVICE_KEY" --header "X-Device-Secret: $DEVICE_SECRET"
 ```
 
 The **web UI** runs on your machine's loopback (`127.0.0.1`, ports 6274, 6275 and 6278),
@@ -111,7 +120,7 @@ an `Auth token:` line. Both are a credential; never paste either into a ticket o
    `streamable-http`, URL `http://localhost:3000/mcp` → **Add**. (The three example servers
    that are already listed can be ignored.)
 3. On your server's card, **Settings** → **Custom Headers** → **+ Add Header** twice:
-   `X-Access-Key-Id` and `X-Secret-Key`, with a device's values (the lab helper prints them).
+   `X-Device-Key` and `X-Device-Secret`, with a device's values (the lab helper prints them).
    Close the dialog: header changes apply on the next connect.
 4. Switch the card on: it shows **Connected**. Then **Tools** → pick a tool → **Execute Tool**.
 

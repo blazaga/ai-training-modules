@@ -89,7 +89,7 @@ const INSPECTOR_UI = {
     'Add Servers → + Add manually',
     'streamable-http · http://localhost:3000/mcp → Add',
     'Settings → Custom Headers → + Add Header, twice',
-    'X-Access-Key-Id and X-Secret-Key, then close',
+    'X-Device-Key and X-Device-Secret, then close',
     'Switch the card on: Connected',
     'Tools → whoami → Execute Tool',
   ],
@@ -100,8 +100,8 @@ const INSPECTOR_UP = [
   '# in a second terminal:',
   DEMO,
   '# the values for the two headers:',
-  'echo "$MCP_KEY_ID"',
-  'echo "$MCP_SECRET"',
+  'echo "$DEVICE_KEY"',
+  'echo "$DEVICE_SECRET"',
 ];
 const UI_FAILED = ['The UI says Failed', 'Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.'];
 const UI_NOTES =
@@ -114,12 +114,12 @@ const UI_NOTES =
 // stretch.
 const MOD = (n, title, minutes, goal, covers) => ({ n, title, minutes, goal, covers });
 const MODULES = [
-  MOD('1', 'Setup and the loop', 40, 'Set up and start the app, then add an `orders` resource: generate → template → fill → verify.', '00 + 01'),
-  MOD('2', 'Data: drizzle and zod', 25, 'Add a `phone` column and watch the migration checks work for you.', '02'),
-  MOD('3', 'Identity: auth and devices', 30, 'Break the "one identical 401" rule on purpose, then issue and rotate device credentials.', '03 + 04'),
-  MOD('4', 'Your first MCP server', 30, 'Read one raw JSON-RPC exchange, then add a `publish-note` tool and pin it with tests.', '05 + 06'),
-  MOD('5', 'Inspector and transports', 25, 'Turn an Inspector call into a CI check, then flip `enableJsonResponse` and compare the wire.', '07 + 08'),
-  MOD('6', 'Secure MCP, then the capstone', 20, 'Rotate a device secret mid-session and watch the next call fail. The capstone is homework.', '09 + 10'),
+  MOD('1', 'Setup and the loop', 40, 'Your agent sets the project up, then adds an `orders` resource: spec → generate → template → fill → verify.', '00 + 01'),
+  MOD('2', 'Data: drizzle and zod', 25, 'Your agent adds a `phone` column, generates the migration and tells you whether it is safe.', '02'),
+  MOD('3', 'Identity: auth and devices', 45, 'Your agent adds Basic auth with Passport, moves it to JWT, then adds devices provisioned with a key and a secret.', '03 + 04'),
+  MOD('4', 'Your first MCP server', 30, 'Your agent turns the notes service into MCP tools over stdio, then adds a `publish-note` tool.', '05 + 06'),
+  MOD('5', 'Inspector and transports', 25, 'Your agent serves the same tools over HTTP at /mcp; you drive them with the Inspector.', '07 + 08'),
+  MOD('6', 'Secure MCP, then the capstone', 20, 'Your agent locks /mcp to devices; you rotate a secret mid-session and watch the next call fail.', '09 + 10'),
 ];
 const cutNote = (m, cut) =>
   `Covers chapter${m.covers.includes('+') ? 's' : ''} ${m.covers}. Left out for time: ${cut}`;
@@ -130,20 +130,20 @@ const SLIDES = [
     title: 'Building Apps with AI Agents',
     subtitle: 'Lab companion · six modules · NestJS 12 · drizzle · SQLite · Passport · MCP',
     notes:
-      'Keep this deck on screen during lab work. Each module has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.',
+      'Keep this deck on screen during lab work. Each module has: a divider (goal + time), PROMPT slides (what the proctor says and the exact prompt learners paste into their agent), CHECK IT (what learners run to check the agent\'s work), CHECKPOINT (what correct looks like) and WHEN THE AGENT GOES WRONG (mistakes agents actually made). The full explanations are in the chapter documents.',
   },
   {
     type: 'flow',
     title: 'How every lab works',
     steps: [
-      ['Spec', 'specs/<name>.md: fields, rules, gaps'],
-      ['Generate', 'nest-cli: structure + wiring'],
-      ['Template', 'house conventions, identical every time'],
-      ['Fill', 'your agent, ONLY inside AI-FILL markers'],
-      ['Verify', 'pnpm verify: read the counts'],
+      ['Proctor', 'the goal, where the requirements are, when it is done'],
+      ['Instruct', 'you give that to your agent, never the steps'],
+      ['Agent', 'works out how from the repo, then builds it'],
+      ['Check', 'pnpm verify + pnpm lab NN: read the counts'],
+      ['Review', 'ask it to show, not tell: the red run, the SQL'],
     ],
     notes:
-      'The repeatable work belongs to tools; judgement belongs to the agent, fenced into markers. If a learner hand-edits generated code, steer them back to the template or the marker.',
+      'The AI does the building and the planning; the learner directs and checks. The instruction says what and when it is done, never how: the repo (CLAUDE.md, its skills, the specs) tells the agent how, and watching it find that out is part of the lab. Measured: fresh agents given only these instructions got every module\'s lab green. Hold the agent to evidence: counts, a failing run, the generated SQL.',
   },
   {
     type: 'rules',
@@ -151,7 +151,7 @@ const SLIDES = [
     rows: [
       ['FiTerminal', 'Node 24 + pnpm', 'Every command runs in boilerplate/nest-ai-starter. `corepack enable` once puts pnpm on your PATH; otherwise write `corepack pnpm`.'],
       ['FiCheckCircle', 'Counts, not exit codes', 'Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.'],
-      ['FiLock', 'Never share a secret', 'Device secrets, Basic credentials and Inspector URLs (they carry a token) stay in your terminal.'],
+      ['FiLock', 'Never share a secret', 'Passwords, tokens, device secrets and Inspector URLs (they carry a token) stay in your terminal.'],
     ],
     notes:
       'Linux, macOS and WSL shells were the target. The `eval "$(…)"` lab helper needs a POSIX shell; on PowerShell, copy the printed values by hand. Not tested on PowerShell.',
@@ -162,7 +162,7 @@ const SLIDES = [
     rows: [
       ['FiDownload', 'Import one file', 'In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.'],
       ['FiPlay', 'Folders follow the labs', 'Numbered by chapter, and each name says its module. Every request has tests: read the Test Results tab, not just the status.'],
-      ['FiLock', 'It stores a live secret', 'Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.'],
+      ['FiLock', 'It stores a live secret', 'Logging in saves a token and provisioning saves the device secret in collection variables. Never export or share the collection after a run.'],
     ],
     notes:
       'The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP client, which is the point of those chapters.',
@@ -171,11 +171,11 @@ const SLIDES = [
     title: 'Lab checks: is my lab done?',
     rows: [
       ['FiCheckSquare', 'One check per lab', '`pnpm lab 01` runs the check for lab 01, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.'],
-      ['FiTool', 'Build labs start red', 'Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.'],
-      ['FiShield', 'Guard labs start green', 'Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.'],
+      ['FiTool', 'Red until built', 'Every lab check fails on the starter, because its feature is not there yet. It turns green when your agent has built it, and stays green after.'],
+      ['FiShield', 'Fell behind?', 'Start the next module from its checkpoint (docs/ai-agent-training/checkpoints/), not by patching your own copy.'],
     ],
     notes:
-      'The checks drive the app over HTTP and MCP and never import learner code, so they compile before the lab is done. The contracts are in test/labs/README.md in the starter. Reference solutions for facilitators are in docs/ai-agent-training/solutions/.',
+      'The checks drive the app over HTTP and MCP and never import learner code, so they compile before the lab is done. The contracts are in test/labs/README.md in the starter. Each module\'s reference result is a patch in docs/ai-agent-training/checkpoints/.',
   },
 
   {
@@ -184,273 +184,327 @@ const SLIDES = [
     notes: 'Six modules, about 170 minutes of labs plus the capstone as homework. Times are ESTIMATES: nobody has run these labs with an audience yet. Adjust after the first session.',
   },
 
+  // ---------------------------------------------------------------- module 1
   { type: 'section', ch: '1', notes: cutNote(MODULES[0], 'the persistence and clean-wipe demos (chapter 00).') },
   {
-    type: 'run', ch: '1', title: 'Run this: set up, then an orders resource',
-    code: [
-      'cd boilerplate/nest-ai-starter',
-      'corepack enable   # refused? use corepack pnpm',
-      'pnpm install',
-      'cp .env.example .env   # port busy? set PORT= here',
-      'pnpm build && pnpm db:migrate',
-      'pnpm verify                # 69 + 61 tests',
-      '# write specs/orders.md (copy specs/notes.md);',
-      '#   the contract: test/labs/README.md, 01. Then:',
-      'pnpm exec nest g resource orders --type rest --crud',
-      'pnpm resource:template --name order --plural orders',
-      "pnpm check:ai-fill         # your agent's to-do list",
-      '# your agent fills every AI-FILL marker, then:',
-      'pnpm verify',
+    type: 'prompt', ch: '1', title: 'Instruction 1/2: set the project up',
+    proctor: 'Have your agent set the project up and prove it works. You only read what it reports.',
+    prompt: [
+      'Set this project up on this machine and prove it works.',
+      'Tell me what you ran and what you saw: counts, not "it',
+      'works".',
     ],
-    notes: 'While pnpm install runs, walk through specs/notes.md. Learners give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.',
+    expect: ['reads CLAUDE.md before running anything', 'reports counts: ledger rows 1, 40 unit, 26 e2e', 'proves a check can fail (a planted error)', 'switches to corepack pnpm if pnpm is missing'],
+    notes: 'Measured: a fresh agent given only this instruction set the project up, started the app, and reported ledger 1 / 40 unit / 26 e2e plus a red lab 01 as its baseline. If port 3000 is busy, PORT in .env (chapter 00).',
   },
   {
-    type: 'checkpoint', ch: '1', title: 'Checkpoint: gate green, markers to zero',
-    outputSource: 'captured, then expected',
+    type: 'prompt', ch: '1', title: 'Instruction 2/2: an orders resource',
+    proctor: 'Do not tell your agent how. The repo says how resources are built; watch whether it finds that out.',
+    prompt: [
+      'We need an orders resource. Its contract is section 01 of',
+      'test/labs/README.md. Build it the way this repo builds',
+      'resources. Done when pnpm lab 01 and pnpm verify are',
+      'green. Report the counts, and anything the contract leaves',
+      'undecided.',
+    ],
+    expect: ['specs/orders.md before any code', 'finds the repo\'s steps: generate, template, fill', 'O1 in the schema, O2 in the service', 'open questions recorded, no invented rules'],
+    notes: 'Measured: a fresh agent found the resource-spec and nest-resource-scaffold skills from CLAUDE.md on its own, filled 14 markers, got lab 01 15/15 and verify green, and listed six open questions (reopening a fulfilled order first). Ask: which instruction told it to use the skill? None did.',
+  },
+  {
+    type: 'run', ch: '1', title: 'Check it: module 1',
+    code: [
+      'pnpm check:ai-fill    # 0 markers left',
+      'pnpm verify           # read both Tests lines',
+      '# ask the agent: "delete rule O2, run',
+      '#   pnpm exec vitest run src/orders, put it back"',
+    ],
+    postman: postman(['00', ['Health']]),
+    notes: 'The mutation check proves the rule is tested: deleting O2 must turn a test red. Ask the agent to show the red run, not to describe it.',
+  },
+  {
+    type: 'checkpoint', ch: '1', title: 'Checkpoint: the loop, closed',
+    outputSource: 'captured',
     output: [
-      '# pnpm db:migrate',
-      'db:migrate: ledger rows: 3',
-      '# pnpm verify (before your resource)',
-      'Tests  69 passed (69)',
-      'Tests  61 passed (61)',
-      '# after the template step (captured)',
+      '# setup: pnpm db:migrate',
+      'db:migrate: ledger rows: 1',
+      '# setup: pnpm verify',
+      'Tests  40 passed (40)',
+      'Tests  26 passed (26)',
+      '# the template step',
       'files written: 11;',
-      'AI-FILL markers to complete: 16',
-      '# after your agent (expected)',
-      'AI-FILL markers: 0',
+      'AI-FILL markers to complete: 14',
+      '# after the agent: pnpm verify',
+      'Tests  47 passed (47)',
+      'Tests  42 passed (42)',
     ],
     done: [
-      'ledger rows: 3, both gates green',
       'check:ai-fill prints 0 markers',
-      'delete O2 from the service: `pnpm exec vitest run src/orders` shows one red test',
+      'deleting O2 turns a test red',
     ],
   },
   {
-    type: 'stuck', ch: '1', title: 'If you are stuck: module 1',
+    type: 'stuck', ch: '1', title: 'When the agent goes wrong: module 1',
     rows: [
-      ['Port 3000 is already in use', 'Set PORT=3100 in .env, then use 3100 in Postman (baseUrl) and every URL. The lab helper reads PORT from .env.'],
-      ['"Run step 1 first"', 'The template script refuses before `nest g resource`, and refuses a second run. Never use --force after filling.'],
-      ['Unit green, e2e red', 'Validation, defaults and status codes live at the HTTP boundary. Only e2e sees them.'],
+      ['It says "done" without counts', 'Ask for the two `Tests` lines and the `Test Files` lines. A claim is not a count.'],
+      ['It edited code outside the markers', 'Ask it to undo that and put the change in the template, or in a marker. Generated code stays generated.'],
+      ['`it.each` fails typecheck (TS2322)', 'Known trap (in the skill): with supertest, write `async (x) => { await … }`.'],
     ],
   },
 
+  // ---------------------------------------------------------------- module 2
   { type: 'section', ch: '2', notes: cutNote(MODULES[1], 'nothing. This is chapter 02 as it stands.') },
   {
-    type: 'run', ch: '2', title: 'Run this: add a phone column',
-    code: [
-      '# 1. specs/users.md: phone (optional, E.164)',
-      '# 2. user.schema.ts + users.table.ts',
-      'pnpm check:migrations   # FAILS: drift',
-      'pnpm db:generate        # READ the SQL',
-      'pnpm check:migrations   # clean now',
-      '# add an allowed and a refused phone case',
-      '#   to test/users.e2e-spec.ts',
-      'pnpm verify   # TS2345 phone missing? add',
-      '#   phone: null to users.service.spec.ts payloads',
-      '# stop the app (Ctrl+C), then:',
-      'pnpm build && pnpm db:migrate',
-      'pnpm start',
+    type: 'prompt', ch: '2', title: 'Instruction: a phone column',
+    proctor: 'A schema change: the agent must read the migration it generates and tell you if it is safe.',
+    prompt: [
+      'Users need an optional phone number; the contract is',
+      'section 02 of test/labs/README.md. Done when pnpm lab 02',
+      'and pnpm verify are green. Before you finish, show me the',
+      'database change and tell me whether it is safe on a',
+      'database that already has users.',
     ],
-    notes: 'Make learners read the generated SQL out loud. A nullable ADD COLUMN is safe on populated tables; NOT NULL is not (chapter 04).',
+    expect: ['the spec, then the schema, then the table', 'reads the generated SQL before calling it safe', 'tests the migration on a table with rows', 'ledger rows: 2'],
+    notes: 'Measured: a fresh agent migrated a scratch database that already had a user, showed the row kept with phone null, and refused a NOT NULL column as a control. If yours only says "it is nullable, so it is safe", ask it to prove it.',
+  },
+  {
+    type: 'run', ch: '2', title: 'Check it: module 2',
+    code: [
+      'git diff drizzle/        # one new migration',
+      'pnpm db:migrate          # ledger rows: 2',
+      'pnpm verify',
+      '# restart the app (Ctrl+C), then:',
+      'pnpm build && pnpm start',
+    ],
+    notes: 'The in-memory test database is built from the migration SQL, not the TypeScript table, so tests cannot catch a missing migration; check:migrations can.',
   },
   {
     type: 'checkpoint', ch: '2', title: 'Checkpoint: drift caught, ledger grows',
-    outputSource: 'captured messages, expected count',
+    outputSource: 'captured',
     output: [
-      '# before db:generate (captured)',
+      '# before db:generate',
       'check-migrations: DRIFT - tables',
       '  changed without a migration.',
-      '# db:generate (captured format)',
-      '[✓] Your SQL migration file ➜',
-      '    drizzle/0003_….sql',
-      '# pnpm db:migrate (expected)',
-      'db:migrate: ledger rows: 4',
+      '# the generated SQL',
+      'ALTER TABLE `users` ADD `phone` text;',
+      '# pnpm db:migrate',
+      'db:migrate: ledger rows: 2',
     ],
     done: [
-      'check:migrations failed BEFORE generating',
-      'you read the SQL in `drizzle/0003_*`',
-      'ledger rows: 4; phone appears in responses',
+      'you saw the drift failure first',
+      'the agent explained why the SQL is safe',
     ],
   },
   {
-    type: 'stuck', ch: '2', title: 'If you are stuck: module 2',
+    type: 'stuck', ch: '2', title: 'When the agent goes wrong: module 2',
     rows: [
-      ['All tests pass, check fails', 'Correct: tests run on the MIGRATION SQL (in-memory SQLite), not your TypeScript table. Generate the migration.'],
-      ['Drift test fails', 'The zod schema and the table must declare exactly the same fields, with the same TS names.'],
-      ['The generated SQL says NOT NULL', 'SQLite refuses it on any table with rows (measured). Decide what happens to existing rows first, as drizzle/0002 does.'],
+      ['TS2345 "phone" is missing', 'Older specs build a user by hand: they need `phone: null` (the skill names this trap).'],
+      ['All tests pass, the check fails', 'Correct: tests run on the MIGRATION SQL. The agent must run `pnpm db:generate`.'],
+      ['It hand-wrote the SQL file', 'Ask it to delete that and generate: the snapshot in drizzle/meta must match.'],
     ],
   },
 
-
-  { type: 'section', ch: '3', notes: cutNote(MODULES[2], 'reading the hand-written middleware commit (chapter 03) and the expiresAt lab (chapter 04). Offer expiresAt as a stretch.') },
+  // ---------------------------------------------------------------- module 3
+  { type: 'section', ch: '3', notes: cutNote(MODULES[2], 'nothing; the expiresAt stretch needs /mcp, so it comes after module 6.') },
   {
-    type: 'run', ch: '3', title: 'Run this: break the 401, then rotate a key',
+    type: 'prompt', ch: '3', title: 'Instruction 1/3: Basic auth with Passport',
+    proctor: 'First the simple handler: HTTP Basic, with Passport doing the protocol. No hand-written header parsing.',
+    prompt: [
+      'Callers must authenticate now. specs/auth.md is the',
+      'design: do its step 1 only, keep pnpm verify green, and',
+      'show me how to see it working.',
+    ],
+    expect: ['passport-http: no hand-written parser', 'a global guard; health and sign-up public', 'every e2e suite now signs in', 'shows you curl: 200 with, 401 without'],
+    notes: 'Measured: a fresh agent built step 1 and demonstrated it with curl: 401 with a Basic challenge and one body for wrong password, unknown email and a bare header. Lab 03 stays red until step 2, by design.',
+  },
+  {
+    type: 'prompt', ch: '3', title: 'Instruction 2/3: move to JWT',
+    proctor: 'Now the better handler: the password crosses the wire once, at login; every other request carries a token that expires.',
+    prompt: [
+      'Now step 2 of specs/auth.md. Done when pnpm lab 03 and',
+      'pnpm verify are green.',
+    ],
+    expect: ['JWT_SECRET the env-config way, never hard-coded', 'a jwt strategy that re-checks the user', 'Basic only on login', 'one 401 body, now with a Bearer challenge'],
+    notes: 'Measured: a fresh agent got lab 03 8/8 from this one line, because the spec carries the design. Production must refuse to start without JWT_SECRET; check that your agent did not hard-code one.',
+  },
+  {
+    type: 'prompt', ch: '3', title: 'Instruction 3/3: devices',
+    proctor: 'A device is a non-human client. One call provisions it and returns its key and secret, shown once.',
+    prompt: [
+      'Add devices: specs/devices.md, and section 04 of',
+      'test/labs/README.md. Done when pnpm lab 03 04 and pnpm',
+      'verify are green.',
+    ],
+    expect: ['the scaffold skill, then reshaped for provision', 'reads the migration (ON DELETE restrict)', 'secret stored as a hash, shown once', 'another user\'s device is 404, not 403'],
+    notes: 'Measured: a fresh agent scaffolded devices with the skill, reshaped the CRUD into provision, rotate and archive, and got lab 03 04 14/14. Break-it discussion: have it give unknown emails a different 401, watch lab 03 fail, revert.',
+  },
+  {
+    type: 'run', ch: '3', title: 'Check it: module 3',
     code: [
-      '# send folder 03, then the lab:',
-      '# unknown emails get a different message',
-      'pnpm test:e2e   # which test fails?',
-      'pnpm lab 03     # red too',
+      '# send Postman folder 03, then 04',
+      'pnpm verify',
       '# restart the app (Ctrl+C), then:',
-      'pnpm build && pnpm start',
-      '# re-send 03 in Postman: red. Revert,',
-      '#   rebuild, restart: all green again',
-      '# then send folder 04',
+      'pnpm build && pnpm db:migrate && pnpm start',
     ],
     postman: postman(
-      ['03', ['Sign up (public)', 'Me: no credentials → 401', 'Me: wrong password → the same 401', 'Me: unknown email → the same 401', 'Me (Basic auth)']],
-      ['04', ['Create device', 'Issue credentials (secret shown once)', 'Activate device', 'Get device (no secret, no hash)']],
+      ['03', ['Sign up (public)', 'Log in: wrong password → 401', 'Log in: unknown email → the same 401', 'Log in (Basic) → token', 'Me (Bearer token)']],
+      ['04', ['Provision device (key + secret shown once)', 'Get device (no secret, no hash)']],
     ),
-    notes: 'Issuing credentials stores a live secret in a collection variable: never export or share the collection after a run. Re-sending Issue credentials is a rotation.',
+    notes: 'Logging in stores a token, and provisioning a live device secret, in collection variables: never export or share the collection after a run.',
   },
   {
-    type: 'checkpoint', ch: '3', title: 'Checkpoint: one 401, one secret',
+    type: 'checkpoint', ch: '3', title: 'Checkpoint: a token, one 401, one secret',
     outputSource: 'from the code, then expected',
     output: [
+      '# Log in: unknown email',
       'HTTP/1.1 401 Unauthorized',
       'WWW-Authenticate: Basic',
       '  realm="nest-ai-starter", charset="UTF-8"',
-      '# after your change, e2e reports:',
-      '× every failure is the SAME 401 …',
-      '# GET device (expected)',
-      '"status":"active", "secretLast4":"…"',
-      '# POST …/credentials (expected)',
-      '"secret":"dsk_…"   (shown ONCE)',
+      '# Log in (Basic) → token',
+      '"tokenType":"Bearer","expiresIn":3600',
+      '# Provision device',
+      '"deviceKey":"DK…","secret":"dsk_…"',
+      '# pnpm db:migrate',
+      'db:migrate: ledger rows: 3',
     ],
     done: [
-      'you saw the test that pins the 401 rule fail, then reverted',
-      'no response but /credentials ever shows a secret',
+      'only provision and rotate ever show a secret',
       "another user's device → 404, not 403",
     ],
   },
   {
-    type: 'stuck', ch: '3', title: 'If you are stuck: module 3',
+    type: 'stuck', ch: '3', title: 'When the agent goes wrong: module 3',
     rows: [
-      ['"2 passed | 30 skipped", exit 1', 'A beforeAll threw (e.g. sign-up lost @Public()). The failure is on the Test Files line.'],
-      ['My new route answers 401', 'Secure by default: the guard is global. Add @Public() only on purpose.'],
-      ['Deleting a user gives a 500', 'A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.'],
+      ['It hand-writes a Basic parser', 'Point it at the spec: passport-http does the parsing. The colon limit is recorded, not worked around.'],
+      ['Skipped tests, exit 1', 'A beforeAll threw (sign-up or login lost @Public()). The failure is on the Test Files line.'],
+      ['A malformed Basic header gives 400', 'passport-http alone does that. The guard\'s handleRequest must turn every failure into the one 401.'],
     ],
   },
 
-  { type: 'section', ch: '4', notes: cutNote(MODULES[3], 'the separate envelope-discussion lab (chapter 05): the raw initialize below covers it.') },
+  // ---------------------------------------------------------------- module 4
+  { type: 'section', ch: '4', notes: cutNote(MODULES[3], 'the separate envelope-discussion lab (chapter 05): reading one raw exchange covers it.') },
   {
-    type: 'run', ch: '4', title: 'Run this (1/2): a raw MCP initialize',
-    code: [],
-    postman: postman(['05', ['initialize', 'tools/list', 'tools/call whoami', 'No device headers → 401']]),
-    notes: 'Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?',
-  },
-  {
-    type: 'run', ch: '4', title: 'Run this (2/2): add a publish-note tool',
-    code: [
-      '// src/mcp/notes.tools.ts',
-      '@Tool({',
-      "  name: 'publish-note',",
-      "  description: 'Publish a note. A published note needs a non-empty body.',",
-      '  parameters: z.object({ id: z.string().uuid() }),',
-      '})',
-      'publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {',
-      "  return runTool(() => this.notes.update(id, { status: 'published' }));",
-      '}',
-      '# then, in the terminal:',
-      'pnpm verify   # red until you add publish-note to',
-      '#   the tool list in test/mcp-stdio.e2e-spec.ts',
+    type: 'prompt', ch: '4', title: 'Instruction: an MCP server over stdio',
+    proctor: 'The same services, now as tools an AI client can call. Stdout belongs to the protocol.',
+    prompt: [
+      'Make the notes service usable by AI clients over MCP,',
+      'stdio first: module 4 of specs/mcp.md, plus the',
+      'publish-note tool in section 06 of test/labs/README.md.',
+      'Done when pnpm lab 06 and pnpm verify are green.',
     ],
-    postman: postman(['06', ['Create note (draft, empty body)', 'Publish it → 422 RULE_VIOLATION', 'Get note']]),
-    notes: 'Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.',
+    expect: ['reads the installed library, not its memory', 'tools call NotesService: no rules of their own', 'an e2e test that reads RAW stdout', 'publish-note reuses the published-needs-a-body rule'],
+    notes: 'Measured: a fresh agent read the installed @rekog/mcp-nest types, got lab 06 4/4, and proved a stray console.log fails its raw-stdout test. Then look at the wire with pnpm mcp:inspect:cli and read chapter 05.',
   },
   {
-    type: 'checkpoint', ch: '4', title: 'Checkpoint: JSON-RPC in SSE, rule over MCP',
+    type: 'run', ch: '4', title: 'Check it: module 4',
+    code: [
+      'pnpm build',
+      'pnpm mcp:inspect:cli --method tools/list',
+      'pnpm mcp:inspect:cli --method tools/call \\',
+      '  --tool-name get-note \\',
+      '  --tool-arg id=00000000-0000-4000-8000-000000000000',
+      'echo "exit: $?"',
+    ],
+    notes: 'The CLI is a real MCP client over stdio. Exit 5 comes from the tool\'s own isError, so it is a sound CI signal (module 5 uses it).',
+  },
+  {
+    type: 'checkpoint', ch: '4', title: 'Checkpoint: errors the model can read',
+    outputSource: 'captured',
+    output: [
+      '{ "content": [ { "type": "text",',
+      '  "text": "NOT_FOUND: Note … not found" } ],',
+      '  "isError": true }',
+      'exit: 5',
+    ],
+    done: [
+      'tools/list shows create-note, get-note, list-notes, publish-note',
+      'a rule violation is a tool error, not a crash',
+    ],
+  },
+  {
+    type: 'stuck', ch: '4', title: 'When the agent goes wrong: module 4',
+    rows: [
+      ['A console.log "for debugging"', 'It goes into the protocol stream. The SDK client ignores it, so only the RAW stdout test catches it.'],
+      ['It copied the zod schema into the tool', 'Two copies drift. Ask it to import the REST schema.'],
+      ['Tool errors come back as exceptions', 'Wrap tool bodies in the tool-result helper: a DomainError must be `isError: true`.'],
+    ],
+  },
+
+  // ---------------------------------------------------------------- module 5
+  { type: 'section', ch: '5', notes: cutNote(MODULES[4], 'the Host-header lab (chapter 08). Mention MCP_ALLOWED_HOSTS; the stuck slide covers its snags.') },
+  {
+    type: 'prompt', ch: '5', title: 'Instruction: MCP over Streamable HTTP',
+    proctor: 'Same tools, over HTTP, inside the app. No auth yet: name that state in a test, module 6 closes it.',
+    prompt: [
+      'Serve the same MCP tools over HTTP inside the app: module',
+      '5 of specs/mcp.md. Done when pnpm lab 08 and pnpm verify',
+      'are green.',
+    ],
+    expect: ['finds how the transport mounts on the app', 'MCP_ALLOWED_HOSTS the env-config way', 'the tools module imported by the app', 'a test that says /mcp is still open'],
+    notes: 'Measured: a fresh agent got lab 08 4/4 and broke each setting once to see a test fail. Experiment: have it flip enableJsonResponse, compare initialize in Postman, watch lab 08 fail, revert.',
+  },
+  {
+    type: 'run', ch: '5', title: 'Run this: the Inspector UI',
+    code: INSPECTOR_UP,
+    ui: INSPECTOR_UI,
+    notes: UI_NOTES,
+  },
+  {
+    type: 'run', ch: '5', title: 'Check it: module 5',
+    code: [
+      '# Postman 05 › initialize: an SSE stream',
+      '# Postman 08 › Foreign Host → 403',
+      'pnpm verify',
+    ],
+    postman: postman(['05', ['initialize']], ['08', ['Foreign Host → 403']]),
+    notes: 'At this point the Inspector connects with no headers at all: that is the security finding module 6 fixes.',
+  },
+  {
+    type: 'checkpoint', ch: '5', title: 'Checkpoint: one message, SSE framing',
     outputSource: 'captured',
     output: [
       'content-type: text/event-stream',
       'event: message',
       'data: {"result":{"protocolVersion":…},',
       ' "jsonrpc":"2.0","id":1}',
-      '# publish-note on a note with no body',
-      '{"content":[{"type":"text","text":',
-      '  "RULE_VIOLATION: A published note',
-      '   needs a non-empty body"}],',
-      ' "isError":true}',
     ],
     done: [
-      'you matched the response id to the request',
-      'the stdio e2e tool list updated on purpose',
-      'tool error (isError) vs protocol error (error)',
+      'tools listed over HTTP, the same as stdio',
+      'a foreign Host is refused (403)',
     ],
   },
   {
-    type: 'stuck', ch: '4', title: 'If you are stuck: module 4',
+    type: 'stuck', ch: '5', title: 'When the agent goes wrong: module 5',
     rows: [
-      ['401 on /mcp', 'Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-run the helper.'],
-      ['console.log "for debugging"', 'It goes into the protocol stream. The SDK client ignores it, so only the RAW stdout test fails.'],
-      ['A crash instead of isError', 'Wrap tool bodies in runTool(): DomainError → tool error the model can read.'],
+      ['tools/list over HTTP is empty', 'McpToolsModule is not in AppModule (measured while building this course). Lab 08 checks for it.'],
+      ['Called by hostname: 403', 'That name is not in MCP_ALLOWED_HOSTS: localhost,<hostname>.'],
+      ['My fetch Host test passes 200', 'fetch silently replaces Host (measured). node:http, curl and Postman send it as written.'],
     ],
   },
 
-  { type: 'section', ch: '5', notes: cutNote(MODULES[4], 'the Host-header lab (chapter 08). Mention MCP_ALLOWED_HOSTS; the stuck slide covers its snags.') },
+  // ---------------------------------------------------------------- module 6
+  { type: 'section', ch: '6', notes: cutNote(MODULES[5], 'nothing from chapter 09; the chapter 10 capstone moves to homework, and the expiresAt lab is a stretch.') },
   {
-    type: 'run', ch: '5', title: 'Run this (1/2): the Inspector UI',
-    code: INSPECTOR_UP,
-    ui: INSPECTOR_UI,
-    notes: UI_NOTES,
+    type: 'prompt', ch: '6', title: 'Instruction: lock /mcp to devices',
+    proctor: 'The transport authenticates, not the tools: a failure is an HTTP 401 before any JSON-RPC is read.',
+    prompt: [
+      'Only devices may use /mcp: module 6 of specs/mcp.md. Done',
+      'when pnpm lab 09 and pnpm verify are green.',
+    ],
+    expect: ['middleware BEFORE the transport mounts', 'one 401 body for every failure', 'whoami: device and owner, public fields', 'proves the order matters by breaking it'],
+    notes: 'Measured: a fresh agent got lab 09 4/4, and registering its middleware after the transport made lab 09 fail 3 tests. Discuss the known limit in the spec: a disabled user\'s devices keep working until archived.',
   },
   {
-    type: 'run', ch: '5', title: 'Run this (2/2): a CI check, then the wire',
-    code: [
-      'pnpm build',
-      'pnpm mcp:inspect:cli --method tools/call \\',
-      '  --tool-name get-note \\',
-      '  --tool-arg id=00000000-0000-4000-8000-000000000000',
-      'echo "exit: $?"',
-      '# attach-mcp.ts: enableJsonResponse: true',
-      '# restart the app: Ctrl+C, then',
-      'pnpm build && pnpm start',
-      '# re-send Postman 05 › initialize: what changed?',
-      '#   (its test goes red: that is the point)',
-      '# then revert enableJsonResponse',
-    ],
-    postman: postman(['05', ['initialize']], ['08', ['Foreign Host → 403']]),
-    notes: 'The CLI is the scriptable half of the Inspector. Exit 5 comes from the tool\'s own isError, which is why it is a sound CI signal.',
-  },
-  {
-    type: 'checkpoint', ch: '5', title: 'Checkpoint: exit 5, then two framings',
-    outputSource: 'captured, then expected',
-    output: [
-      '{ "content": [ { "type": "text",',
-      '  "text": "NOT_FOUND: Note … not found" } ],',
-      '  "isError": true }',
-      'exit: 5',
-      '# enableJsonResponse: true (expected)',
-      'content-type: application/json',
-      '{"result":…}',
-    ],
-    done: [
-      'the Inspector UI shows Connected',
-      "a script that FAILS when create-note accepts `{title:'x', status:'published'}`",
-      'both framings captured and compared',
-    ],
-  },
-  {
-    type: 'stuck', ch: '5', title: 'If you are stuck: module 5',
-    rows: [
-      UI_FAILED,
-      ['Sharing the Inspector UI URL', 'Don\'t: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.'],
-      ['Called by hostname: 403', 'With valid device headers (without them it is 401: auth runs first). Add the name to MCP_ALLOWED_HOSTS: localhost,<hostname>.'],
-    ],
-  },
-
-  { type: 'section', ch: '6', notes: cutNote(MODULES[5], 'nothing from chapter 09; the chapter 10 capstone moves to homework.') },
-  {
-    type: 'run', ch: '6', title: 'Run this: rotate mid-session',
+    type: 'run', ch: '6', title: 'Check it: rotate mid-session',
     code: [
       DEMO,
       'npx -y @modelcontextprotocol/inspector@2.12.0 \\',
       '  --cli http://localhost:3000/mcp \\',
       '  --method tools/call --tool-name whoami \\',
-      '  --header "X-Access-Key-Id: $MCP_KEY_ID" \\',
-      '  --header "X-Secret-Key: $MCP_SECRET"',
+      '  --header "X-Device-Key: $DEVICE_KEY" \\',
+      '  --header "X-Device-Secret: $DEVICE_SECRET"',
     ],
-    postman: postman(['09', ['Rotate credentials', 'whoami with the OLD secret → 401', 'whoami with the NEW secret']]),
-    notes: 'Two clients, two devices: the Inspector uses the helper\'s device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.',
+    postman: postman(['09', ['Rotate secret', 'whoami with the OLD secret → 401', 'whoami with the NEW secret']]),
+    notes: 'Two clients, two devices: the Inspector uses the helper\'s device, Postman its own. Rotating in Postman therefore does not break the Inspector call; a good question to ask.',
   },
   {
     type: 'checkpoint', ch: '6', title: 'Checkpoint: rotation bites immediately',
@@ -460,23 +514,21 @@ const SLIDES = [
       '"device": { … "status": "active" … },',
       '"owner":  { … "email": "demo@example.com" }',
       '# Postman 09 · Rotate mid-session',
-      'Rotate credentials           200',
+      'Rotate secret                200',
       'whoami with the OLD secret   401',
       'whoami with the NEW secret   200',
     ],
     done: [
       'the old secret failed on the NEXT call',
-      'the 7 failure modes → one 401, explained',
-      'why stdio whoami is a tool error (local trust)',
+      'a user token on /mcp → 401',
     ],
-    notes: 'The Inspector treats any 401 as an OAuth challenge. Device keys suit header-configured machine clients; the OAuth path is @rekog/mcp-nest-auth (not built in this course).',
   },
   {
-    type: 'stuck', ch: '6', title: 'If you are stuck: module 6',
+    type: 'stuck', ch: '6', title: 'When the agent goes wrong: module 6',
     rows: [
-      ['Inspector says auth_required', 'That IS your 401. Check the headers, or re-run the helper for a fresh device.'],
-      ['whoami over stdio fails', 'By design: stdio trusts the local user; there is no device identity.'],
-      ['Auth seems bypassed', 'The middleware must be registered BEFORE the transport mounts (measured: after = bypassed).'],
+      ['Calls without headers still work', 'The middleware is registered after the transport mounts. Move it before (measured: 2 e2e tests fail otherwise).'],
+      ['It logs the headers to debug', 'Never: a device secret in a log is a leaked secret. Ask it to remove the line.'],
+      ['The Inspector UI says Failed', 'Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network).'],
     ],
   },
 
@@ -504,7 +556,7 @@ const SLIDES = [
 
 // The lab check each unit ends with (boilerplate/nest-ai-starter/test/labs/). Added to the
 // unit's LAST run slide as a command, and to its checkpoint as the first done-when item.
-const GUARD_LABS = new Set(['03', '08', '09']);
+const GUARD_LABS = new Set();
 function withLabChecks(slides, labsByUnit) {
   const lastRun = new Map();
   slides.forEach((s, i) => s.type === 'run' && labsByUnit[s.ch] && lastRun.set(s.ch, i));
@@ -522,11 +574,11 @@ function withLabChecks(slides, labsByUnit) {
   });
 }
 
-// Module 3 checks lab 03 only: lab 04 (expiresAt) is a build lab that fails until it is built,
-// and module 3 leaves it out, so `pnpm lab 03 04` could never pass there.
+// Module 3 builds auth (lab 03) and devices (lab 04). The expiresAt stretch is lab 12: it
+// needs /mcp, so it follows module 6.
 const TRACKS = [
   { file: 'lab-companion', label: 'Lab companion', unit: 'MODULE', units: MODULES,
-    slides: withLabChecks(SLIDES, { '1': ['01'], '2': ['02'], '3': ['03'], '4': ['06'], '5': ['08'], '6': ['09'] }) },
+    slides: withLabChecks(SLIDES, { '1': ['01'], '2': ['02'], '3': ['03', '04'], '4': ['06'], '5': ['08'], '6': ['09'] }) },
 ];
 
 // ---- icons -----------------------------------------------------------------------
@@ -612,7 +664,11 @@ async function buildPptx(file, track) {
   // Largest code size at which the longest line and every line fit (Courier: 0.6em wide).
   function fitCode(lines, w, h) {
     const long = Math.max(...lines.map((l) => l.length));
-    return [14, 12, 11, 10].find((fs) => (long * fs * 0.6) / 72 <= w && (lines.length * fs * 1.2) / 72 <= h) ?? 10;
+    const size = [14, 12, 11, 10].find((fs) => (long * fs * 0.6) / 72 <= w && (lines.length * fs * 1.2) / 72 <= h);
+    // No silent fallback: at 10pt a longer line soft-wraps in the box and the next hard break
+    // strands a word on its own line, which is unreadable in a prompt meant to be pasted.
+    if (!size) throw new Error(`code block does not fit ${w}" x ${h}" even at 10pt: ${lines.length} lines, longest ${long} chars (max ${Math.floor((w * 72) / 6)}): "${lines.find((l) => l.length === long)}"`);
+    return size;
   }
   // The Postman panel: which folder, which requests, in order.
   function postmanCard(slide, x, y, w, h, groups, opts = {}) {
@@ -670,6 +726,20 @@ async function buildPptx(file, track) {
       }
       if (s.postman) postmanCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, s.postman);
       else if (s.ui) postmanCard(slide, 0.5 + 9.0 - pmW, 1.2, pmW, 3.85, panel, { title: s.ui.title, color: INSPECTOR, icon: icons.ui });
+    } else if (s.type === 'prompt') {
+      slide = pres.addSlide({ masterName: 'CONTENT' });
+      slide.addText(s.title, { placeholder: 'title' });
+      // The proctor's line, then the instruction card (the motif: a goal, where the requirements
+      // are, and when it is done; never the steps), then what to watch for in the agent's approach.
+      slide.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.15, w: 0.08, h: 0.6, fill: { color: COL.mint }, line: { color: COL.mint } });
+      slide.addText([{ text: 'Proctor: ', options: { bold: true, color: COL.text } }, ...md2runs(s.proctor, { color: COL.slate })], { x: 0.7, y: 1.12, w: 8.8, h: 0.66, fontSize: 14, italic: true, valign: 'middle', margin: 0, isTextBox: true, objectName: 'proctor' });
+      terminal(slide, 0.5, 1.9, 5.7, 3.15, s.prompt, { fontSize: fitCode(s.prompt, 5.05, 2.6), label: 'instruction · give it to your agent' });
+      slide.addText('Watch its approach', { x: 6.45, y: 1.9, w: 3.05, h: 0.4, fontSize: 16, bold: true, color: COL.text, margin: 0, isTextBox: true });
+      s.expect.forEach((e, i) => {
+        const y = 2.4 + i * 0.66;
+        badge(slide, 6.45, y + 0.04, 0.32, COL.mint, icons.check);
+        slide.addText(md2runs(e), { x: 6.9, y, w: 2.6, h: 0.62, fontSize: 12, color: COL.text, valign: 'top', margin: 0, isTextBox: true });
+      });
     } else if (s.type === 'checkpoint') {
       slide = pres.addSlide({ masterName: 'CONTENT' });
       slide.addText(s.title, { placeholder: 'title' });
@@ -786,6 +856,9 @@ function buildMarkdown(track) {
       if (s.code.length) p.push('', ...fence(s.code));
       if (s.postman) p.push('', '**In Postman**', '', ...s.postman.map((g) => `- **${g.folder}**: ${g.requests.join(' · ')}`));
       if (s.ui) p.push('', `**${s.ui.title}**`, '', ...s.ui.steps.map((step, i) => `${i + 1}. ${step}`));
+    }
+    if (s.type === 'prompt') {
+      p.push(`## ${s.title}`, '', `> **Proctor:** ${s.proctor}`, '', '**Give it to your agent** (paste, or say it in your own words):', '', '```text', ...s.prompt, '```', '', '**Watch its approach**', '', ...s.expect.map((e) => `- ${e}`));
     }
     if (s.type === 'checkpoint') {
       p.push(`## ${s.title}`, '', `_Output: ${s.outputSource}_`, '', ...fence(s.output), '', '**Done when**', '', ...s.done.map((d) => `- [ ] ${d}`));

@@ -2,20 +2,15 @@
   "info": {
     "_postman_id": "c74dabb4-902e-5f8a-a4c6-401f45cc8254",
     "name": "nest-ai-starter labs",
-    "description": "Every REST and MCP call the course labs make.\n\n1. In boilerplate/nest-ai-starter: `pnpm build && pnpm db:migrate && pnpm start`.\n2. Import this file into Postman. `baseUrl` is http://localhost:3000.\n3. Run the folders in order (or the whole collection with the Runner).\n\nFolders are numbered by chapter; each name also says its module.\n\nAuth: the collection uses Basic auth with {{email}} / {{password}} (a local demo user). Requests that must not send credentials override it with No Auth.\n\nSECRETS: issuing credentials stores the device secret in the `secret` variable (current value). Never export, share or commit the collection after running it. Re-import the clean file instead.",
+    "description": "Every REST and MCP call the course labs make.\n\n1. In boilerplate/nest-ai-starter: `pnpm build && pnpm db:migrate && pnpm start`.\n2. Import this file into Postman. `baseUrl` is http://localhost:3000.\n3. Run the folders in order (or the whole collection with the Runner).\n\nFolders are numbered by chapter; each name also says its module.\n\nAuth: \"Log in\" (folder 03) trades {{email}} / {{password}} (a local demo user) for a token; the collection then sends `Authorization: Bearer {{token}}`. Requests that must not send it override it. MCP requests authenticate as a device with X-Device-Key / X-Device-Secret.\n\nSECRETS. Provisioning stores the device secret in the `secret` variable (current value). Never export, share or commit the collection after running it. Re-import the clean file instead.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
-    "type": "basic",
-    "basic": [
+    "type": "bearer",
+    "bearer": [
       {
-        "key": "username",
-        "value": "{{email}}",
-        "type": "string"
-      },
-      {
-        "key": "password",
-        "value": "{{password}}",
+        "key": "token",
+        "value": "{{token}}",
         "type": "string"
       }
     ]
@@ -34,11 +29,15 @@
       "value": "demo passphrase for labs"
     },
     {
+      "key": "token",
+      "value": ""
+    },
+    {
       "key": "deviceId",
       "value": ""
     },
     {
-      "key": "accessKeyId",
+      "key": "deviceKey",
       "value": ""
     },
     {
@@ -93,7 +92,7 @@
     {
       "id": "99629e77-1f64-53bf-b4ff-59aa5d589d19",
       "name": "03 · Auth (module 3)",
-      "description": "Sign up, then see that EVERY auth failure is the same 401. Chapter 03 lab: change the message for unknown emails and re-run this folder: the \"same body\" test fails, and so does the e2e test that pins the rule.",
+      "description": "Sign up, log in with Basic to get a token, then use the token. Every failure is the same 401. Chapter 03 lab: give unknown emails a different message at login and re-run this folder: the \"same body\" test fails, and so does the e2e test that pins the rule.",
       "item": [
         {
           "id": "ee807d98-a9ce-5d7a-8fd0-d9c7fb2302a8",
@@ -142,51 +141,17 @@
           ]
         },
         {
-          "id": "57491ac0-c7c0-58c3-b8a2-3035bf46a1a0",
-          "name": "Me: no credentials → 401",
+          "id": "c445ba1d-6aac-5790-848e-7dc6869aeb7f",
+          "name": "Log in: wrong password → 401",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "me"]
+              "path": ["api", "v1", "auth", "login"]
             },
-            "description": "No Authorization header at all.",
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('401 with a Basic challenge', () => {",
-                  "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic');",
-                  "});",
-                  "pm.test('the same body as every other auth failure', () => {",
-                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "5666710f-7208-556b-aedd-04d50b0b1336",
-          "name": "Me: wrong password → the same 401",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "me"]
-            },
-            "description": "A known email with a wrong password must be indistinguishable from no credentials.",
+            "description": "A known email with a wrong password.",
             "auth": {
               "type": "basic",
               "basic": [
@@ -222,15 +187,15 @@
           ]
         },
         {
-          "id": "6a2d2b92-c7f0-5058-a504-ec9aa46ae5fd",
-          "name": "Me: unknown email → the same 401",
+          "id": "fb8ad5f9-81bd-50fc-be9f-9f5496d7c284",
+          "name": "Log in: unknown email → the same 401",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "me"]
+              "path": ["api", "v1", "auth", "login"]
             },
             "description": "An email nobody registered. Same 401 again, so emails cannot be probed.",
             "auth": {
@@ -268,8 +233,53 @@
           ]
         },
         {
-          "id": "ffa1b797-8655-53df-89a7-b346bea56965",
-          "name": "Me (Basic auth)",
+          "id": "ffe1b2bb-a44a-509a-9b7d-b991606873f9",
+          "name": "Log in (Basic) → token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Basic with {{email}} / {{password}}. The test stores the access token in the `token` variable; every later request sends it as `Authorization: Bearer {{token}}` (the collection auth).",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{email}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with a bearer token', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const t = pm.response.json();",
+                  "  pm.expect(t.tokenType).to.eql('Bearer');",
+                  "  pm.collectionVariables.set('token', t.accessToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "39b12d57-57a0-52fc-8b0e-97200f3d5c26",
+          "name": "Me: no token → 401",
           "request": {
             "method": "GET",
             "header": [],
@@ -278,7 +288,41 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "auth", "me"]
             },
-            "description": "Uses the collection auth: Basic with {{email}} / {{password}}."
+            "description": "No Authorization header at all.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 with a Bearer challenge', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Bearer');",
+                  "});",
+                  "pm.test('the same body as every other auth failure', () => {",
+                  "  pm.expect(pm.response.json()).to.eql({ statusCode: 401, error: 'Unauthorized', message: 'Invalid credentials' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "a22968c4-80cc-5206-a4d0-acde800f5cfc",
+          "name": "Me (Bearer token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Uses the collection auth: Bearer {{token}}."
           },
           "event": [
             {
@@ -302,11 +346,11 @@
     {
       "id": "9bc82436-4612-520f-8d4c-ec49aa84ede0",
       "name": "04 · Devices (module 3)",
-      "description": "Create a device, issue its credentials (the secret is shown ONCE and stored in the `secret` variable), activate it, then read it back: the secret never appears again.",
+      "description": "Provision a device: one call creates it and returns its key and secret (the secret is shown ONCE and stored in the `secret` variable). Then read it back: the secret never appears again.",
       "item": [
         {
-          "id": "420c6709-7f16-5abb-819e-abfe44f5b7f6",
-          "name": "Create device",
+          "id": "6432d43c-a84a-57d4-b5b7-69c66e8ae84f",
+          "name": "Provision device (key + secret shown once)",
           "request": {
             "method": "POST",
             "header": [
@@ -316,11 +360,11 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/devices",
+              "raw": "{{baseUrl}}/api/v1/devices/provision",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices"]
+              "path": ["api", "v1", "devices", "provision"]
             },
-            "description": "Owned by the signed-in user. Starts as `draft`.",
+            "description": "Owned by the signed-in user, active at once. Returns `deviceKey` and the plaintext `secret`, ONCE. The test stores both in collection variables. Never paste the secret anywhere, and never share or export the collection with its current values.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"postman device\",\n  \"description\": \"created from the Postman collection\"\n}",
@@ -337,65 +381,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201 draft device', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('draft'); });",
-                  "pm.collectionVariables.set('deviceId', pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "1a78b939-85bd-5c36-94b2-5705b8fb6b64",
-          "name": "Issue credentials (secret shown once)",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/credentials",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices", "{{deviceId}}", "credentials"]
-            },
-            "description": "Returns `accessKeyId` and the plaintext `secret`, ONCE. The test stores both in collection variables. Never paste the secret anywhere, and never share or export the collection with its current values."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 with a key id and a one-time secret', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const c = pm.response.json();",
-                  "  pm.expect(c.accessKeyId).to.match(/^AKID[A-Z2-7]{16}$/);",
-                  "  pm.expect(c.secret).to.match(/^dsk_/);",
-                  "  pm.collectionVariables.set('accessKeyId', c.accessKeyId);",
-                  "  pm.collectionVariables.set('secret', c.secret);",
+                  "pm.test('201, an active device with a key and a one-time secret', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const d = pm.response.json();",
+                  "  pm.expect(d.status).to.eql('active');",
+                  "  pm.expect(d.deviceKey).to.match(/^DK[A-Z2-7]{16}$/);",
+                  "  pm.expect(d.secret).to.match(/^dsk_/);",
+                  "  pm.collectionVariables.set('deviceId', d.id);",
+                  "  pm.collectionVariables.set('deviceKey', d.deviceKey);",
+                  "  pm.collectionVariables.set('secret', d.secret);",
                   "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "63390b43-b88e-5b0e-99e9-8e9e90d444bc",
-          "name": "Activate device",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/activate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices", "{{deviceId}}", "activate"]
-            },
-            "description": "Only an ACTIVE device can call /mcp."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 active', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('active'); });"
                 ]
               }
             }
@@ -412,7 +407,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "devices", "{{deviceId}}"]
             },
-            "description": "Chapter 04 checkpoint: only /credentials ever shows a secret."
+            "description": "Chapter 04 checkpoint: only provision and rotate ever show a secret."
           },
           "event": [
             {
@@ -424,7 +419,7 @@
                   "  pm.response.to.have.status(200);",
                   "  const d = pm.response.json();",
                   "  pm.expect(d).to.not.have.any.keys('secret', 'secretHash');",
-                  "  pm.expect(d.accessKeyId).to.eql(pm.collectionVariables.get('accessKeyId'));",
+                  "  pm.expect(d.deviceKey).to.eql(pm.collectionVariables.get('deviceKey'));",
                   "  pm.expect(d.secretLast4).to.eql(pm.collectionVariables.get('secret').slice(-4));",
                   "});"
                 ]
@@ -460,9 +455,9 @@
       ]
     },
     {
-      "id": "30039248-5d56-5013-ad6c-156fdb527b66",
-      "name": "05 · MCP over HTTP (module 4)",
-      "description": "Raw JSON-RPC to /mcp with device headers. The server is stateless: every POST stands alone, and the answer is one SSE `message` event. Read the Body tab: `event: message` then `data: {...}`.",
+      "id": "47719d02-1eb8-57a8-8de2-d75fedf39b69",
+      "name": "05 · MCP over HTTP (module 5)",
+      "description": "Raw JSON-RPC to /mcp (the device headers matter from module 6 on). The server is stateless: every POST stands alone, and the answer is one SSE `message` event. Read the Body tab: `event: message` then `data: {...}`.",
       "item": [
         {
           "id": "d0b32d19-d0cd-5f81-9ad0-999df3f36a69",
@@ -479,11 +474,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{secret}}"
               }
             ],
@@ -540,11 +535,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{secret}}"
               }
             ],
@@ -598,11 +593,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{secret}}"
               }
             ],
@@ -611,7 +606,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["mcp"]
             },
-            "description": "Who is calling: the device and its owner, resolved from the X-Access-Key-Id / X-Secret-Key headers.",
+            "description": "Who is calling: the device and its owner, resolved from the X-Device-Key / X-Device-Secret headers.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"whoami\",\n    \"arguments\": {}\n  }\n}",
@@ -658,11 +653,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{secret}}"
               }
             ],
@@ -717,11 +712,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{secret}}"
               }
             ],
@@ -777,7 +772,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["mcp"]
             },
-            "description": "Device auth runs BEFORE the MCP transport. Missing, wrong, draft, archived or rotated: all the same 401.",
+            "description": "Device auth runs BEFORE the MCP transport. Missing, wrong, archived or rotated: all the same 401.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"ping\"\n}",
@@ -937,11 +932,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{secret}}"
               },
               {
@@ -989,17 +984,17 @@
       "description": "Rotate the secret, then call whoami with the OLD one: it fails at once. The new one works.",
       "item": [
         {
-          "id": "c99b732d-8c74-59ec-bb70-77cafc2991e4",
-          "name": "Rotate credentials",
+          "id": "21d50adf-351e-5d32-adca-6e24cadbf021",
+          "name": "Rotate secret",
           "request": {
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/credentials",
+              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/rotate",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices", "{{deviceId}}", "credentials"]
+              "path": ["api", "v1", "devices", "{{deviceId}}", "rotate"]
             },
-            "description": "Same accessKeyId, new secret. The OLD secret stays in `secret` for the next request; the new one goes to `rotatedSecret`."
+            "description": "Same deviceKey, new secret. The OLD secret stays in `secret` for the next request; the new one goes to `rotatedSecret`."
           },
           "event": [
             {
@@ -1007,10 +1002,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('same key id, new secret', () => {",
+                  "pm.test('same key, new secret', () => {",
                   "  pm.response.to.have.status(200);",
                   "  const c = pm.response.json();",
-                  "  pm.expect(c.accessKeyId).to.eql(pm.collectionVariables.get('accessKeyId'));",
+                  "  pm.expect(c.deviceKey).to.eql(pm.collectionVariables.get('deviceKey'));",
                   "  pm.expect(c.secret).to.not.eql(pm.collectionVariables.get('secret'));",
                   "  pm.collectionVariables.set('rotatedSecret', c.secret);",
                   "});"
@@ -1034,11 +1029,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{secret}}"
               }
             ],
@@ -1090,11 +1085,11 @@
                 "value": "application/json, text/event-stream"
               },
               {
-                "key": "X-Access-Key-Id",
-                "value": "{{accessKeyId}}"
+                "key": "X-Device-Key",
+                "value": "{{deviceKey}}"
               },
               {
-                "key": "X-Secret-Key",
+                "key": "X-Device-Secret",
                 "value": "{{rotatedSecret}}"
               }
             ],

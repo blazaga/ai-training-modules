@@ -1,7 +1,8 @@
-# Chapter 09 — Authenticating MCP with device access keys
+# Chapter 09 — Authenticating MCP with device keys
 
-**You will:** require a device's `AccessKeyId` + secret (chapter 04) on the MCP HTTP
-endpoint, and give tools the caller's identity. **Commit:** `course(ch09)`. **Files:**
+**Your agent will:** require a device's key + secret (chapter 04) on the MCP HTTP endpoint
+(module 6), and
+give tools the caller's identity. **Files:**
 `src/mcp/device-auth.middleware.ts`, `src/mcp/identity.tools.ts`,
 `src/bootstrap/attach-mcp.ts`.
 
@@ -19,13 +20,13 @@ app.use('/mcp', deviceAuth(app.get(DevicesService, { strict: false })));
 **Order is load-bearing, and measured:** with the middleware registered only _after_
 `startAllMicroservices()`, the auth is bypassed and 2 e2e tests fail.
 
-## The check (all of it lives in chapter 04's `verifyAccessKey`)
+## The check (all of it lives in chapter 04's `verifyDeviceKey`)
 
 ```
-X-Access-Key-Id: AKID…        X-Secret-Key: dsk_…
+X-Device-Key: DK…        X-Device-Secret: dsk_…
 ```
 
-The key id must exist, the secret must match its sha256 (timing-safe), and the device must
+The key must exist, the secret must match its sha256 (timing-safe), and the device must
 be **active**. A rotated-away secret fails at once, because nothing is cached. On success
 the device is attached to the request, and tools read it through `McpContext`:
 
@@ -41,18 +42,20 @@ whoami(@Ctx() ctx: McpContext) {
 
 - An **active** device: a real MCP client lists and calls tools, and `whoami` returns
   _that_ device and _its_ owner, with no hash in the output.
-- **Seven failures, one identical 401:** no headers, key id only, unknown key id, wrong
-  secret, draft device, archived device, rotated-away secret.
-- Mutations: auth not registered → 2 fail; device status unchecked → 1 fails; middleware
-  after mount → 2 fail. The chapter 08 test that pinned the "open" state failed with
-  exactly the new 401 when it ran against chapter 09 code.
+- **Six failures, one identical 401:** no headers, key only, unknown key, wrong secret,
+  archived device, rotated-away secret.
+- Mutations (measured): auth not registered → 2 fail; middleware after mount → 2 fail;
+  archived devices accepted → 1 fails.
+- The `/mcp` endpoint takes **device** credentials only. A user's bearer token or Basic
+  header gets the same 401 (`pnpm lab 09` checks both): users and devices are different
+  kinds of client.
 
 ## The Inspector with device keys, and a limit to state honestly
 
 ```bash
 npx @modelcontextprotocol/inspector@2.12.0 --cli http://localhost:3000/mcp \
   --method tools/call --tool-name whoami \
-  --header "X-Access-Key-Id: AKID…" --header "X-Secret-Key: <SECRET>"
+  --header "X-Device-Key: $DEVICE_KEY" --header "X-Device-Secret: $DEVICE_SECRET"
 ```
 
 That works. **Without** headers, the Inspector treats our 401 as an **OAuth challenge**
@@ -71,23 +74,19 @@ in this course).
 ## End-to-end check (the built app on its SQLite file)
 
 `pnpm build`, `pnpm db:migrate` (ledger 3 rows, idempotent), `pnpm start` → sign-up →
-device → credentials → activate → **MCP `whoami` 200** with the right device; no
-credentials 401. The `MCP_ALLOWED_HOSTS` trap from chapter 08, reproduced: `localhost` and
+log in → provision → **MCP `whoami` 200** with the right device; no credentials 401. The `MCP_ALLOWED_HOSTS` trap from chapter 08, reproduced: `localhost` and
 `127.0.0.1` pass by default (200), the machine's hostname is refused (403 `Invalid Host`),
 and `MCP_ALLOWED_HOSTS=localhost,<hostname>` lets it through (200).
 
-## Verify
-
-Unit `Tests 67 passed`, e2e `Tests 61 passed`.
-
 ## Labs
 
-Lab 3 is checked: `pnpm lab 09` pins what rotation does to a connected client (the
-old secret fails on the very next call). It passes on the starter; to see it fail, let a
-non-active device through `verifyAccessKey`.
+Lab 3 is the end of module 6, checked with `pnpm lab 09`: it pins what rotation does to a
+connected client (the old secret fails on the very next call). It is red until your agent has
+built module 6. To see it pin the rule, have your agent let an archived device through
+`verifyDeviceKey`, watch it fail, and revert.
 
 1. Scope `list-notes` to the calling device's owner. What changes in `NotesService`
    (compare chapter 04's ownership)?
-2. Add rate limiting per access key id. Where does it go: middleware or tool?
+2. Add rate limiting per device key. Where does it go: middleware or tool?
 3. Rotate a device's secret while a client is connected. What does the client see on
    its next request?

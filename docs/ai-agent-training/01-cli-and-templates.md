@@ -120,13 +120,15 @@ exactly one test go red (skill `nest-verify`).
 
 ## Labs
 
-Lab 1 is checked. The exact contract (fields, rules O1 and O2, status codes) is in
-`boilerplate/nest-ai-starter/test/labs/README.md`: write it into `specs/orders.md` first,
-build, then run `pnpm lab 01` until every test passes.
+Lab 1 is module 1, and your agent builds it from the proctor's instruction. The exact contract
+(fields, rules O1 and O2, status codes) is in `boilerplate/nest-ai-starter/test/labs/README.md`:
+the agent writes it into `specs/orders.md` first, then generates, templates and fills. You check
+with `pnpm lab 01` until every test passes.
 
-1. **Add `orders`** from a spec you write (two rules, one needing stored state). Hand in:
-   the spec, the template output (file count + marker count), `verify` output with both
-   `Tests` lines, and one mutation result per rule.
+1. **Your agent adds `orders`** from the spec (two rules, one needing stored state). You check
+   and hand in: the spec, the template output (file count + marker count), `verify` output with
+   both `Tests` lines, and one mutation result per rule. The mutations are yours, not the
+   agent's: delete a rule and see which test goes red.
 2. **Change a convention once, everywhere:** add `?sort=` to every list via
    `templates/resource/` + `src/common/`, then re-render a scratch resource.
 3. **Break the gate:** make `verify` pass while the work is not done. (Hint: what does

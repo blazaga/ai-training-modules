@@ -1,0 +1,411 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 5003146..a2b553e 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -117,8 +117,8 @@ is the finished worked example, and `specs/notes.md` is its spec.
+   malformed header. `req.user` is the PUBLIC user. Signing key: `JWT_SECRET` (required in
+   production). e2e tests authenticate with `signUpAndLogin` from `test/support/auth.ts`.
+ - **Devices (MCP clients):** `POST /api/v1/devices/provision` returns `deviceKey` + a
+-  one-time `secret` (shown once, stored only as a hash). Devices are the clients of
+-  the MCP server; how they authenticate there is in `specs/mcp.md`.
++  one-time `secret`; `/mcp` takes them as `X-Device-Key` / `X-Device-Secret`
++  (`src/mcp/device-auth.middleware.ts`), never a user's token.
+ - **Ownership:** user-owned resources take the owner id from `@CurrentUser()` and scope
+   every read and write to it (see `DevicesService.findOne`). Another user's row is **404**,
+   never 403, so ids cannot be probed. FK deletes that are blocked map to 409
+diff --git a/src/bootstrap/attach-mcp.ts b/src/bootstrap/attach-mcp.ts
+index 6eec013..a5c0683 100644
+--- a/src/bootstrap/attach-mcp.ts
++++ b/src/bootstrap/attach-mcp.ts
+@@ -2,6 +2,8 @@ import type { INestApplication } from '@nestjs/common';
+ import { ConfigService } from '@nestjs/config';
+ import { McpStrategy, StreamableHttpTransport } from '@rekog/mcp-nest';
+ import type { Env } from '../config/env.schema.js';
++import { DevicesService } from '../devices/devices.service.js';
++import { deviceAuth } from '../mcp/device-auth.middleware.js';
+ import { MCP_SERVER_INFO } from '../mcp/mcp-tools.module.js';
+ 
+ /**
+@@ -34,8 +36,10 @@ export async function attachMcp(app: INestApplication): Promise<void> {
+       }),
+     ],
+   });
+-  // No authentication on /mcp yet: module 6 adds device auth here, BEFORE the
+-  // transport mounts its routes.
++  // ch09: every request to /mcp must carry ACTIVE device credentials. Registered
++  // BEFORE the transport mounts its routes, so a failure is an HTTP 401 and no
++  // JSON-RPC is ever read for it.
++  app.use('/mcp', deviceAuth(app.get(DevicesService, { strict: false })));
+   mcp.setHttpAdapter(app.getHttpAdapter());
+   app.connectMicroservice({ strategy: mcp });
+   // Order matters: mount the MCP routes before the server accepts connections.
+diff --git a/src/mcp-stdio.ts b/src/mcp-stdio.ts
+index 28b7259..1d1a6e6 100644
+--- a/src/mcp-stdio.ts
++++ b/src/mcp-stdio.ts
+@@ -13,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
+ import { NestFactory } from '@nestjs/core';
+ import { McpStrategy, StdioTransport } from '@rekog/mcp-nest';
+ import { validateEnv } from './config/env.schema.js';
++import { DatabaseModule } from './database/database.module.js';
+ import { MCP_SERVER_INFO, McpToolsModule } from './mcp/mcp-tools.module.js';
+ 
+ @Module({
+@@ -22,6 +23,7 @@ import { MCP_SERVER_INFO, McpToolsModule } from './mcp/mcp-tools.module.js';
+       validate: validateEnv,
+       ignoreEnvFile: process.env.NODE_ENV === 'test', // see app.module.ts
+     }),
++    DatabaseModule, // whoami (ch09) reads users
+     McpToolsModule,
+   ],
+ })
+diff --git a/src/mcp/device-auth.middleware.ts b/src/mcp/device-auth.middleware.ts
+new file mode 100644
+index 0000000..a8b28e4
+--- /dev/null
++++ b/src/mcp/device-auth.middleware.ts
+@@ -0,0 +1,54 @@
++import type { NextFunction, Request, Response } from 'express';
++import type { DevicesService } from '../devices/devices.service.js';
++import type { Device } from '../devices/entities/device.entity.js';
++
++/** Header names a device sends. Case-insensitive on the wire. */
++export const DEVICE_KEY_HEADER = 'x-device-key';
++export const DEVICE_SECRET_HEADER = 'x-device-secret';
++
++/** The request after authentication: tools read this via McpContext.getRawRequest(). */
++export type DeviceRequest = Request & { mcpDevice?: Device };
++
++/** One body for every failure, so callers cannot tell which check failed. */
++export const DEVICE_UNAUTHORIZED = {
++  statusCode: 401,
++  error: 'Unauthorized',
++  message: 'Invalid device credentials',
++} as const;
++
++const header = (req: Request, name: string): string | undefined => {
++  const value = req.headers[name];
++  return typeof value === 'string' && value.length > 0 ? value : undefined;
++};
++
++/**
++ * ch09: device authentication for the MCP HTTP endpoint, at the TRANSPORT
++ * level. A failure is a plain HTTP 401 before any JSON-RPC is read, which is
++ * what MCP clients expect from an HTTP transport. (A Nest guard on the tool
++ * controller would only produce a JSON-RPC error inside an HTTP 200.)
++ *
++ * The checks are those of DevicesService.verifyDeviceKey (ch04): the key
++ * exists, the secret matches its hash (timing-safe), and the device is ACTIVE.
++ * A rotated-away secret fails immediately, because nothing is cached.
++ * Never log these headers.
++ */
++export function deviceAuth(devices: DevicesService) {
++  return (req: Request, res: Response, next: NextFunction): void => {
++    const deviceKey = header(req, DEVICE_KEY_HEADER);
++    const secret = header(req, DEVICE_SECRET_HEADER);
++    const verified =
++      deviceKey && secret
++        ? devices.verifyDeviceKey(deviceKey, secret)
++        : Promise.resolve(undefined);
++    verified
++      .then((device) => {
++        if (!device) {
++          res.status(401).json(DEVICE_UNAUTHORIZED);
++          return;
++        }
++        (req as DeviceRequest).mcpDevice = device;
++        next();
++      })
++      .catch(next);
++  };
++}
+diff --git a/src/mcp/identity.tools.ts b/src/mcp/identity.tools.ts
+new file mode 100644
+index 0000000..76cd46c
+--- /dev/null
++++ b/src/mcp/identity.tools.ts
+@@ -0,0 +1,38 @@
++import { Ctx } from '@nestjs/microservices';
++import { McpController, type McpContext, Tool } from '@rekog/mcp-nest';
++import { z } from 'zod';
++import { RuleViolationError } from '../common/errors/domain-error.js';
++import { DeviceResponseSchema } from '../devices/device.schema.js';
++import { UserResponseSchema } from '../users/user.schema.js';
++import { UsersService } from '../users/users.service.js';
++import type { DeviceRequest } from './device-auth.middleware.js';
++import { runTool, type ToolResult } from './tool-result.js';
++
++/** ch09: tools that depend on WHO is calling (the authenticated device). */
++@McpController()
++export class IdentityTools {
++  constructor(private readonly users: UsersService) {}
++
++  @Tool({
++    name: 'whoami',
++    description:
++      'The device making this call and the user who owns it. HTTP transport only.',
++    parameters: z.object({}),
++  })
++  whoami(@Ctx() ctx: McpContext): Promise<ToolResult> {
++    return runTool(async () => {
++      const device = ctx.getRawRequest<DeviceRequest>()?.mcpDevice;
++      if (!device) {
++        // stdio has no device: the local user who started the process is trusted.
++        throw new RuleViolationError(
++          'No device identity: this transport is not authenticated',
++        );
++      }
++      const owner = await this.users.findOne(device.ownerUserId);
++      return {
++        device: DeviceResponseSchema.parse(device),
++        owner: UserResponseSchema.parse(owner),
++      };
++    });
++  }
++}
+diff --git a/src/mcp/mcp-tools.module.ts b/src/mcp/mcp-tools.module.ts
+index 353b6fc..42c35a1 100644
+--- a/src/mcp/mcp-tools.module.ts
++++ b/src/mcp/mcp-tools.module.ts
+@@ -1,11 +1,13 @@
+ import { Module } from '@nestjs/common';
+ import { NotesModule } from '../notes/notes.module.js';
++import { UsersModule } from '../users/users.module.js';
++import { IdentityTools } from './identity.tools.js';
+ import { NotesTools } from './notes.tools.js';
+ 
+ /** Every @McpController lives here, so each entrypoint (stdio, HTTP) serves the same tools. */
+ @Module({
+-  imports: [NotesModule],
+-  controllers: [NotesTools],
++  imports: [NotesModule, UsersModule],
++  controllers: [NotesTools, IdentityTools],
+ })
+ export class McpToolsModule {}
+ 
+diff --git a/test/mcp-http.e2e-spec.ts b/test/mcp-http.e2e-spec.ts
+index 5926a6c..54ea2af 100644
+--- a/test/mcp-http.e2e-spec.ts
++++ b/test/mcp-http.e2e-spec.ts
+@@ -6,19 +6,49 @@ import {
+ } from '@modelcontextprotocol/client';
+ import { request } from 'node:http';
+ import type { AddressInfo } from 'node:net';
++import supertest from 'supertest';
+ import { AppModule } from '../src/app.module.js';
+ import { attachMcp } from '../src/bootstrap/attach-mcp.js';
+ import { configureApp } from '../src/bootstrap/configure-app.js';
++import { signUpAndLogin } from './support/auth.js';
+ 
++type Credentials = { deviceKey: string; secret: string };
+ type TextResult = { content: { text: string }[]; isError?: boolean };
+ 
+ /**
+- * ch08: the MCP tools over Streamable HTTP on a real listening server. Module 6 adds
+- * device authentication; until then /mcp is open, and the first test says so.
++ * ch08 + ch09: the MCP tools over Streamable HTTP on a real listening server,
++ * authenticated with a device's key + secret (from POST /devices/provision).
+  */
+ describe('MCP over Streamable HTTP (e2e)', () => {
+   let app: INestApplication;
+   let url: string;
++  let owner: { id: string; email: string };
++  let ownerAuth: Record<string, string>;
++  const rest = () => supertest(app.getHttpServer());
++
++  /** A provisioned device, archived if asked. */
++  async function device(
++    state: 'active' | 'archived',
++  ): Promise<Credentials & { id: string }> {
++    const { body } = await rest()
++      .post('/api/v1/devices/provision')
++      .set(ownerAuth)
++      .send({ name: `agent-${state}` })
++      .expect(201);
++    if (state === 'archived') {
++      await rest()
++        .delete(`/api/v1/devices/${body.id}`)
++        .set(ownerAuth)
++        .expect(204);
++    }
++    return { id: body.id, deviceKey: body.deviceKey, secret: body.secret };
++  }
++  const headersFor = (c: Credentials) => ({
++    'X-Device-Key': c.deviceKey,
++    'X-Device-Secret': c.secret,
++  });
++
++  let active: Credentials & { id: string };
+ 
+   beforeAll(async () => {
+     const moduleRef = await Test.createTestingModule({
+@@ -30,6 +60,14 @@ describe('MCP over Streamable HTTP (e2e)', () => {
+     await app.listen(0);
+     const { port } = app.getHttpServer().address() as AddressInfo;
+     url = `http://localhost:${port}/mcp`;
++    const signedIn = await signUpAndLogin(app, {
++      email: 'mcp-owner@example.com',
++      name: 'MCP Owner',
++      password: 'mcp owner passphrase',
++    });
++    owner = { id: signedIn.id, email: 'mcp-owner@example.com' };
++    ownerAuth = signedIn.headers;
++    active = await device('active');
+   });
+ 
+   afterAll(async () => {
+@@ -48,33 +86,91 @@ describe('MCP over Streamable HTTP (e2e)', () => {
+     });
+   const ping = { jsonrpc: '2.0', id: 1, method: 'ping' };
+ 
+-  it('NO authentication yet: a real MCP client lists and calls tools without credentials', async () => {
+-    // The security finding this module ends on; module 6 closes it with device auth.
++  async function connect(credentials: Credentials): Promise<Client> {
+     const client = new Client({ name: 'e2e', version: '1.0.0' });
+-    await client.connect(new StreamableHTTPClientTransport(new URL(url)));
+-    const { tools } = await client.listTools();
+-    expect(tools.map((t) => t.name)).toEqual(
+-      expect.arrayContaining(['create-note', 'list-notes']),
++    await client.connect(
++      new StreamableHTTPClientTransport(new URL(url), {
++        requestInit: { headers: headersFor(credentials) },
++      }),
+     );
+-    const result = (await client.callTool({
+-      name: 'create-note',
+-      arguments: { title: 'over HTTP' },
+-    })) as TextResult;
+-    expect(JSON.parse(result.content[0].text).title).toBe('over HTTP');
+-    await client.close();
++    return client;
++  }
++
++  describe('ch09: device authentication', () => {
++    it('an ACTIVE device: a real MCP client lists and calls tools', async () => {
++      const client = await connect(active);
++      const { tools } = await client.listTools();
++      expect(tools.map((t) => t.name)).toEqual(
++        expect.arrayContaining(['create-note', 'whoami']),
++      );
++      const result = (await client.callTool({
++        name: 'create-note',
++        arguments: { title: 'over HTTP' },
++      })) as TextResult;
++      expect(JSON.parse(result.content[0].text).title).toBe('over HTTP');
++      await client.close();
++    });
++
++    it('whoami: the tool sees WHICH device called, and its owner', async () => {
++      const client = await connect(active);
++      const result = (await client.callTool({
++        name: 'whoami',
++        arguments: {},
++      })) as TextResult;
++      const me = JSON.parse(result.content[0].text);
++      expect(me.device).toMatchObject({
++        id: active.id,
++        deviceKey: active.deviceKey,
++        ownerUserId: owner.id,
++      });
++      expect(me.owner).toMatchObject({ id: owner.id, email: owner.email });
++      expect(JSON.stringify(me)).not.toMatch(/secretHash|passwordHash/);
++      await client.close();
++    });
++
++    it('every failure is the SAME HTTP 401, before any JSON-RPC', async () => {
++      const archived = await device('archived');
++      const rotated = await device('active');
++      // Rotate: the secret captured above must stop working immediately.
++      await rest()
++        .post(`/api/v1/devices/${rotated.id}/rotate`)
++        .set(ownerAuth)
++        .expect(200);
++      const attempts: [string, Record<string, string>][] = [
++        ['no headers', {}],
++        ['key only', { 'X-Device-Key': active.deviceKey }],
++        [
++          'unknown key',
++          headersFor({ ...active, deviceKey: 'DKAAAAAAAAAAAAAAAA' }),
++        ],
++        ['wrong secret', headersFor({ ...active, secret: 'dsk_wrong' })],
++        ['archived device', headersFor(archived)],
++        ['rotated-away secret', headersFor(rotated)],
++      ];
++      const bodies = new Set<string>();
++      for (const [label, headers] of attempts) {
++        const res = await post(ping, headers);
++        expect({ label, status: res.status }).toEqual({ label, status: 401 });
++        bodies.add(await res.text());
++      }
++      expect(bodies.size).toBe(1);
++    });
+   });
+ 
+   it('responses are Server-Sent Events: `event: message` + `data: <JSON-RPC>`', async () => {
+-    const res = await post({
+-      jsonrpc: '2.0',
+-      id: 1,
+-      method: 'initialize',
+-      params: {
+-        protocolVersion: '2025-06-18',
+-        capabilities: {},
+-        clientInfo: { name: 'raw', version: '1' },
++    const res = await post(
++      {
++        jsonrpc: '2.0',
++        id: 1,
++        method: 'initialize',
++        params: {
++          protocolVersion: '2025-06-18',
++          capabilities: {},
++          clientInfo: { name: 'raw', version: '1' },
++        },
+       },
+-    });
++      headersFor(active),
++    );
+     expect(res.status).toBe(200);
+     expect(res.headers.get('content-type')).toContain('text/event-stream');
+     const text = await res.text();
+@@ -96,7 +192,7 @@ describe('MCP over Streamable HTTP (e2e)', () => {
+   it('rejects a foreign Host header (DNS-rebinding protection): 403', async () => {
+     // NOT fetch: under the Fetch spec `Host` is a forbidden header, and Node's
+     // fetch silently replaces it (measured). node:http sends it as written.
+-    // The same request on both, so the Host is the ONLY difference.
++    // Valid device credentials on both, so the Host is the ONLY difference.
+     const status = (host: string) =>
+       new Promise<number | undefined>((resolve, reject) => {
+         const req = request(
+@@ -109,6 +205,7 @@ describe('MCP over Streamable HTTP (e2e)', () => {
+               host,
+               'content-type': 'application/json',
+               accept: 'application/json, text/event-stream',
++              ...headersFor(active),
+             },
+           },
+           (res) => {
+diff --git a/test/mcp-stdio.e2e-spec.ts b/test/mcp-stdio.e2e-spec.ts
+index c766749..b3478c0 100644
+--- a/test/mcp-stdio.e2e-spec.ts
++++ b/test/mcp-stdio.e2e-spec.ts
+@@ -47,6 +47,7 @@ describe('MCP over stdio (e2e)', () => {
+       'get-note',
+       'list-notes',
+       'publish-note',
++      'whoami',
+     ]);
+     const create = tools.find((t) => t.name === 'create-note');
+     expect(create?.inputSchema.required).toEqual(['title']);
+@@ -116,6 +117,12 @@ describe('MCP over stdio (e2e)', () => {
+     expect(result.content[0].text).toMatch(/^NOT_FOUND:/);
+   });
+ 
++  it('whoami over stdio: no device identity (local trust), so a tool error', async () => {
++    const result = await call('whoami', {});
++    expect(result.isError).toBe(true);
++    expect(result.content[0].text).toMatch(/No device identity/);
++  });
++
+   it('stdout carries only protocol: diagnostics went to stderr', () => {
+     expect(stderr).toContain('mcp-stdio: ready');
+   });

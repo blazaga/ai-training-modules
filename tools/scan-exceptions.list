@@ -8,5 +8,4 @@ boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/AGENTS.md|my-se
 boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/rules/test-e2e-supertest.md|Token = loginResponse|variable assignment, not a value
 boilerplate/nest-ai-starter/.claude/skills/nestjs-best-practices/AGENTS.md|Token = loginResponse|same, compiled copy
 boilerplate/nest-ai-starter/src/common/zod/zod-validation.pipe.spec.ts|value-that-must-not-be-echoed|fake value used to prove validation errors never echo input
-boilerplate/nest-ai-starter/test/mcp-http.e2e-spec.ts|password: ownerPassword|a variable reference to a test fixture, not a literal value
-boilerplate/nest-ai-starter/src/mcp/device-auth.middleware.ts|SECRET_KEY_HEADER = 'x-secret-key'|an HTTP header NAME constant, not a secret
+docs/ai-agent-training/checkpoints/module-6-mcp-device-auth.patch|DEVICE_SECRET_HEADER = 'x-device-secret'|an HTTP header NAME constant, not a secret (the module 6 middleware, as a patch)

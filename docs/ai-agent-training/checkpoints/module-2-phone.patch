@@ -1,22 +1,22 @@
-diff --git a/drizzle/0003_youthful_psynapse.sql b/drizzle/0003_youthful_psynapse.sql
+diff --git a/drizzle/0001_loud_red_skull.sql b/drizzle/0001_loud_red_skull.sql
 new file mode 100644
 index 0000000..45a9824
 --- /dev/null
-+++ b/drizzle/0003_youthful_psynapse.sql
++++ b/drizzle/0001_loud_red_skull.sql
 @@ -0,0 +1 @@
 +ALTER TABLE `users` ADD `phone` text;
 \ No newline at end of file
-diff --git a/drizzle/meta/0003_snapshot.json b/drizzle/meta/0003_snapshot.json
+diff --git a/drizzle/meta/0001_snapshot.json b/drizzle/meta/0001_snapshot.json
 new file mode 100644
-index 0000000..5207a7b
+index 0000000..2a1aca7
 --- /dev/null
-+++ b/drizzle/meta/0003_snapshot.json
-@@ -0,0 +1,218 @@
++++ b/drizzle/meta/0001_snapshot.json
+@@ -0,0 +1,91 @@
 +{
 +  "version": "6",
 +  "dialect": "sqlite",
-+  "id": "dc1c4d52-efe2-4e08-8247-d5610eabfba0",
-+  "prevId": "fdf7f59f-bd38-48ba-922b-3a9315fcfe6c",
++  "id": "175b9225-94aa-4d91-8c0d-fa44ace22f9a",
++  "prevId": "299f2a00-27fe-43ba-85f0-10055bac890c",
 +  "tables": {
 +    "users": {
 +      "name": "users",
@@ -50,18 +50,18 @@ index 0000000..5207a7b
 +          "autoincrement": false,
 +          "default": "'active'"
 +        },
-+        "password_hash": {
-+          "name": "password_hash",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": true,
-+          "autoincrement": false
-+        },
 +        "phone": {
 +          "name": "phone",
 +          "type": "text",
 +          "primaryKey": false,
 +          "notNull": false,
++          "autoincrement": false
++        },
++        "password_hash": {
++          "name": "password_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
 +          "autoincrement": false
 +        },
 +        "created_at": {
@@ -82,138 +82,11 @@ index 0000000..5207a7b
 +      "indexes": {
 +        "users_email_unique": {
 +          "name": "users_email_unique",
-+          "columns": [
-+            "email"
-+          ],
++          "columns": ["email"],
 +          "isUnique": true
 +        }
 +      },
 +      "foreignKeys": {},
-+      "compositePrimaryKeys": {},
-+      "uniqueConstraints": {},
-+      "checkConstraints": {}
-+    },
-+    "devices": {
-+      "name": "devices",
-+      "columns": {
-+        "id": {
-+          "name": "id",
-+          "type": "text",
-+          "primaryKey": true,
-+          "notNull": true,
-+          "autoincrement": false
-+        },
-+        "owner_user_id": {
-+          "name": "owner_user_id",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": true,
-+          "autoincrement": false
-+        },
-+        "name": {
-+          "name": "name",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": true,
-+          "autoincrement": false
-+        },
-+        "description": {
-+          "name": "description",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": true,
-+          "autoincrement": false,
-+          "default": "''"
-+        },
-+        "status": {
-+          "name": "status",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": true,
-+          "autoincrement": false,
-+          "default": "'draft'"
-+        },
-+        "access_key_id": {
-+          "name": "access_key_id",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": false,
-+          "autoincrement": false
-+        },
-+        "secret_hash": {
-+          "name": "secret_hash",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": false,
-+          "autoincrement": false
-+        },
-+        "secret_last4": {
-+          "name": "secret_last4",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": false,
-+          "autoincrement": false
-+        },
-+        "secret_rotated_at": {
-+          "name": "secret_rotated_at",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": false,
-+          "autoincrement": false
-+        },
-+        "last_used_at": {
-+          "name": "last_used_at",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": false,
-+          "autoincrement": false
-+        },
-+        "archived_at": {
-+          "name": "archived_at",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": false,
-+          "autoincrement": false
-+        },
-+        "created_at": {
-+          "name": "created_at",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": true,
-+          "autoincrement": false
-+        },
-+        "updated_at": {
-+          "name": "updated_at",
-+          "type": "text",
-+          "primaryKey": false,
-+          "notNull": true,
-+          "autoincrement": false
-+        }
-+      },
-+      "indexes": {
-+        "devices_access_key_id_unique": {
-+          "name": "devices_access_key_id_unique",
-+          "columns": [
-+            "access_key_id"
-+          ],
-+          "isUnique": true
-+        }
-+      },
-+      "foreignKeys": {
-+        "devices_owner_user_id_users_id_fk": {
-+          "name": "devices_owner_user_id_users_id_fk",
-+          "tableFrom": "devices",
-+          "tableTo": "users",
-+          "columnsFrom": [
-+            "owner_user_id"
-+          ],
-+          "columnsTo": [
-+            "id"
-+          ],
-+          "onDelete": "restrict",
-+          "onUpdate": "no action"
-+        }
-+      },
 +      "compositePrimaryKeys": {},
 +      "uniqueConstraints": {},
 +      "checkConstraints": {}
@@ -230,26 +103,24 @@ index 0000000..5207a7b
 +    "indexes": {}
 +  }
 +}
-\ No newline at end of file
 diff --git a/drizzle/meta/_journal.json b/drizzle/meta/_journal.json
-index f5382f9..f2ff197 100644
+index e160264..0246ac6 100644
 --- a/drizzle/meta/_journal.json
 +++ b/drizzle/meta/_journal.json
-@@ -22,6 +22,13 @@
-       "when": 1792980807818,
-       "tag": "0002_mean_gressill",
+@@ -8,6 +8,13 @@
+       "when": 1792980806794,
+       "tag": "0000_tricky_blockbuster",
        "breakpoints": true
 +    },
 +    {
-+      "idx": 3,
++      "idx": 1,
 +      "version": "6",
-+      "when": 1792981391715,
-+      "tag": "0003_youthful_psynapse",
++      "when": 1793062583288,
++      "tag": "0001_loud_red_skull",
 +      "breakpoints": true
      }
    ]
  }
-\ No newline at end of file
 diff --git a/specs/users.md b/specs/users.md
 index a2e06a0..04c3f62 100644
 --- a/specs/users.md
@@ -346,10 +217,10 @@ index 71af273..51ede9a 100644
    createdAt: createdAtColumn(),
    updatedAt: updatedAtColumn(),
 diff --git a/test/users.e2e-spec.ts b/test/users.e2e-spec.ts
-index 25c3d28..11ee616 100644
+index 3a6cb49..0451bb0 100644
 --- a/test/users.e2e-spec.ts
 +++ b/test/users.e2e-spec.ts
-@@ -134,6 +134,56 @@ describe('users (e2e)', () => {
+@@ -111,6 +111,56 @@ describe('users (e2e)', () => {
      expect(JSON.stringify(fetched.body)).not.toMatch(/password/i);
    });
  

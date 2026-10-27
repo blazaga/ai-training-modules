@@ -1,6 +1,6 @@
 diff --git a/specs/orders.md b/specs/orders.md
 new file mode 100644
-index 0000000..69a744a
+index 0000000..02ec0d9
 --- /dev/null
 +++ b/specs/orders.md
 @@ -0,0 +1,45 @@
@@ -50,21 +50,21 @@ index 0000000..69a744a
 +Ownership (orders are not scoped to a user; any authenticated caller sees all of them),
 +pricing, persistence beyond memory.
 diff --git a/src/app.module.ts b/src/app.module.ts
-index 112f8cd..8cec961 100644
+index eb05d77..4cf6b1f 100644
 --- a/src/app.module.ts
 +++ b/src/app.module.ts
-@@ -11,6 +11,7 @@ import { NotesModule } from './notes/notes.module.js';
+@@ -8,6 +8,7 @@ import { DatabaseModule } from './database/database.module.js';
+ import { HealthModule } from './health/health.module.js';
+ import { NotesModule } from './notes/notes.module.js';
  import { UsersModule } from './users/users.module.js';
- import { AuthModule } from './auth/auth.module.js';
- import { DevicesModule } from './devices/devices.module.js';
 +import { OrdersModule } from './orders/orders.module.js';
  
  @Module({
    imports: [
-@@ -23,6 +24,7 @@ import { DevicesModule } from './devices/devices.module.js';
+@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module.js';
+     // Feature modules. `nest g resource <name>` appends new ones here.
+     NotesModule,
      UsersModule,
-     AuthModule,
-     DevicesModule,
 +    OrdersModule,
    ],
    providers: [
@@ -446,10 +446,10 @@ index 0000000..c9e9543
 +}
 diff --git a/test/orders.e2e-spec.ts b/test/orders.e2e-spec.ts
 new file mode 100644
-index 0000000..9a84047
+index 0000000..0bcba7b
 --- /dev/null
 +++ b/test/orders.e2e-spec.ts
-@@ -0,0 +1,165 @@
+@@ -0,0 +1,142 @@
 +import { INestApplication } from '@nestjs/common';
 +import { Test } from '@nestjs/testing';
 +import request from 'supertest';
@@ -458,7 +458,7 @@ index 0000000..9a84047
 +import { configureApp } from '../src/bootstrap/configure-app.js';
 +import { OrderResponseSchema } from '../src/orders/order.schema.js';
 +
-+/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
++/** Through the real HTTP stack: routing, validation pipe, error filter. */
 +describe('orders (e2e)', () => {
 +  let app: INestApplication<App>;
 +  const base = '/api/v1/orders';
@@ -467,19 +467,12 @@ index 0000000..9a84047
 +  // No field is unique, so a constant shape is fine; quantity and status default.
 +  const valid = () => ({ item: 'Pencil' });
 +
-+  /** Headers that authenticate a request (set by e2e-setup). */
-+  let authHeaders: Record<string, string> = {};
-+
-+  /** Every request in this file is authenticated unless it uses `request` directly. */
++  /** Shorthand for requests through the real HTTP server. */
 +  const http = {
-+    get: (url: string) =>
-+      request(app.getHttpServer()).get(url).set(authHeaders),
-+    post: (url: string) =>
-+      request(app.getHttpServer()).post(url).set(authHeaders),
-+    patch: (url: string) =>
-+      request(app.getHttpServer()).patch(url).set(authHeaders),
-+    delete: (url: string) =>
-+      request(app.getHttpServer()).delete(url).set(authHeaders),
++    get: (url: string) => request(app.getHttpServer()).get(url),
++    post: (url: string) => request(app.getHttpServer()).post(url),
++    patch: (url: string) => request(app.getHttpServer()).patch(url),
++    delete: (url: string) => request(app.getHttpServer()).delete(url),
 +  };
 +
 +  beforeAll(async () => {
@@ -489,27 +482,11 @@ index 0000000..9a84047
 +    app = moduleRef.createNestApplication();
 +    configureApp(app);
 +    await app.init();
-+    // Routes are authenticated by default: sign up (public), then use Basic auth.
-+    const owner = {
-+      email: 'e2e-orders@example.com',
-+      name: 'E2E Orders',
-+      password: 'e2e orders passphrase',
-+    };
-+    await request(app.getHttpServer())
-+      .post('/api/v1/users')
-+      .send(owner)
-+      .expect(201);
-+    authHeaders = {
-+      Authorization: `Basic ${Buffer.from(`${owner.email}:${owner.password}`).toString('base64')}`,
-+    };
 +  });
 +
 +  afterAll(async () => {
 +    await app.close();
 +  });
-+
-+  it('rejects requests without credentials (401)', () =>
-+    request(app.getHttpServer()).get(base).expect(401));
 +
 +  it('POST creates (201) and GET reads it back (200)', async () => {
 +    const created = await http.post(base).send(valid()).expect(201);

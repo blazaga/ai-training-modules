@@ -2,17 +2,18 @@ import {
   device,
   deviceHeaders,
   type LabApp,
+  mcpClient,
   rawMcp,
   signUp,
   startApp,
 } from './lab-harness.js';
 
 /**
- * Lab 08 (module 5): the Streamable HTTP settings, back as the starter ships them.
+ * Lab 08 (module 5): the same MCP tools over Streamable HTTP at /mcp (specs/mcp.md).
  *
- * This check passes on the starter. In the lab you flip `enableJsonResponse` (and,
+ * Green once module 5 is built. Then the experiment: flip `enableJsonResponse` (and,
  * optionally, `statefulMode`) in src/bootstrap/attach-mcp.ts and compare the wire: this
- * check then fails. Revert, rebuild, and it passes again.
+ * check fails. Revert, rebuild, and it passes again.
  */
 describe('Lab 08 · transport settings', () => {
   let lab: LabApp;
@@ -33,7 +34,7 @@ describe('Lab 08 · transport settings', () => {
     const { auth } = await signUp(lab, 'lab08@example.com');
     headers = deviceHeaders(await device(lab, auth, 'active'));
   });
-  afterAll(() => lab.close());
+  afterAll(() => lab?.close());
 
   it('answers as an SSE stream: one `message` event carrying the JSON-RPC reply', async () => {
     const res = await rawMcp(lab, initialize, headers)
@@ -55,6 +56,21 @@ describe('Lab 08 · transport settings', () => {
     const msg = JSON.parse(data!.slice(6));
     expect(msg).toMatchObject({ jsonrpc: '2.0', id: 1 });
     expect(msg.result.serverInfo.name).toBe('nest-ai-starter');
+  });
+
+  it('serves the notes tools over HTTP (the same tools as stdio)', async () => {
+    const client = await mcpClient(lab, {
+      deviceKey: headers['X-Device-Key'],
+      secret: headers['X-Device-Secret'],
+    });
+    try {
+      const names = (await client.listTools()).tools.map((t) => t.name);
+      expect(names, 'is McpToolsModule imported in AppModule?').toEqual(
+        expect.arrayContaining(['create-note', 'get-note', 'list-notes']),
+      );
+    } finally {
+      await client.close();
+    }
   });
 
   it('is stateless: no Mcp-Session-Id header', async () => {

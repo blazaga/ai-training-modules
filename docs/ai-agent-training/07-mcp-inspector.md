@@ -23,7 +23,7 @@ a device's headers, exactly as any other client does (chapter 09).
    `streamable-http`, URL `http://localhost:3000/mcp` → **Add**. (The three example servers
    that are already listed can be ignored.)
 3. On your server's card, **Settings** → **Custom Headers** → **+ Add Header** twice:
-   `X-Access-Key-Id` and `X-Secret-Key`, with a device's values (the lab helper prints them).
+   `X-Device-Key` and `X-Device-Secret`, with a device's values (the lab helper prints them).
    Close the dialog: header changes apply on the next connect.
 4. Switch the card on: it shows **Connected**. Then **Tools** → pick a tool → **Execute Tool**.
 
@@ -88,7 +88,7 @@ For the HTTP server (chapters 08–09) the same CLI takes a URL and headers:
 ```bash
 npx @modelcontextprotocol/inspector@2.12.0 --cli http://localhost:3000/mcp \
   --method tools/call --tool-name whoami \
-  --header "X-Access-Key-Id: AKID…" --header "X-Secret-Key: <SECRET>"
+  --header "X-Device-Key: $DEVICE_KEY" --header "X-Device-Secret: $DEVICE_SECRET"
 ```
 
 ## Labs

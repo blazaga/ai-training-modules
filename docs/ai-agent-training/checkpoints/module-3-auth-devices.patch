@@ -1,0 +1,2280 @@
+diff --git a/.env.example b/.env.example
+index f267646..83c878b 100644
+--- a/.env.example
++++ b/.env.example
+@@ -8,3 +8,9 @@ SWAGGER_ENABLED=true
+ # app then uses it. Remove the line to use an in-memory database instead (gone on restart).
+ DATABASE_URL=file:./data/app.db
+ 
++# ch03: the key that signs access tokens, at least 32 characters. Unset = a random key per
++# process (tokens stop working on restart); required in production. Generate one with:
++#   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
++# JWT_SECRET=
++# ch03: access-token lifetime in seconds.
++JWT_EXPIRES_IN=3600
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 5f1acd6..5003146 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -108,6 +108,22 @@ is the finished worked example, and `specs/notes.md` is its spec.
+   `__drizzle_migrations` table, never drizzle's log.
+ - **Private fields** (password/secret hashes) live in the schema's `PRIVATE` set. Responses
+   go through `<Name>ResponseSchema`, so they never leave the API.
++- **Auth (secure by default), all Passport:** `POST /api/v1/auth/login` takes Basic
++  (`passport-http`, `BasicLoginGuard`) and returns a JWT. `JwtAuthGuard` is a global
++  `APP_GUARD` (strategy `jwt`): every other route needs `Authorization: Bearer <token>`
++  unless marked `@Public()` (`src/auth/public.decorator.ts`); a forgotten decorator fails
++  CLOSED (401). Every auth failure is the same 401 body plus `WWW-Authenticate`; the
++  guards' `handleRequest` enforce that, including the 400 `passport-http` would give a
++  malformed header. `req.user` is the PUBLIC user. Signing key: `JWT_SECRET` (required in
++  production). e2e tests authenticate with `signUpAndLogin` from `test/support/auth.ts`.
++- **Devices (MCP clients):** `POST /api/v1/devices/provision` returns `deviceKey` + a
++  one-time `secret` (shown once, stored only as a hash). Devices are the clients of
++  the MCP server; how they authenticate there is in `specs/mcp.md`.
++- **Ownership:** user-owned resources take the owner id from `@CurrentUser()` and scope
++  every read and write to it (see `DevicesService.findOne`). Another user's row is **404**,
++  never 403, so ids cannot be probed. FK deletes that are blocked map to 409
++  (`SQLITE_CONSTRAINT_TRIGGER` for RESTRICT, `SQLITE_CONSTRAINT_FOREIGNKEY` for NO ACTION;
++  the adapter handles both).
+ - **Generated migrations are not automatically safe.** drizzle-kit emits `ADD … NOT NULL`
+   with no warning, and SQLite refuses it on any table that has rows (an empty test database
+   hides that). It also drops `ON DELETE` from a foreign key added with `ADD`. Read every
+diff --git a/drizzle/0002_lucky_spyke.sql b/drizzle/0002_lucky_spyke.sql
+new file mode 100644
+index 0000000..4b3fd92
+--- /dev/null
++++ b/drizzle/0002_lucky_spyke.sql
+@@ -0,0 +1,18 @@
++CREATE TABLE `devices` (
++	`id` text PRIMARY KEY NOT NULL,
++	`owner_user_id` text NOT NULL,
++	`name` text NOT NULL,
++	`description` text DEFAULT '' NOT NULL,
++	`status` text DEFAULT 'active' NOT NULL,
++	`device_key` text,
++	`secret_hash` text,
++	`secret_last4` text,
++	`secret_rotated_at` text,
++	`last_used_at` text,
++	`archived_at` text,
++	`created_at` text NOT NULL,
++	`updated_at` text NOT NULL,
++	FOREIGN KEY (`owner_user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE restrict
++);
++--> statement-breakpoint
++CREATE UNIQUE INDEX `devices_device_key_unique` ON `devices` (`device_key`);
+\ No newline at end of file
+diff --git a/drizzle/meta/0002_snapshot.json b/drizzle/meta/0002_snapshot.json
+new file mode 100644
+index 0000000..030f2e7
+--- /dev/null
++++ b/drizzle/meta/0002_snapshot.json
+@@ -0,0 +1,210 @@
++{
++  "version": "6",
++  "dialect": "sqlite",
++  "id": "239592bc-6929-4a4f-b931-7350c74719dd",
++  "prevId": "175b9225-94aa-4d91-8c0d-fa44ace22f9a",
++  "tables": {
++    "users": {
++      "name": "users",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "email": {
++          "name": "email",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false,
++          "default": "'active'"
++        },
++        "phone": {
++          "name": "phone",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "password_hash": {
++          "name": "password_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        }
++      },
++      "indexes": {
++        "users_email_unique": {
++          "name": "users_email_unique",
++          "columns": ["email"],
++          "isUnique": true
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "checkConstraints": {}
++    },
++    "devices": {
++      "name": "devices",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "owner_user_id": {
++          "name": "owner_user_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "description": {
++          "name": "description",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false,
++          "default": "''"
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false,
++          "default": "'active'"
++        },
++        "device_key": {
++          "name": "device_key",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "secret_hash": {
++          "name": "secret_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "secret_last4": {
++          "name": "secret_last4",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "secret_rotated_at": {
++          "name": "secret_rotated_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "last_used_at": {
++          "name": "last_used_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "archived_at": {
++          "name": "archived_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        }
++      },
++      "indexes": {
++        "devices_device_key_unique": {
++          "name": "devices_device_key_unique",
++          "columns": ["device_key"],
++          "isUnique": true
++        }
++      },
++      "foreignKeys": {
++        "devices_owner_user_id_users_id_fk": {
++          "name": "devices_owner_user_id_users_id_fk",
++          "tableFrom": "devices",
++          "tableTo": "users",
++          "columnsFrom": ["owner_user_id"],
++          "columnsTo": ["id"],
++          "onDelete": "restrict",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "checkConstraints": {}
++    }
++  },
++  "views": {},
++  "enums": {},
++  "_meta": {
++    "schemas": {},
++    "tables": {},
++    "columns": {}
++  },
++  "internal": {
++    "indexes": {}
++  }
++}
+diff --git a/drizzle/meta/_journal.json b/drizzle/meta/_journal.json
+index 0246ac6..e13bd6e 100644
+--- a/drizzle/meta/_journal.json
++++ b/drizzle/meta/_journal.json
+@@ -15,6 +15,13 @@
+       "when": 1793062583288,
+       "tag": "0001_loud_red_skull",
+       "breakpoints": true
++    },
++    {
++      "idx": 2,
++      "version": "6",
++      "when": 1793062655237,
++      "tag": "0002_lucky_spyke",
++      "breakpoints": true
+     }
+   ]
+ }
+diff --git a/src/app.module.ts b/src/app.module.ts
+index 4cf6b1f..e8fba12 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -8,6 +8,8 @@ import { DatabaseModule } from './database/database.module.js';
+ import { HealthModule } from './health/health.module.js';
+ import { NotesModule } from './notes/notes.module.js';
+ import { UsersModule } from './users/users.module.js';
++import { AuthModule } from './auth/auth.module.js';
++import { DevicesModule } from './devices/devices.module.js';
+ import { OrdersModule } from './orders/orders.module.js';
+ 
+ @Module({
+@@ -25,6 +27,8 @@ import { OrdersModule } from './orders/orders.module.js';
+     // Feature modules. `nest g resource <name>` appends new ones here.
+     NotesModule,
+     UsersModule,
++    AuthModule,
++    DevicesModule,
+     OrdersModule,
+   ],
+   providers: [
+diff --git a/src/auth/auth.constants.ts b/src/auth/auth.constants.ts
+new file mode 100644
+index 0000000..abf0c45
+--- /dev/null
++++ b/src/auth/auth.constants.ts
+@@ -0,0 +1,12 @@
++/** The 401 every auth failure returns: one body, so failures cannot be told apart. */
++export const UNAUTHORIZED_BODY = {
++  statusCode: 401,
++  error: 'Unauthorized',
++  message: 'Invalid credentials',
++} as const;
++
++/** The challenge sent with a failed login: Basic, on POST /auth/login only. */
++export const BASIC_CHALLENGE = 'Basic realm="nest-ai-starter", charset="UTF-8"';
++
++/** The challenge sent with every other 401: the API expects a bearer token. */
++export const BEARER_CHALLENGE = 'Bearer realm="nest-ai-starter"';
+diff --git a/src/auth/auth.controller.ts b/src/auth/auth.controller.ts
+new file mode 100644
+index 0000000..3f366cc
+--- /dev/null
++++ b/src/auth/auth.controller.ts
+@@ -0,0 +1,32 @@
++import { Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
++import { ApiTags } from '@nestjs/swagger';
++import type { UserResponse } from '../users/entities/user.entity.js';
++import { type AccessToken, AuthService } from './auth.service.js';
++import { BasicLoginGuard } from './basic-login.guard.js';
++import { CurrentUser } from './current-user.decorator.js';
++import { Public } from './public.decorator.js';
++
++/** Routes: /api/v1/auth */
++@ApiTags('auth')
++@Controller('auth')
++export class AuthController {
++  constructor(private readonly auth: AuthService) {}
++
++  /**
++   * Trade Basic credentials for an access token. @Public() takes the route out of the
++   * global JWT guard; BasicLoginGuard checks the email and password instead.
++   */
++  @Public()
++  @UseGuards(BasicLoginGuard)
++  @Post('login')
++  @HttpCode(200)
++  login(@CurrentUser() user: UserResponse): AccessToken {
++    return this.auth.login(user);
++  }
++
++  /** Who am I? Needs a bearer token, like every route that is not @Public(). */
++  @Get('me')
++  me(@CurrentUser() user: UserResponse): UserResponse {
++    return user;
++  }
++}
+diff --git a/src/auth/auth.module.ts b/src/auth/auth.module.ts
+new file mode 100644
+index 0000000..03cf7c3
+--- /dev/null
++++ b/src/auth/auth.module.ts
+@@ -0,0 +1,29 @@
++import { Module } from '@nestjs/common';
++import { APP_GUARD } from '@nestjs/core';
++import { JwtModule } from '@nestjs/jwt';
++import { PassportModule } from '@nestjs/passport';
++import { UsersModule } from '../users/users.module.js';
++import { AuthController } from './auth.controller.js';
++import { AuthService } from './auth.service.js';
++import { BasicStrategy } from './basic.strategy.js';
++import { JwtAuthGuard } from './jwt-auth.guard.js';
++import { JwtKeys } from './jwt-keys.js';
++import { JwtStrategy } from './jwt.strategy.js';
++
++/**
++ * Two strategies, one job each: Basic proves who you are on POST /auth/login and
++ * gets you a token; the token (JWT) authenticates every other request. Registering
++ * JwtAuthGuard as APP_GUARD makes EVERY route authenticated; opt out with @Public().
++ */
++@Module({
++  imports: [UsersModule, PassportModule, JwtModule.register({})],
++  controllers: [AuthController],
++  providers: [
++    JwtKeys,
++    AuthService,
++    BasicStrategy,
++    JwtStrategy,
++    { provide: APP_GUARD, useClass: JwtAuthGuard },
++  ],
++})
++export class AuthModule {}
+diff --git a/src/auth/auth.service.ts b/src/auth/auth.service.ts
+new file mode 100644
+index 0000000..6fd5720
+--- /dev/null
++++ b/src/auth/auth.service.ts
+@@ -0,0 +1,34 @@
++import { Injectable } from '@nestjs/common';
++import { JwtService } from '@nestjs/jwt';
++import type { UserResponse } from '../users/entities/user.entity.js';
++import { JwtKeys } from './jwt-keys.js';
++import type { TokenPayload } from './jwt.strategy.js';
++
++/** What POST /auth/login returns. */
++export interface AccessToken {
++  accessToken: string;
++  tokenType: 'Bearer';
++  /** Seconds until the token expires. */
++  expiresIn: number;
++}
++
++@Injectable()
++export class AuthService {
++  constructor(
++    private readonly jwt: JwtService,
++    private readonly keys: JwtKeys,
++  ) {}
++
++  /** Sign a token for a user who has just proved who they are (Basic, on login). */
++  login(user: UserResponse): AccessToken {
++    const payload: TokenPayload = { sub: user.id, email: user.email };
++    return {
++      accessToken: this.jwt.sign(payload, {
++        secret: this.keys.secret,
++        expiresIn: this.keys.expiresIn,
++      }),
++      tokenType: 'Bearer',
++      expiresIn: this.keys.expiresIn,
++    };
++  }
++}
+diff --git a/src/auth/basic-login.guard.ts b/src/auth/basic-login.guard.ts
+new file mode 100644
+index 0000000..fb39e0a
+--- /dev/null
++++ b/src/auth/basic-login.guard.ts
+@@ -0,0 +1,32 @@
++import {
++  type ExecutionContext,
++  Injectable,
++  UnauthorizedException,
++} from '@nestjs/common';
++import { AuthGuard } from '@nestjs/passport';
++import type { Response } from 'express';
++import { BASIC_CHALLENGE, UNAUTHORIZED_BODY } from './auth.constants.js';
++
++/**
++ * Guards POST /auth/login with the Basic strategy. Every failure is the same 401
++ * with a Basic challenge, including a malformed header (passport-http alone would
++ * answer that one with 400).
++ */
++@Injectable()
++export class BasicLoginGuard extends AuthGuard('basic') {
++  handleRequest<TUser>(
++    err: unknown,
++    user: TUser | false | null,
++    _info: unknown,
++    context: ExecutionContext,
++  ): TUser {
++    if (err || !user) {
++      context
++        .switchToHttp()
++        .getResponse<Response>()
++        .setHeader('WWW-Authenticate', BASIC_CHALLENGE);
++      throw new UnauthorizedException(UNAUTHORIZED_BODY);
++    }
++    return user;
++  }
++}
+diff --git a/src/auth/basic.strategy.ts b/src/auth/basic.strategy.ts
+new file mode 100644
+index 0000000..9e2db72
+--- /dev/null
++++ b/src/auth/basic.strategy.ts
+@@ -0,0 +1,33 @@
++import { Injectable } from '@nestjs/common';
++import { PassportStrategy } from '@nestjs/passport';
++import { BasicStrategy as HttpBasicStrategy } from 'passport-http';
++import type { UserResponse } from '../users/entities/user.entity.js';
++import { UserResponseSchema } from '../users/user.schema.js';
++import { UsersService } from '../users/users.service.js';
++
++/**
++ * ch03 step 1: HTTP Basic, with Passport's standard strategy. passport-http reads the
++ * `Authorization: Basic …` header and hands us the email and password; we only say
++ * whether they belong to an active user. It guards ONE route, POST /auth/login.
++ *
++ * Known limit of passport-http 0.3.0 (measured): it keeps only the text between the
++ * first and SECOND colon, so a password containing a colon cannot log in.
++ */
++@Injectable()
++export class BasicStrategy extends PassportStrategy(
++  HttpBasicStrategy,
++  'basic',
++) {
++  constructor(private readonly users: UsersService) {
++    super();
++  }
++
++  /** Returns the PUBLIC user (→ req.user), or null (→ 401 from BasicLoginGuard). */
++  async validate(
++    email: string,
++    password: string,
++  ): Promise<UserResponse | null> {
++    const user = await this.users.verifyCredentials(email, password);
++    return user ? UserResponseSchema.parse(user) : null;
++  }
++}
+diff --git a/src/auth/current-user.decorator.ts b/src/auth/current-user.decorator.ts
+new file mode 100644
+index 0000000..0ddca89
+--- /dev/null
++++ b/src/auth/current-user.decorator.ts
+@@ -0,0 +1,11 @@
++import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
++import type { UserResponse } from '../users/entities/user.entity.js';
++
++/**
++ * The authenticated (public) user that a guard put on the request.
++ * Use only on routes that are NOT @Public(), where it is always set.
++ */
++export const CurrentUser = createParamDecorator(
++  (_data: unknown, context: ExecutionContext): UserResponse =>
++    context.switchToHttp().getRequest<{ user: UserResponse }>().user,
++);
+diff --git a/src/auth/jwt-auth.guard.ts b/src/auth/jwt-auth.guard.ts
+new file mode 100644
+index 0000000..733a144
+--- /dev/null
++++ b/src/auth/jwt-auth.guard.ts
+@@ -0,0 +1,46 @@
++import {
++  type ExecutionContext,
++  Injectable,
++  UnauthorizedException,
++} from '@nestjs/common';
++import { Reflector } from '@nestjs/core';
++import { AuthGuard } from '@nestjs/passport';
++import type { Response } from 'express';
++import { BEARER_CHALLENGE, UNAUTHORIZED_BODY } from './auth.constants.js';
++import { IS_PUBLIC } from './public.decorator.js';
++
++/**
++ * Global guard (APP_GUARD in AuthModule): every route needs a valid bearer token
++ * unless it is marked @Public(). Any failure (no token, bad signature, expired,
++ * unknown user) becomes the same 401 body plus a Bearer challenge.
++ */
++@Injectable()
++export class JwtAuthGuard extends AuthGuard('jwt') {
++  constructor(private readonly reflector: Reflector) {
++    super();
++  }
++
++  canActivate(context: ExecutionContext) {
++    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [
++      context.getHandler(),
++      context.getClass(),
++    ]);
++    return isPublic ? true : super.canActivate(context);
++  }
++
++  handleRequest<TUser>(
++    err: unknown,
++    user: TUser | false | null,
++    _info: unknown,
++    context: ExecutionContext,
++  ): TUser {
++    if (err || !user) {
++      context
++        .switchToHttp()
++        .getResponse<Response>()
++        .setHeader('WWW-Authenticate', BEARER_CHALLENGE);
++      throw new UnauthorizedException(UNAUTHORIZED_BODY);
++    }
++    return user;
++  }
++}
+diff --git a/src/auth/jwt-keys.ts b/src/auth/jwt-keys.ts
+new file mode 100644
+index 0000000..3cdc333
+--- /dev/null
++++ b/src/auth/jwt-keys.ts
+@@ -0,0 +1,26 @@
++import { Injectable, Logger } from '@nestjs/common';
++import { ConfigService } from '@nestjs/config';
++import { randomBytes } from 'node:crypto';
++import type { Env } from '../config/env.schema.js';
++
++/**
++ * The signing key and token lifetime, read once. Without JWT_SECRET (allowed outside
++ * production only) the key is random per process, so tokens stop working on restart.
++ * The key itself is never logged.
++ */
++@Injectable()
++export class JwtKeys {
++  readonly secret: string;
++  readonly expiresIn: number;
++
++  constructor(config: ConfigService<Env, true>) {
++    const configured = config.get('JWT_SECRET', { infer: true });
++    if (!configured) {
++      new Logger('Auth').warn(
++        'JWT_SECRET is not set: using a random key; tokens stop working when the app restarts',
++      );
++    }
++    this.secret = configured ?? randomBytes(32).toString('hex');
++    this.expiresIn = config.get('JWT_EXPIRES_IN', { infer: true });
++  }
++}
+diff --git a/src/auth/jwt.strategy.ts b/src/auth/jwt.strategy.ts
+new file mode 100644
+index 0000000..d0f5206
+--- /dev/null
++++ b/src/auth/jwt.strategy.ts
+@@ -0,0 +1,38 @@
++import { Injectable } from '@nestjs/common';
++import { PassportStrategy } from '@nestjs/passport';
++import { ExtractJwt, Strategy } from 'passport-jwt';
++import type { UserResponse } from '../users/entities/user.entity.js';
++import { UserResponseSchema } from '../users/user.schema.js';
++import { UsersService } from '../users/users.service.js';
++import { JwtKeys } from './jwt-keys.js';
++
++/** What a token carries: the user's id (`sub`) and nothing secret. */
++export interface TokenPayload {
++  sub: string;
++  email: string;
++}
++
++/**
++ * ch03 step 2: `Authorization: Bearer <token>`. passport-jwt checks the signature and
++ * the expiry; we then look the user up, so a token stops working as soon as its user
++ * is gone or no longer active.
++ */
++@Injectable()
++export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
++  constructor(
++    keys: JwtKeys,
++    private readonly users: UsersService,
++  ) {
++    super({
++      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
++      secretOrKey: keys.secret,
++      ignoreExpiration: false,
++    });
++  }
++
++  /** Returns the PUBLIC user (→ req.user), or null (→ 401 from JwtAuthGuard). */
++  async validate(payload: TokenPayload): Promise<UserResponse | null> {
++    const user = await this.users.findOne(payload.sub).catch(() => undefined);
++    return user?.status === 'active' ? UserResponseSchema.parse(user) : null;
++  }
++}
+diff --git a/src/auth/public.decorator.ts b/src/auth/public.decorator.ts
+new file mode 100644
+index 0000000..e192de8
+--- /dev/null
++++ b/src/auth/public.decorator.ts
+@@ -0,0 +1,9 @@
++import { SetMetadata } from '@nestjs/common';
++
++export const IS_PUBLIC = 'auth:isPublic';
++
++/**
++ * Every route is authenticated by default (JwtAuthGuard is global). Mark the
++ * exceptions explicitly, so a forgotten decorator fails CLOSED (401), never open.
++ */
++export const Public = () => SetMetadata(IS_PUBLIC, true);
+diff --git a/src/bootstrap/configure-app.ts b/src/bootstrap/configure-app.ts
+index 84f7871..3396187 100644
+--- a/src/bootstrap/configure-app.ts
++++ b/src/bootstrap/configure-app.ts
+@@ -21,7 +21,13 @@ export function configureApp(app: INestApplication): void {
+   if (config.get('SWAGGER_ENABLED', { infer: true })) {
+     const doc = SwaggerModule.createDocument(
+       app,
+-      new DocumentBuilder().setTitle('nest-ai-starter').setVersion('1').build(),
++      new DocumentBuilder()
++        .setTitle('nest-ai-starter')
++        .setVersion('1')
++        // Enables "Authorize" in the docs UI. Deliberately NOT a global security
++        // requirement: @Public() routes (health, sign-up, login) would be documented wrongly.
++        .addBearerAuth()
++        .build(),
+     );
+     SwaggerModule.setup('api/docs', app, doc);
+   }
+diff --git a/src/config/env.schema.spec.ts b/src/config/env.schema.spec.ts
+index af62c9d..7f0b863 100644
+--- a/src/config/env.schema.spec.ts
++++ b/src/config/env.schema.spec.ts
+@@ -6,13 +6,15 @@ describe('validateEnv', () => {
+       NODE_ENV: 'development',
+       PORT: 3000,
+       SWAGGER_ENABLED: true,
++      JWT_EXPIRES_IN: 3600,
+     });
+   });
+ 
+-  /** The minimum a production start needs. */
++  /** The minimum a production start needs. The key is a stand-in, 32 characters. */
+   const prod = {
+     NODE_ENV: 'production',
+     DATABASE_URL: 'file:/data/app.db',
++    JWT_SECRET: 'x'.repeat(32),
+   };
+ 
+   it('turns docs off by default in production', () => {
+@@ -31,6 +33,18 @@ describe('validateEnv', () => {
+     );
+   });
+ 
++  it('production refuses to start without JWT_SECRET', () => {
++    expect(() => validateEnv({ ...prod, JWT_SECRET: undefined })).toThrow(
++      /JWT_SECRET: is required when NODE_ENV=production/,
++    );
++  });
++
++  it('a short JWT_SECRET is rejected without echoing it', () => {
++    const short = 'too-short-to-sign-tokens';
++    expect(() => validateEnv({ JWT_SECRET: short })).toThrow(/JWT_SECRET/);
++    expect(() => validateEnv({ JWT_SECRET: short })).not.toThrow(short);
++  });
++
+   it('a malformed DATABASE_URL is rejected without echoing it', () => {
+     // Not a file: URL (here a network URL with a password in it).
+     const url = 'postgres://user:hunter2-not-real@host/db';
+diff --git a/src/config/env.schema.ts b/src/config/env.schema.ts
+index 9225f9b..16adcd0 100644
+--- a/src/config/env.schema.ts
++++ b/src/config/env.schema.ts
+@@ -21,11 +21,22 @@ export const envSchema = z
+       .string()
+       .regex(/^file:./, 'must be a file: URL, e.g. file:./data/app.db')
+       .optional(),
++    /**
++     * ch03: the key that signs access tokens (JWT). Unset → a random key per process
++     * (dev/test only), so tokens stop working when the app restarts.
++     */
++    JWT_SECRET: z.string().min(32, 'must be at least 32 characters').optional(),
++    /** ch03: how long an access token is valid, in seconds. */
++    JWT_EXPIRES_IN: z.coerce.number().int().min(60).max(86400).default(3600),
+   })
+   .refine((env) => env.NODE_ENV !== 'production' || env.DATABASE_URL, {
+     message: 'is required when NODE_ENV=production',
+     path: ['DATABASE_URL'],
+   })
++  .refine((env) => env.NODE_ENV !== 'production' || env.JWT_SECRET, {
++    message: 'is required when NODE_ENV=production',
++    path: ['JWT_SECRET'],
++  })
+   .transform(({ SWAGGER_ENABLED, ...env }) => ({
+     ...env,
+     SWAGGER_ENABLED:
+diff --git a/src/database/schema.ts b/src/database/schema.ts
+index 8880647..486cfee 100644
+--- a/src/database/schema.ts
++++ b/src/database/schema.ts
+@@ -4,3 +4,4 @@
+  * When you add a table, export it here, then run `pnpm db:generate`.
+  */
+ export * from '../users/users.table.js';
++export * from '../devices/devices.table.js';
+diff --git a/src/devices/device-credentials.spec.ts b/src/devices/device-credentials.spec.ts
+new file mode 100644
+index 0000000..c117d0d
+--- /dev/null
++++ b/src/devices/device-credentials.spec.ts
+@@ -0,0 +1,34 @@
++import {
++  generateDeviceKey,
++  generateSecret,
++  hashSecret,
++  secretMatches,
++} from './device-credentials.js';
++
++describe('device credentials', () => {
++  it('device keys are DK + 16 base32 chars, and unique', () => {
++    const ids = new Set(Array.from({ length: 200 }, generateDeviceKey));
++    expect(ids.size).toBe(200);
++    for (const id of ids) expect(id).toMatch(/^DK[A-Z2-7]{16}$/);
++  });
++
++  it('secrets are dsk_ + 43 base64url chars (256 bits), and unique', () => {
++    const secret = generateSecret();
++    expect(secret).toMatch(/^dsk_[A-Za-z0-9_-]{43}$/);
++    expect(generateSecret()).not.toBe(secret);
++  });
++
++  it('stores only a hash, and the hash verifies the secret', () => {
++    const secret = generateSecret();
++    const stored = hashSecret(secret);
++    expect(stored).toMatch(/^[0-9a-f]{64}$/);
++    expect(stored).not.toContain(secret.slice(4));
++    expect(secretMatches(secret, stored)).toBe(true);
++    expect(secretMatches(generateSecret(), stored)).toBe(false);
++  });
++
++  it('a malformed stored hash never matches and never throws', () => {
++    expect(secretMatches(generateSecret(), 'not-hex')).toBe(false);
++    expect(secretMatches(generateSecret(), '')).toBe(false);
++  });
++});
+diff --git a/src/devices/device-credentials.ts b/src/devices/device-credentials.ts
+new file mode 100644
+index 0000000..b9b42ec
+--- /dev/null
++++ b/src/devices/device-credentials.ts
+@@ -0,0 +1,47 @@
++import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
++
++/** RFC 4648 base32 alphabet: upper-case, no 0/1/8/9, so no O/0 or I/1 confusion. */
++const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
++
++function base32(bytes: Buffer): string {
++  let bits = 0;
++  let value = 0;
++  let out = '';
++  for (const byte of bytes) {
++    value = (value << 8) | byte;
++    bits += 8;
++    while (bits >= 5) {
++      out += BASE32[(value >>> (bits - 5)) & 31];
++      bits -= 5;
++    }
++  }
++  return out;
++}
++
++/** `DK` + 16 base32 chars (80 random bits). An identifier: safe to show and log. */
++export function generateDeviceKey(): string {
++  return `DK${base32(randomBytes(10))}`;
++}
++
++/**
++ * `dsk_` + base64url(32 random bytes): 256 bits. The prefix lets secret
++ * scanners spot a leaked device secret. Generated on the SERVER only.
++ */
++export function generateSecret(): string {
++  return `dsk_${randomBytes(32).toString('base64url')}`;
++}
++
++/**
++ * sha256, hex. A fast hash is right here and wrong for passwords: a 256-bit
++ * random secret cannot be brute-forced, while a human password can.
++ */
++export function hashSecret(secret: string): string {
++  return createHash('sha256').update(secret, 'utf8').digest('hex');
++}
++
++/** Constant-time comparison of a presented secret with a stored hash. */
++export function secretMatches(secret: string, storedHash: string): boolean {
++  const actual = Buffer.from(hashSecret(secret), 'hex');
++  const expected = Buffer.from(storedHash, 'hex');
++  return actual.length === expected.length && timingSafeEqual(actual, expected);
++}
+diff --git a/src/devices/device.schema.ts b/src/devices/device.schema.ts
+new file mode 100644
+index 0000000..e5d6e9a
+--- /dev/null
++++ b/src/devices/device.schema.ts
+@@ -0,0 +1,74 @@
++import { z } from 'zod';
++import { patchSchema } from '../common/schemas/patch-schema.js';
++
++/**
++ * Single source of truth for a Device AS STORED: validation, TypeScript types
++ * and the OpenAPI schema all derive from these definitions. Change fields HERE only.
++ */
++export const DeviceSchema = z.object({
++  id: z.string().uuid(),
++  /** ch04b: the user who created the device. Server-owned. */
++  ownerUserId: z.string().uuid(),
++  name: z.string().trim().min(1).max(100),
++  description: z.string().max(500).default(''),
++  status: z.enum(['active', 'archived']).default('active'),
++  /** Sent as X-Device-Key. Set when the device is provisioned. */
++  deviceKey: z
++    .string()
++    .regex(/^DK[A-Z2-7]{16}$/)
++    .nullable(),
++  secretHash: z.string().nullable(),
++  secretLast4: z.string().nullable(),
++  secretRotatedAt: z.string().datetime().nullable(),
++  lastUsedAt: z.string().datetime().nullable(),
++  archivedAt: z.string().datetime().nullable(),
++  createdAt: z.string().datetime(),
++  updatedAt: z.string().datetime(),
++});
++
++/**
++ * Stored but never RETURNED and never ACCEPTED from a client (a password or
++ * secret hash). Responses are parsed through DeviceResponseSchema, which
++ * strips these. A test checks that no response carries them.
++ */
++const PRIVATE = {
++  secretHash: true,
++} as const;
++
++/**
++ * Returned to clients but never ACCEPTED from them: the server sets these, usually
++ * through actions (e.g. `status` only changes by archiving).
++ */
++const SERVER_OWNED = {
++  ownerUserId: true,
++  status: true,
++  deviceKey: true,
++  secretLast4: true,
++  secretRotatedAt: true,
++  lastUsedAt: true,
++  archivedAt: true,
++} as const;
++
++/** What every endpoint returns. */
++export const DeviceResponseSchema = DeviceSchema.omit(PRIVATE);
++
++/**
++ * Client-settable fields, UNREFINED. Zod 4 throws on .omit()/.partial() of a
++ * refined object, so derive from this and attach .refine() last.
++ */
++const DeviceFields = DeviceSchema.omit({
++  id: true,
++  createdAt: true,
++  updatedAt: true,
++  ...PRIVATE,
++  ...SERVER_OWNED,
++});
++
++/** POST /devices/provision body. */
++export const CreateDeviceSchema = DeviceFields;
++
++/**
++ * PATCH body: any subset of the create fields, never empty, and WITHOUT defaults
++ * (see patchSchema: .partial() would overwrite stored values with defaults).
++ */
++export const UpdateDeviceSchema = patchSchema(DeviceFields);
+diff --git a/src/devices/devices.controller.ts b/src/devices/devices.controller.ts
+new file mode 100644
+index 0000000..3f1a35d
+--- /dev/null
++++ b/src/devices/devices.controller.ts
+@@ -0,0 +1,102 @@
++import {
++  Body,
++  Controller,
++  Delete,
++  Get,
++  HttpCode,
++  HttpStatus,
++  Param,
++  ParseUUIDPipe,
++  Patch,
++  Post,
++  Query,
++} from '@nestjs/common';
++import { ApiTags } from '@nestjs/swagger';
++import type { Page } from '../common/persistence/repository.js';
++import { CurrentUser } from '../auth/current-user.decorator.js';
++import { PageQueryDto } from '../common/schemas/page-query.schema.js';
++import { DeviceResponseSchema } from './device.schema.js';
++import { DevicesService } from './devices.service.js';
++import { CreateDeviceDto } from './dto/create-device.dto.js';
++import { UpdateDeviceDto } from './dto/update-device.dto.js';
++import type { UserResponse } from '../users/entities/user.entity.js';
++import type { Device, DeviceResponse } from './entities/device.entity.js';
++
++/** Strip private fields. Every value this controller returns passes through here. */
++const toResponse = (entity: Device): DeviceResponse =>
++  DeviceResponseSchema.parse(entity);
++
++/**
++ * HTTP only: parse, delegate, return. No business logic here (it goes in the
++ * service) and no try/catch (DomainExceptionFilter maps errors).
++ * Routes: /api/v1/devices
++ */
++@ApiTags('devices')
++@Controller('devices')
++export class DevicesController {
++  constructor(private readonly service: DevicesService) {}
++
++  /**
++   * Create a device that is ready to use. The ONLY responses that ever contain the
++   * plain `secret` are this one and rotate: store it now, it cannot be shown again.
++   */
++  @Post('provision')
++  async provision(
++    @CurrentUser() user: UserResponse,
++    @Body() body: CreateDeviceDto,
++  ): Promise<DeviceResponse & { secret: string }> {
++    const { device, secret } = await this.service.provision(user.id, body);
++    return { ...toResponse(device), secret };
++  }
++
++  @Get()
++  async findPage(
++    @CurrentUser() user: UserResponse,
++    @Query() query: PageQueryDto,
++  ): Promise<Page<DeviceResponse>> {
++    const page = await this.service.findPage(
++      user.id,
++      query.limit,
++      query.offset,
++    );
++    return { ...page, items: page.items.map(toResponse) };
++  }
++
++  @Get(':id')
++  async findOne(
++    @CurrentUser() user: UserResponse,
++    @Param('id', ParseUUIDPipe) id: string,
++  ): Promise<DeviceResponse> {
++    return toResponse(await this.service.findOne(user.id, id));
++  }
++
++  @Patch(':id')
++  async update(
++    @CurrentUser() user: UserResponse,
++    @Param('id', ParseUUIDPipe) id: string,
++    @Body() body: UpdateDeviceDto,
++  ): Promise<DeviceResponse> {
++    return toResponse(await this.service.update(user.id, id, body));
++  }
++
++  /** Soft delete: the device is archived (status `archived`, `archivedAt` set). */
++  @Delete(':id')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  remove(
++    @CurrentUser() user: UserResponse,
++    @Param('id', ParseUUIDPipe) id: string,
++  ): Promise<void> {
++    return this.service.remove(user.id, id);
++  }
++
++  /** A new secret for the same key. The old secret stops working at once. */
++  @Post(':id/rotate')
++  @HttpCode(HttpStatus.OK)
++  async rotate(
++    @CurrentUser() user: UserResponse,
++    @Param('id', ParseUUIDPipe) id: string,
++  ): Promise<DeviceResponse & { secret: string }> {
++    const { device, secret } = await this.service.rotate(user.id, id);
++    return { ...toResponse(device), secret };
++  }
++}
+diff --git a/src/devices/devices.drizzle-repository.ts b/src/devices/devices.drizzle-repository.ts
+new file mode 100644
+index 0000000..c0ecd32
+--- /dev/null
++++ b/src/devices/devices.drizzle-repository.ts
+@@ -0,0 +1,52 @@
++import { Inject, Injectable } from '@nestjs/common';
++import { asc, count, eq } from 'drizzle-orm';
++import type { Page } from '../common/persistence/repository.js';
++import { DrizzleRepository } from '../common/persistence/drizzle-repository.js';
++import { DB, type Db } from '../database/database.types.js';
++import type { DevicesRepository } from './devices.repository.js';
++import { devices } from './devices.table.js';
++import type { Device } from './entities/device.entity.js';
++
++/** SQLite storage for devices (drizzle). CRUD comes from DrizzleRepository. */
++@Injectable()
++export class DrizzleDevicesRepository
++  extends DrizzleRepository<Device>
++  implements DevicesRepository
++{
++  constructor(@Inject(DB) db: Db) {
++    super(db, devices, 'Device');
++  }
++
++  async findByDeviceKey(deviceKey: string): Promise<Device | undefined> {
++    const [row] = await this.db
++      .select()
++      .from(devices)
++      .where(eq(devices.deviceKey, deviceKey))
++      .limit(1);
++    return row ? this.toEntity(row) : undefined;
++  }
++
++  async findPageByOwner(
++    ownerUserId: string,
++    limit: number,
++    offset: number,
++  ): Promise<Page<Device>> {
++    const mine = eq(devices.ownerUserId, ownerUserId);
++    const [rows, [{ total }]] = await Promise.all([
++      this.db
++        .select()
++        .from(devices)
++        .where(mine)
++        .orderBy(asc(devices.createdAt), asc(devices.id))
++        .limit(limit)
++        .offset(offset),
++      this.db.select({ total: count() }).from(devices).where(mine),
++    ]);
++    return {
++      items: rows.map((row) => this.toEntity(row)),
++      total,
++      limit,
++      offset,
++    };
++  }
++}
+diff --git a/src/devices/devices.module.ts b/src/devices/devices.module.ts
+new file mode 100644
+index 0000000..fa8826c
+--- /dev/null
++++ b/src/devices/devices.module.ts
+@@ -0,0 +1,16 @@
++import { Module } from '@nestjs/common';
++import { DevicesController } from './devices.controller.js';
++import { DrizzleDevicesRepository } from './devices.drizzle-repository.js';
++import { DEVICES_REPOSITORY } from './devices.repository.js';
++import { DevicesService } from './devices.service.js';
++
++@Module({
++  controllers: [DevicesController],
++  providers: [
++    DevicesService,
++    // SQLite via drizzle (DB is provided globally by DatabaseModule).
++    { provide: DEVICES_REPOSITORY, useClass: DrizzleDevicesRepository },
++  ],
++  exports: [DevicesService],
++})
++export class DevicesModule {}
+diff --git a/src/devices/devices.repository.ts b/src/devices/devices.repository.ts
+new file mode 100644
+index 0000000..8885434
+--- /dev/null
++++ b/src/devices/devices.repository.ts
+@@ -0,0 +1,17 @@
++import type { Page, Repository } from '../common/persistence/repository.js';
++import type { Device } from './entities/device.entity.js';
++
++/** Injection token: services depend on the port, never on a storage class. */
++export const DEVICES_REPOSITORY = Symbol('DEVICES_REPOSITORY');
++
++/** The generic CRUD port plus the lookups this resource needs. */
++export interface DevicesRepository extends Repository<Device> {
++  /** For authentication (ch09): the device with this key. */
++  findByDeviceKey(deviceKey: string): Promise<Device | undefined>;
++  /** ch04b: one owner's devices, in creation order. */
++  findPageByOwner(
++    ownerUserId: string,
++    limit: number,
++    offset: number,
++  ): Promise<Page<Device>>;
++}
+diff --git a/src/devices/devices.service.spec.ts b/src/devices/devices.service.spec.ts
+new file mode 100644
+index 0000000..7f7a1a5
+--- /dev/null
++++ b/src/devices/devices.service.spec.ts
+@@ -0,0 +1,145 @@
++import {
++  NotFoundError,
++  RuleViolationError,
++} from '../common/errors/domain-error.js';
++import { connectInMemory, type Connection } from '../database/connect.js';
++import { DrizzleDevicesRepository } from './devices.drizzle-repository.js';
++import { DevicesService } from './devices.service.js';
++import { devices } from './devices.table.js';
++import { users } from '../users/users.table.js';
++
++/**
++ * Unit tests against a REAL database (SQLite in memory, migrated): the
++ * repository's SQL is exercised, not mocked. One database per file.
++ */
++describe('DevicesService', () => {
++  let connection: Connection;
++  let service: DevicesService;
++
++  // Parsed shape (defaults applied), as the pipe hands it to the service.
++  const valid = { name: 'Sensor 1', description: '' };
++
++  /** Two real users: devices.owner_user_id is a foreign key. */
++  let owner: string;
++  let stranger: string;
++
++  beforeAll(async () => {
++    connection = await connectInMemory();
++    const [a, b] = await connection.db
++      .insert(users)
++      .values([
++        { email: 'owner@example.com', name: 'Owner', passwordHash: 'x' },
++        { email: 'stranger@example.com', name: 'Stranger', passwordHash: 'x' },
++      ])
++      .returning({ id: users.id });
++    owner = a.id;
++    stranger = b.id;
++  });
++
++  afterAll(async () => {
++    await connection.close();
++  });
++
++  beforeEach(async () => {
++    await connection.db.delete(devices);
++    service = new DevicesService(new DrizzleDevicesRepository(connection.db));
++  });
++
++  it('provisions and reads back a device', async () => {
++    const { device } = await service.provision(owner, valid);
++    await expect(service.findOne(owner, device.id)).resolves.toEqual(device);
++  });
++
++  it('throws NotFoundError for an unknown id', async () => {
++    await expect(
++      service.findOne(owner, '00000000-0000-4000-8000-000000000000'),
++    ).rejects.toBeInstanceOf(NotFoundError);
++  });
++
++  describe('ownership', () => {
++    it("another user's device is NOT FOUND, for every operation", async () => {
++      const { device } = await service.provision(owner, valid);
++      for (const attempt of [
++        () => service.findOne(stranger, device.id),
++        () => service.update(stranger, device.id, { name: 'x' }),
++        () => service.remove(stranger, device.id),
++        () => service.rotate(stranger, device.id),
++      ]) {
++        await expect(attempt()).rejects.toBeInstanceOf(NotFoundError);
++      }
++    });
++
++    it('lists only the caller’s devices', async () => {
++      await service.provision(owner, valid);
++      await service.provision(stranger, valid);
++      const mine = await service.findPage(owner, 20, 0);
++      expect(mine.total).toBe(1);
++      expect(mine.items.every((d) => d.ownerUserId === owner)).toBe(true);
++    });
++  });
++
++  describe('provision and credentials', () => {
++    it('a provisioned device is active, with a key; the secret is returned once and only its hash is stored', async () => {
++      const { device, secret } = await service.provision(owner, valid);
++      expect(device.status).toBe('active');
++      expect(device.deviceKey).toMatch(/^DK[A-Z2-7]{16}$/);
++      expect(secret).toMatch(/^dsk_/);
++      const stored = await service.findOne(owner, device.id);
++      expect(stored.secretHash).not.toContain(secret.slice(4));
++      expect(stored.secretLast4).toBe(secret.slice(-4));
++      expect(JSON.stringify(stored)).not.toContain(secret);
++    });
++
++    it('the key and secret authenticate; success records lastUsedAt', async () => {
++      const { device, secret } = await service.provision(owner, valid);
++      const verified = await service.verifyDeviceKey(device.deviceKey!, secret);
++      expect(verified?.id).toBe(device.id);
++      expect(verified?.lastUsedAt).not.toBeNull();
++    });
++
++    it('rotation keeps the key and invalidates the old secret IMMEDIATELY', async () => {
++      const first = await service.provision(owner, valid);
++      const second = await service.rotate(owner, first.device.id);
++      expect(second.device.deviceKey).toBe(first.device.deviceKey);
++      await expect(
++        service.verifyDeviceKey(first.device.deviceKey!, first.secret),
++      ).resolves.toBeUndefined();
++      await expect(
++        service.verifyDeviceKey(first.device.deviceKey!, second.secret),
++      ).resolves.toBeDefined();
++    });
++
++    it('an unknown key or a wrong secret is undefined', async () => {
++      const { device } = await service.provision(owner, valid);
++      await expect(
++        service.verifyDeviceKey('DKAAAAAAAAAAAAAAAA', 'dsk_x'),
++      ).resolves.toBeUndefined();
++      await expect(
++        service.verifyDeviceKey(device.deviceKey!, 'dsk_wrong'),
++      ).resolves.toBeUndefined();
++    });
++
++    it('R2: an archived device cannot be rotated', async () => {
++      const { device } = await service.provision(owner, valid);
++      await service.remove(owner, device.id);
++      await expect(service.rotate(owner, device.id)).rejects.toBeInstanceOf(
++        RuleViolationError,
++      );
++    });
++  });
++
++  it('R3 + R4: delete archives (soft); an archived device cannot be edited or used', async () => {
++    const { device, secret } = await service.provision(owner, valid);
++    await service.remove(owner, device.id);
++    const archived = await service.findOne(owner, device.id); // still there
++    expect(archived.status).toBe('archived');
++    expect(archived.archivedAt).not.toBeNull();
++    await expect(
++      service.update(owner, device.id, { name: 'x' }),
++    ).rejects.toBeInstanceOf(RuleViolationError);
++    await expect(
++      service.verifyDeviceKey(device.deviceKey!, secret),
++    ).resolves.toBeUndefined();
++    await expect(service.remove(owner, device.id)).resolves.toBeUndefined(); // idempotent
++  });
++});
+diff --git a/src/devices/devices.service.ts b/src/devices/devices.service.ts
+new file mode 100644
+index 0000000..4dc8556
+--- /dev/null
++++ b/src/devices/devices.service.ts
+@@ -0,0 +1,153 @@
++import { Inject, Injectable } from '@nestjs/common';
++import type { z } from 'zod';
++import {
++  NotFoundError,
++  RuleViolationError,
++} from '../common/errors/domain-error.js';
++import type { Entity, Page } from '../common/persistence/repository.js';
++import type { CreateDeviceSchema } from './device.schema.js';
++import {
++  generateDeviceKey,
++  generateSecret,
++  hashSecret,
++  secretMatches,
++} from './device-credentials.js';
++import {
++  DEVICES_REPOSITORY,
++  type DevicesRepository,
++} from './devices.repository.js';
++import type { UpdateDeviceDto } from './dto/update-device.dto.js';
++import type { Device } from './entities/device.entity.js';
++
++/** A device together with its secret: returned by provision and rotate, never again. */
++export interface DeviceWithSecret {
++  device: Device;
++  secret: string;
++}
++
++/**
++ * Business logic for devices. Shape rules (types, lengths, enums) live in the
++ * schema. Only rules that need state or more than one field belong here, and
++ * they fail by throwing a DomainError, never by returning a flag.
++ */
++@Injectable()
++export class DevicesService {
++  constructor(
++    @Inject(DEVICES_REPOSITORY) private readonly repo: DevicesRepository,
++  ) {}
++
++  /**
++   * Create a device for its owner, ready to use: active, with a new key and secret.
++   * The secret is returned here ONCE; only its hash is stored (spec).
++   */
++  // `input` is typed as the parsed payload, not the DTO class: spreading a class instance
++  // is flagged by lint (no-misused-spread), and the pipe hands over a plain object anyway.
++  async provision(
++    ownerId: string,
++    input: z.infer<typeof CreateDeviceSchema>,
++  ): Promise<DeviceWithSecret> {
++    const secret = generateSecret();
++    const stored: Omit<Device, keyof Entity> = {
++      ...input,
++      ownerUserId: ownerId, // the creating user owns it
++      status: 'active',
++      deviceKey: generateDeviceKey(),
++      secretHash: hashSecret(secret),
++      secretLast4: secret.slice(-4),
++      secretRotatedAt: null,
++      lastUsedAt: null,
++      archivedAt: null,
++    };
++    return { device: await this.repo.create(stored), secret };
++  }
++
++  findPage(
++    ownerId: string,
++    limit: number,
++    offset: number,
++  ): Promise<Page<Device>> {
++    return this.repo.findPageByOwner(ownerId, limit, offset);
++  }
++
++  /**
++   * Scoped to the owner. Another user's device is NOT FOUND (404), not
++   * forbidden, so device ids cannot be probed. Every method below goes through here.
++   */
++  async findOne(ownerId: string, id: string): Promise<Device> {
++    const found = await this.repo.findById(id);
++    if (!found || found.ownerUserId !== ownerId) {
++      throw new NotFoundError('Device', id);
++    }
++    return found;
++  }
++
++  async update(
++    ownerId: string,
++    id: string,
++    patch: UpdateDeviceDto,
++  ): Promise<Device> {
++    const current = await this.findOne(ownerId, id);
++    // Spec R3: an archived device cannot be edited.
++    if (current.status === 'archived') {
++      throw new RuleViolationError('An archived device cannot be edited');
++    }
++    const updated = await this.repo.update(id, patch);
++    if (!updated) throw new NotFoundError('Device', id);
++    return updated;
++  }
++
++  /**
++   * Spec R4: DELETE archives (a soft delete). The row stays, with `status: archived`
++   * and `archivedAt`, and its key stops working at once. Archiving twice is a no-op.
++   */
++  async remove(ownerId: string, id: string): Promise<void> {
++    const current = await this.findOne(ownerId, id);
++    if (current.status === 'archived') return;
++    const archived = await this.repo.update(id, {
++      status: 'archived',
++      archivedAt: new Date().toISOString(),
++    });
++    if (!archived) throw new NotFoundError('Device', id);
++  }
++
++  /**
++   * Replace the secret; the key stays the same. The old secret stops working
++   * immediately, because only the new hash is stored and nothing is cached.
++   */
++  async rotate(ownerId: string, id: string): Promise<DeviceWithSecret> {
++    const current = await this.findOne(ownerId, id);
++    if (current.status === 'archived') {
++      // Spec R2
++      throw new RuleViolationError('An archived device cannot be rotated');
++    }
++    const secret = generateSecret();
++    const device = await this.repo.update(id, {
++      secretHash: hashSecret(secret),
++      secretLast4: secret.slice(-4),
++      secretRotatedAt: new Date().toISOString(),
++    });
++    if (!device) throw new NotFoundError('Device', id);
++    return { device, secret };
++  }
++
++  /** A decoy hash, so an unknown key costs the same comparison work. */
++  private readonly decoyHash = hashSecret(generateSecret());
++
++  /**
++   * The ACTIVE device these credentials belong to, or undefined. Used by the MCP
++   * middleware (ch09). Every failure looks the same to the caller.
++   */
++  async verifyDeviceKey(
++    deviceKey: string,
++    secret: string,
++  ): Promise<Device | undefined> {
++    const device = await this.repo.findByDeviceKey(deviceKey);
++    const ok = secretMatches(secret, device?.secretHash ?? this.decoyHash);
++    if (!device || !ok || device.status !== 'active') return undefined;
++    return (
++      (await this.repo.update(device.id, {
++        lastUsedAt: new Date().toISOString(),
++      })) ?? undefined
++    );
++  }
++}
+diff --git a/src/devices/devices.table.spec.ts b/src/devices/devices.table.spec.ts
+new file mode 100644
+index 0000000..1741bbd
+--- /dev/null
++++ b/src/devices/devices.table.spec.ts
+@@ -0,0 +1,16 @@
++import { getTableColumns } from 'drizzle-orm';
++import { DeviceSchema } from './device.schema.js';
++import { devices } from './devices.table.js';
++
++/**
++ * Drift guard: the zod schema (API contract) and the drizzle table (storage)
++ * are written separately, so nothing else stops them disagreeing. A field
++ * added to one and forgotten in the other fails here, not in production.
++ */
++describe('devices table vs DeviceSchema', () => {
++  it('declare exactly the same fields', () => {
++    const columns = Object.keys(getTableColumns(devices)).sort();
++    const fields = Object.keys(DeviceSchema.shape).sort();
++    expect(columns).toEqual(fields);
++  });
++});
+diff --git a/src/devices/devices.table.ts b/src/devices/devices.table.ts
+new file mode 100644
+index 0000000..4efb7e4
+--- /dev/null
++++ b/src/devices/devices.table.ts
+@@ -0,0 +1,34 @@
++import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
++import {
++  createdAtColumn,
++  idColumn,
++  timestampColumn,
++  updatedAtColumn,
++} from '../database/columns.js';
++import { users } from '../users/users.table.js';
++
++/**
++ * The devices table. TS keys are camelCase; SQL columns are snake_case.
++ * Must declare exactly the fields of DeviceSchema: devices.table.spec.ts
++ * fails on any drift. After changing it: `pnpm db:generate`, then commit the
++ * whole drizzle/ folder.
++ */
++export const devices = sqliteTable('devices', {
++  id: idColumn(),
++  ownerUserId: text('owner_user_id')
++    .notNull()
++    .references(() => users.id, { onDelete: 'restrict' }),
++  name: text('name').notNull(),
++  description: text('description').notNull().default(''),
++  status: text('status', { enum: ['active', 'archived'] })
++    .notNull()
++    .default('active'),
++  deviceKey: text('device_key').unique(),
++  secretHash: text('secret_hash'),
++  secretLast4: text('secret_last4'),
++  secretRotatedAt: timestampColumn('secret_rotated_at'),
++  lastUsedAt: timestampColumn('last_used_at'),
++  archivedAt: timestampColumn('archived_at'),
++  createdAt: createdAtColumn(),
++  updatedAt: updatedAtColumn(),
++});
+diff --git a/src/devices/dto/create-device.dto.ts b/src/devices/dto/create-device.dto.ts
+new file mode 100644
+index 0000000..713f6ff
+--- /dev/null
++++ b/src/devices/dto/create-device.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { CreateDeviceSchema } from '../device.schema.js';
++
++export class CreateDeviceDto extends createZodDto(CreateDeviceSchema) {}
+diff --git a/src/devices/dto/update-device.dto.ts b/src/devices/dto/update-device.dto.ts
+new file mode 100644
+index 0000000..a0c127e
+--- /dev/null
++++ b/src/devices/dto/update-device.dto.ts
+@@ -0,0 +1,4 @@
++import { createZodDto } from '../../common/zod/zod-dto.js';
++import { UpdateDeviceSchema } from '../device.schema.js';
++
++export class UpdateDeviceDto extends createZodDto(UpdateDeviceSchema) {}
+diff --git a/src/devices/entities/device.entity.ts b/src/devices/entities/device.entity.ts
+new file mode 100644
+index 0000000..174941b
+--- /dev/null
++++ b/src/devices/entities/device.entity.ts
+@@ -0,0 +1,8 @@
++import type { z } from 'zod';
++import type { DeviceResponseSchema, DeviceSchema } from '../device.schema.js';
++
++/** Derived from the schemas: never hand-write fields here. */
++export type Device = z.infer<typeof DeviceSchema>;
++
++/** A Device without its private fields: the only shape that leaves the API. */
++export type DeviceResponse = z.infer<typeof DeviceResponseSchema>;
+diff --git a/src/health/health.controller.ts b/src/health/health.controller.ts
+index 9c3d8f6..8065946 100644
+--- a/src/health/health.controller.ts
++++ b/src/health/health.controller.ts
+@@ -1,6 +1,8 @@
+ import { Controller, Get, VERSION_NEUTRAL } from '@nestjs/common';
++import { Public } from '../auth/public.decorator.js';
+ 
+ /** Liveness probe at GET /api/health (unversioned, so probes survive API v2). */
++@Public()
+ @Controller({ path: 'health', version: VERSION_NEUTRAL })
+ export class HealthController {
+   @Get()
+diff --git a/src/users/users.controller.ts b/src/users/users.controller.ts
+index b4f786c..af55710 100644
+--- a/src/users/users.controller.ts
++++ b/src/users/users.controller.ts
+@@ -13,6 +13,7 @@ import {
+ } from '@nestjs/common';
+ import { ApiTags } from '@nestjs/swagger';
+ import type { Page } from '../common/persistence/repository.js';
++import { Public } from '../auth/public.decorator.js';
+ import { PageQueryDto } from '../common/schemas/page-query.schema.js';
+ import { UserResponseSchema } from './user.schema.js';
+ import { UsersService } from './users.service.js';
+@@ -34,6 +35,7 @@ const toResponse = (entity: User): UserResponse =>
+ export class UsersController {
+   constructor(private readonly service: UsersService) {}
+ 
++  @Public()
+   @Post()
+   async create(@Body() body: CreateUserDto): Promise<UserResponse> {
+     return toResponse(await this.service.create(body));
+diff --git a/src/users/users.service.ts b/src/users/users.service.ts
+index dba0e77..4f04af8 100644
+--- a/src/users/users.service.ts
++++ b/src/users/users.service.ts
+@@ -1,6 +1,6 @@
+ import { Inject, Injectable } from '@nestjs/common';
+ import { NotFoundError } from '../common/errors/domain-error.js';
+-import { hashPassword } from '../common/security/password.js';
++import { hashPassword, verifyPassword } from '../common/security/password.js';
+ import type { Entity, Page } from '../common/persistence/repository.js';
+ import { USERS_REPOSITORY, type UsersRepository } from './users.repository.js';
+ import type { CreateUserDto } from './dto/create-user.dto.js';
+@@ -61,4 +61,29 @@ export class UsersService {
+     const deleted = await this.repo.delete(id);
+     if (!deleted) throw new NotFoundError('User', id);
+   }
++
++  // ---- added in ch03 (auth); not part of the resource template ----
++
++  /** A real scrypt hash of a random value, so unknown emails cost the same work. */
++  private readonly decoyHash = hashPassword(
++    `decoy-${Math.random()}-${Date.now()}`,
++  );
++
++  /**
++   * The user for these credentials, or undefined. Every failure looks the same to
++   * the caller (unknown email, wrong password, disabled account), and an unknown
++   * email still runs one scrypt verify, so response time does not reveal which
++   * emails exist.
++   */
++  async verifyCredentials(
++    email: string,
++    password: string,
++  ): Promise<User | undefined> {
++    const user = await this.repo.findByEmail(email.trim().toLowerCase());
++    const ok = await verifyPassword(
++      password,
++      user?.passwordHash ?? (await this.decoyHash),
++    );
++    return user && ok && user.status === 'active' ? user : undefined;
++  }
+ }
+diff --git a/templates/resource/src/__names__/__names__.controller.ts.tpl b/templates/resource/src/__names__/__names__.controller.ts.tpl
+index 8f82551..b005938 100644
+--- a/templates/resource/src/__names__/__names__.controller.ts.tpl
++++ b/templates/resource/src/__names__/__names__.controller.ts.tpl
+@@ -34,6 +34,9 @@ const toResponse = (entity: __Name__): __Name__Response =>
+ export class __Names__Controller {
+   constructor(private readonly service: __Names__Service) {}
+ 
++  // AI-FILL(access-create): every route is authenticated by default (global
++  // guard). If the spec makes CREATE public (e.g. sign-up), put `@Public()` here
++  // (import it from '../auth/public.decorator.js'); otherwise delete this comment.
+   @Post()
+   async create(@Body() body: Create__Name__Dto): Promise<__Name__Response> {
+     return toResponse(await this.service.create(body));
+diff --git a/templates/resource/test/__names__.e2e-spec.ts.tpl b/templates/resource/test/__names__.e2e-spec.ts.tpl
+index 6737ec2..863cdf0 100644
+--- a/templates/resource/test/__names__.e2e-spec.ts.tpl
++++ b/templates/resource/test/__names__.e2e-spec.ts.tpl
+@@ -4,9 +4,10 @@ import request from 'supertest';
+ import type { App } from 'supertest/types.js';
+ import { AppModule } from '../src/app.module.js';
+ import { configureApp } from '../src/bootstrap/configure-app.js';
++import { signUpAndLogin } from './support/auth.js';
+ import { __Name__ResponseSchema } from '../src/__names__/__name__.schema.js';
+ 
+-/** Through the real HTTP stack: routing, validation pipe, error filter. */
++/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
+ describe('__names__ (e2e)', () => {
+   let app: INestApplication<App>;
+   const base = '/api/v1/__names__';
+@@ -16,16 +17,19 @@ describe('__names__ (e2e)', () => {
+   // FRESH value per call if any field is unique (e.g. a counter in the email).
+   const valid = () => ({});
+ 
+-  /** Shorthand for requests through the real HTTP server. */
++  /** Headers that authenticate a request (set by e2e-setup). */
++  let authHeaders: Record<string, string> = {};
++
++  /** Every request in this file is authenticated unless it uses `request` directly. */
+   const http = {
+     get: (url: string) =>
+-      request(app.getHttpServer()).get(url),
++      request(app.getHttpServer()).get(url).set(authHeaders),
+     post: (url: string) =>
+-      request(app.getHttpServer()).post(url),
++      request(app.getHttpServer()).post(url).set(authHeaders),
+     patch: (url: string) =>
+-      request(app.getHttpServer()).patch(url),
++      request(app.getHttpServer()).patch(url).set(authHeaders),
+     delete: (url: string) =>
+-      request(app.getHttpServer()).delete(url),
++      request(app.getHttpServer()).delete(url).set(authHeaders),
+   };
+ 
+   beforeAll(async () => {
+@@ -35,12 +39,19 @@ describe('__names__ (e2e)', () => {
+     app = moduleRef.createNestApplication();
+     configureApp(app);
+     await app.init();
++    // AI-FILL(e2e-setup): routes are authenticated by default (global guard).
++    // Sign up and log in with the helper, and keep its headers:
++    // `({ headers: authHeaders } = await signUpAndLogin(app, { email, name, password }));`
++    // Only if EVERY route of this resource is @Public(), delete this comment.
+   });
+ 
+   afterAll(async () => {
+     await app.close();
+   });
+ 
++  it('rejects requests without credentials (401)', () =>
++    request(app.getHttpServer()).get(base).expect(401));
++
+   it('POST creates (201) and GET reads it back (200)', async () => {
+     const created = await http.post(base).send(valid()).expect(201);
+     await http
+diff --git a/test/auth.e2e-spec.ts b/test/auth.e2e-spec.ts
+new file mode 100644
+index 0000000..0aa2d8e
+--- /dev/null
++++ b/test/auth.e2e-spec.ts
+@@ -0,0 +1,123 @@
++import { INestApplication } from '@nestjs/common';
++import { Test } from '@nestjs/testing';
++import request from 'supertest';
++import type { App } from 'supertest/types.js';
++import { AppModule } from '../src/app.module.js';
++import { configureApp } from '../src/bootstrap/configure-app.js';
++import { basic, login } from './support/auth.js';
++
++/** Basic on POST /auth/login, then a bearer token everywhere else, through the real stack. */
++describe('auth (e2e)', () => {
++  let app: INestApplication<App>;
++  const loginUrl = '/api/v1/auth/login';
++  const me = '/api/v1/auth/me';
++  const ada = {
++    email: 'ada@example.com',
++    name: 'Ada',
++    password: 'correct horse battery',
++  };
++  let adaId: string;
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++    app = moduleRef.createNestApplication();
++    configureApp(app);
++    await app.init();
++    const created = await request(app.getHttpServer())
++      .post('/api/v1/users')
++      .send(ada)
++      .expect(201);
++    adaId = created.body.id;
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  it('login with Basic returns a bearer token, and the token reaches /me', async () => {
++    const res = await request(app.getHttpServer())
++      .post(loginUrl)
++      .set('Authorization', basic(ada.email, ada.password))
++      .expect(200);
++    expect(res.body).toMatchObject({ tokenType: 'Bearer', expiresIn: 3600 });
++    const me$ = await request(app.getHttpServer())
++      .get(me)
++      .set('Authorization', `Bearer ${res.body.accessToken}`)
++      .expect(200);
++    expect(me$.body).toMatchObject({ id: adaId, email: ada.email });
++    expect(JSON.stringify(me$.body)).not.toMatch(/password/i);
++  });
++
++  it('login matches the email case-insensitively', () =>
++    request(app.getHttpServer())
++      .post(loginUrl)
++      .set('Authorization', basic('ADA@Example.com', ada.password))
++      .expect(200));
++
++  it('every failed login is the SAME 401, with a Basic challenge', async () => {
++    const attempts: (string | undefined)[] = [
++      undefined, // no header
++      'Basic', // bare scheme: passport-http alone would answer 400
++      'Basic !!!not-base64-credentials',
++      basic('nobody@example.com', ada.password),
++      basic(ada.email, 'wrong password'),
++    ];
++    const bodies = new Set<string>();
++    for (const header of attempts) {
++      const req = request(app.getHttpServer()).post(loginUrl);
++      if (header) req.set('Authorization', header);
++      const res = await req.expect(401);
++      expect(res.headers['www-authenticate']).toMatch(/^Basic realm=/);
++      bodies.add(JSON.stringify(res.body));
++    }
++    expect(bodies.size).toBe(1);
++  });
++
++  it('every other route refuses anything but a valid token: the SAME 401, with a Bearer challenge', async () => {
++    const token = await login(app, ada.email, ada.password);
++    const attempts: (string | undefined)[] = [
++      undefined, // no header
++      basic(ada.email, ada.password), // Basic is for /login only
++      'Bearer not-a-jwt',
++      `Bearer ${token.slice(0, -2)}xx`, // signature tampered with
++    ];
++    const bodies = new Set<string>();
++    for (const header of attempts) {
++      const req = request(app.getHttpServer()).get(me);
++      if (header) req.set('Authorization', header);
++      const res = await req.expect(401);
++      expect(res.headers['www-authenticate']).toMatch(/^Bearer realm=/);
++      bodies.add(JSON.stringify(res.body));
++    }
++    expect(bodies.size).toBe(1);
++  });
++
++  it('a disabled user can neither log in nor use a token issued before', async () => {
++    const bob = {
++      email: 'bob@example.com',
++      name: 'Bob',
++      password: 'bob horse battery staple',
++    };
++    const created = await request(app.getHttpServer())
++      .post('/api/v1/users')
++      .send(bob)
++      .expect(201);
++    const bobToken = await login(app, bob.email, bob.password);
++    const adaToken = await login(app, ada.email, ada.password);
++    await request(app.getHttpServer())
++      .patch(`/api/v1/users/${created.body.id}`)
++      .set('Authorization', `Bearer ${adaToken}`)
++      .send({ status: 'disabled' })
++      .expect(200);
++    await request(app.getHttpServer())
++      .post(loginUrl)
++      .set('Authorization', basic(bob.email, bob.password))
++      .expect(401);
++    await request(app.getHttpServer())
++      .get(me)
++      .set('Authorization', `Bearer ${bobToken}`)
++      .expect(401);
++  });
++});
+diff --git a/test/devices.e2e-spec.ts b/test/devices.e2e-spec.ts
+new file mode 100644
+index 0000000..f3a9000
+--- /dev/null
++++ b/test/devices.e2e-spec.ts
+@@ -0,0 +1,186 @@
++import { INestApplication } from '@nestjs/common';
++import { Test } from '@nestjs/testing';
++import request from 'supertest';
++import type { App } from 'supertest/types.js';
++import { AppModule } from '../src/app.module.js';
++import { configureApp } from '../src/bootstrap/configure-app.js';
++import { DeviceResponseSchema } from '../src/devices/device.schema.js';
++import { signUpAndLogin } from './support/auth.js';
++
++/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
++describe('devices (e2e)', () => {
++  let app: INestApplication<App>;
++  const base = '/api/v1/devices';
++  const missing = '00000000-0000-4000-8000-000000000000';
++
++  const valid = () => ({ name: 'Sensor' });
++  const provisionUrl = `${base}/provision`;
++
++  /** Headers that authenticate a request (set by e2e-setup). */
++  let authHeaders: Record<string, string> = {};
++
++  /** Every request in this file is authenticated unless it uses `request` directly. */
++  const http = {
++    get: (url: string) =>
++      request(app.getHttpServer()).get(url).set(authHeaders),
++    post: (url: string) =>
++      request(app.getHttpServer()).post(url).set(authHeaders),
++    patch: (url: string) =>
++      request(app.getHttpServer()).patch(url).set(authHeaders),
++    delete: (url: string) =>
++      request(app.getHttpServer()).delete(url).set(authHeaders),
++  };
++
++  /** POST /devices/provision with a valid body: the device and its one-time secret. */
++  const provision = () => http.post(provisionUrl).send(valid()).expect(201);
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++    app = moduleRef.createNestApplication();
++    configureApp(app);
++    await app.init();
++    // Routes are authenticated by default: sign up (public), log in, send the token.
++    ({ headers: authHeaders } = await signUpAndLogin(app, {
++      email: 'e2e-owner@example.com',
++      name: 'E2E Owner',
++      password: 'e2e owner passphrase',
++    }));
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  it('rejects requests without credentials (401)', () =>
++    request(app.getHttpServer()).get(base).expect(401));
++
++  it('POST /provision creates an ACTIVE device with a key and a secret (201)', async () => {
++    const { body } = await provision();
++    expect(body).toMatchObject({ status: 'active' });
++    expect(body.deviceKey).toMatch(/^DK[A-Z2-7]{16}$/);
++    expect(body.secret).toMatch(/^dsk_[A-Za-z0-9_-]{43}$/);
++    expect(body.secretLast4).toBe(body.secret.slice(-4));
++  });
++
++  it('the secret appears in that one response, never again', async () => {
++    const { body: device } = await provision();
++    const fetched = await http.get(`${base}/${device.id}`).expect(200);
++    expect(fetched.body).not.toHaveProperty('secret');
++    expect(fetched.body).not.toHaveProperty('secretHash');
++    expect(JSON.stringify(fetched.body)).not.toContain(device.secret);
++    const { secret, ...stored } = device;
++    void secret;
++    expect(fetched.body).toEqual(stored);
++  });
++
++  it('responses carry only public fields (no private field ever leaves)', async () => {
++    const publicKeys = new Set(Object.keys(DeviceResponseSchema.shape));
++    const leaked = (body: object) =>
++      Object.keys(body).filter((key) => !publicKeys.has(key));
++    const { body: provisioned } = await provision();
++    expect(leaked(provisioned)).toEqual(['secret']); // the one-time secret only
++    const list = await http.get(base).expect(200);
++    expect(list.body.items.length).toBeGreaterThan(0);
++    for (const item of list.body.items) expect(leaked(item)).toEqual([]);
++  });
++
++  it('provision stores the PARSED body: unknown keys are stripped', async () => {
++    // Guards the validation pipe's contract over HTTP. A pipe that validated but
++    // passed the raw input through would store this key; unit tests cannot see it.
++    const created = await http
++      .post(provisionUrl)
++      .send({ ...valid(), notAField: 'x' })
++      .expect(201);
++    expect(created.body).not.toHaveProperty('notAField');
++  });
++
++  it('provision rejects an invalid body (400)', () =>
++    http.post(provisionUrl).send({ unexpected: 'shape' }).expect(400));
++
++  it('R1: server-owned fields sent by a client are ignored', async () => {
++    const created = await http
++      .post(provisionUrl)
++      .send({ ...valid(), status: 'archived', deviceKey: 'DKAAAAAAAAAAAAAAAA' })
++      .expect(201);
++    expect(created.body.status).toBe('active');
++    expect(created.body.deviceKey).not.toBe('DKAAAAAAAAAAAAAAAA');
++  });
++
++  it('GET unknown id is 404 with the DomainError body', () =>
++    http
++      .get(`${base}/${missing}`)
++      .expect(404)
++      .expect((res) => expect(res.body.code).toBe('NOT_FOUND')));
++
++  it('GET a non-uuid id is 400', () =>
++    http.get(`${base}/not-a-uuid`).expect(400));
++
++  it('PATCH with an empty body is 400', async () => {
++    const { body: device } = await provision();
++    await http.patch(`${base}/${device.id}`).send({}).expect(400);
++  });
++
++  it('rotate: a new secret for the same key (200)', async () => {
++    const { body: device } = await provision();
++    const rotated = await http.post(`${base}/${device.id}/rotate`).expect(200);
++    expect(rotated.body.deviceKey).toBe(device.deviceKey);
++    expect(rotated.body.secret).toMatch(/^dsk_/);
++    expect(rotated.body.secret).not.toBe(device.secret);
++  });
++
++  it('R3 + R4: DELETE archives (204, the device stays); then edits and rotation are 422', async () => {
++    const { body: device } = await provision();
++    await http.delete(`${base}/${device.id}`).expect(204);
++    const archived = await http.get(`${base}/${device.id}`).expect(200);
++    expect(archived.body.status).toBe('archived');
++    expect(archived.body.archivedAt).not.toBeNull();
++    await http
++      .patch(`${base}/${device.id}`)
++      .send({ name: 'renamed' })
++      .expect(422)
++      .expect((res) => expect(res.body.code).toBe('RULE_VIOLATION'));
++    await http.post(`${base}/${device.id}/rotate`).expect(422);
++  });
++
++  describe('ownership', () => {
++    let strangerAuth: Record<string, string>;
++
++    beforeAll(async () => {
++      ({ headers: strangerAuth } = await signUpAndLogin(app, {
++        email: 'e2e-stranger@example.com',
++        name: 'Stranger',
++        password: 'stranger passphrase',
++      }));
++    });
++
++    it('another user gets 404 for my device and does not see it listed', async () => {
++      const { body: mine } = await provision();
++      expect(mine.ownerUserId).toMatch(/^[0-9a-f-]{36}$/);
++      await request(app.getHttpServer())
++        .get(`${base}/${mine.id}`)
++        .set(strangerAuth)
++        .expect(404);
++      await request(app.getHttpServer())
++        .post(`${base}/${mine.id}/rotate`)
++        .set(strangerAuth)
++        .expect(404);
++      const theirs = await request(app.getHttpServer())
++        .get(base)
++        .set(strangerAuth)
++        .expect(200);
++      expect(theirs.body.items).toEqual([]);
++    });
++
++    it('a user who still owns a device cannot be deleted (409)', async () => {
++      const { body: device } = await provision();
++      const me = await http.get('/api/v1/auth/me').expect(200);
++      await http
++        .delete(`/api/v1/users/${me.body.id}`)
++        .expect(409)
++        .expect((res) => expect(res.body.code).toBe('CONFLICT'));
++      expect(device.ownerUserId).toBe(me.body.id);
++    });
++  });
++});
+diff --git a/test/notes.e2e-spec.ts b/test/notes.e2e-spec.ts
+index 636264b..2ca406a 100644
+--- a/test/notes.e2e-spec.ts
++++ b/test/notes.e2e-spec.ts
+@@ -4,9 +4,10 @@ import request from 'supertest';
+ import type { App } from 'supertest/types.js';
+ import { AppModule } from '../src/app.module.js';
+ import { configureApp } from '../src/bootstrap/configure-app.js';
++import { signUpAndLogin } from './support/auth.js';
+ import { NoteResponseSchema } from '../src/notes/note.schema.js';
+ 
+-/** Through the real HTTP stack: routing, validation pipe, error filter. */
++/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
+ describe('notes (e2e)', () => {
+   let app: INestApplication<App>;
+   const base = '/api/v1/notes';
+@@ -14,12 +15,19 @@ describe('notes (e2e)', () => {
+ 
+   const valid = () => ({ title: 'First note', body: 'Hello' });
+ 
+-  /** Shorthand for requests through the real HTTP server. */
++  /** Headers that authenticate a request (set by e2e-setup). */
++  let authHeaders: Record<string, string> = {};
++
++  /** Every request in this file is authenticated unless it uses `request` directly. */
+   const http = {
+-    get: (url: string) => request(app.getHttpServer()).get(url),
+-    post: (url: string) => request(app.getHttpServer()).post(url),
+-    patch: (url: string) => request(app.getHttpServer()).patch(url),
+-    delete: (url: string) => request(app.getHttpServer()).delete(url),
++    get: (url: string) =>
++      request(app.getHttpServer()).get(url).set(authHeaders),
++    post: (url: string) =>
++      request(app.getHttpServer()).post(url).set(authHeaders),
++    patch: (url: string) =>
++      request(app.getHttpServer()).patch(url).set(authHeaders),
++    delete: (url: string) =>
++      request(app.getHttpServer()).delete(url).set(authHeaders),
+   };
+ 
+   beforeAll(async () => {
+@@ -29,12 +37,21 @@ describe('notes (e2e)', () => {
+     app = moduleRef.createNestApplication();
+     configureApp(app);
+     await app.init();
++    // Routes are authenticated by default: sign up (public), log in, send the token.
++    ({ headers: authHeaders } = await signUpAndLogin(app, {
++      email: 'e2e-owner@example.com',
++      name: 'E2E Owner',
++      password: 'e2e owner passphrase',
++    }));
+   });
+ 
+   afterAll(async () => {
+     await app.close();
+   });
+ 
++  it('rejects requests without credentials (401)', () =>
++    request(app.getHttpServer()).get(base).expect(401));
++
+   it('POST creates (201) and GET reads it back (200)', async () => {
+     const created = await http.post(base).send(valid()).expect(201);
+     await http
+diff --git a/test/orders.e2e-spec.ts b/test/orders.e2e-spec.ts
+index 0bcba7b..0bb98cb 100644
+--- a/test/orders.e2e-spec.ts
++++ b/test/orders.e2e-spec.ts
+@@ -4,9 +4,10 @@ import request from 'supertest';
+ import type { App } from 'supertest/types.js';
+ import { AppModule } from '../src/app.module.js';
+ import { configureApp } from '../src/bootstrap/configure-app.js';
++import { signUpAndLogin } from './support/auth.js';
+ import { OrderResponseSchema } from '../src/orders/order.schema.js';
+ 
+-/** Through the real HTTP stack: routing, validation pipe, error filter. */
++/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
+ describe('orders (e2e)', () => {
+   let app: INestApplication<App>;
+   const base = '/api/v1/orders';
+@@ -15,12 +16,19 @@ describe('orders (e2e)', () => {
+   // No field is unique, so a constant shape is fine; quantity and status default.
+   const valid = () => ({ item: 'Pencil' });
+ 
+-  /** Shorthand for requests through the real HTTP server. */
++  /** Headers that authenticate a request (set in beforeAll). */
++  let authHeaders: Record<string, string> = {};
++
++  /** Every request in this file is authenticated unless it uses `request` directly. */
+   const http = {
+-    get: (url: string) => request(app.getHttpServer()).get(url),
+-    post: (url: string) => request(app.getHttpServer()).post(url),
+-    patch: (url: string) => request(app.getHttpServer()).patch(url),
+-    delete: (url: string) => request(app.getHttpServer()).delete(url),
++    get: (url: string) =>
++      request(app.getHttpServer()).get(url).set(authHeaders),
++    post: (url: string) =>
++      request(app.getHttpServer()).post(url).set(authHeaders),
++    patch: (url: string) =>
++      request(app.getHttpServer()).patch(url).set(authHeaders),
++    delete: (url: string) =>
++      request(app.getHttpServer()).delete(url).set(authHeaders),
+   };
+ 
+   beforeAll(async () => {
+@@ -30,12 +38,21 @@ describe('orders (e2e)', () => {
+     app = moduleRef.createNestApplication();
+     configureApp(app);
+     await app.init();
++    // Routes are authenticated by default: sign up (public), log in, send the token.
++    ({ headers: authHeaders } = await signUpAndLogin(app, {
++      email: 'e2e-owner@example.com',
++      name: 'E2E Owner',
++      password: 'e2e owner passphrase',
++    }));
+   });
+ 
+   afterAll(async () => {
+     await app.close();
+   });
+ 
++  it('rejects requests without credentials (401)', () =>
++    request(app.getHttpServer()).get(base).expect(401));
++
+   it('POST creates (201) and GET reads it back (200)', async () => {
+     const created = await http.post(base).send(valid()).expect(201);
+     await http
+diff --git a/test/support/auth.ts b/test/support/auth.ts
+new file mode 100644
+index 0000000..39bf71e
+--- /dev/null
++++ b/test/support/auth.ts
+@@ -0,0 +1,39 @@
++import type { INestApplication } from '@nestjs/common';
++import request from 'supertest';
++import type { App } from 'supertest/types.js';
++
++/** `Authorization: Basic base64(email:password)`, the login request's header. */
++export const basic = (email: string, password: string): string =>
++  `Basic ${Buffer.from(`${email}:${password}`).toString('base64')}`;
++
++/** Trade an email and password for an access token (POST /api/v1/auth/login). */
++export async function login(
++  app: INestApplication<App>,
++  email: string,
++  password: string,
++): Promise<string> {
++  const res = await request(app.getHttpServer())
++    .post('/api/v1/auth/login')
++    .set('Authorization', basic(email, password))
++    .expect(200);
++  return res.body.accessToken as string;
++}
++
++/**
++ * Sign up a user through the public route, log in, and return the headers that
++ * authenticate every later request: `{ Authorization: 'Bearer <token>' }`.
++ */
++export async function signUpAndLogin(
++  app: INestApplication<App>,
++  user: { email: string; name: string; password: string },
++): Promise<{ id: string; headers: Record<string, string> }> {
++  const created = await request(app.getHttpServer())
++    .post('/api/v1/users')
++    .send(user)
++    .expect(201);
++  const token = await login(app, user.email, user.password);
++  return {
++    id: created.body.id as string,
++    headers: { Authorization: `Bearer ${token}` },
++  };
++}
+diff --git a/test/users.e2e-spec.ts b/test/users.e2e-spec.ts
+index 0451bb0..67f230f 100644
+--- a/test/users.e2e-spec.ts
++++ b/test/users.e2e-spec.ts
+@@ -4,9 +4,10 @@ import request from 'supertest';
+ import type { App } from 'supertest/types.js';
+ import { AppModule } from '../src/app.module.js';
+ import { configureApp } from '../src/bootstrap/configure-app.js';
++import { signUpAndLogin } from './support/auth.js';
+ import { UserResponseSchema } from '../src/users/user.schema.js';
+ 
+-/** Through the real HTTP stack: routing, validation pipe, error filter. */
++/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
+ describe('users (e2e)', () => {
+   let app: INestApplication<App>;
+   const base = '/api/v1/users';
+@@ -20,12 +21,19 @@ describe('users (e2e)', () => {
+     password: 'correct horse battery',
+   });
+ 
+-  /** Shorthand for requests through the real HTTP server. */
++  /** Headers that authenticate a request (set in beforeAll). */
++  let authHeaders: Record<string, string> = {};
++
++  /** Every request in this file is authenticated unless it uses `request` directly. */
+   const http = {
+-    get: (url: string) => request(app.getHttpServer()).get(url),
+-    post: (url: string) => request(app.getHttpServer()).post(url),
+-    patch: (url: string) => request(app.getHttpServer()).patch(url),
+-    delete: (url: string) => request(app.getHttpServer()).delete(url),
++    get: (url: string) =>
++      request(app.getHttpServer()).get(url).set(authHeaders),
++    post: (url: string) =>
++      request(app.getHttpServer()).post(url).set(authHeaders),
++    patch: (url: string) =>
++      request(app.getHttpServer()).patch(url).set(authHeaders),
++    delete: (url: string) =>
++      request(app.getHttpServer()).delete(url).set(authHeaders),
+   };
+ 
+   beforeAll(async () => {
+@@ -35,12 +43,21 @@ describe('users (e2e)', () => {
+     app = moduleRef.createNestApplication();
+     configureApp(app);
+     await app.init();
++    // Routes are authenticated by default: sign up (public), log in, send the token.
++    ({ headers: authHeaders } = await signUpAndLogin(app, {
++      email: 'e2e-owner@example.com',
++      name: 'E2E Owner',
++      password: 'e2e owner passphrase',
++    }));
+   });
+ 
+   afterAll(async () => {
+     await app.close();
+   });
+ 
++  it('rejects requests without credentials (401)', () =>
++    request(app.getHttpServer()).get(base).expect(401));
++
+   it('POST creates (201) and GET reads it back (200)', async () => {
+     const created = await http.post(base).send(valid()).expect(201);
+     await http

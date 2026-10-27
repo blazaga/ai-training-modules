@@ -1,6 +1,7 @@
 # Chapter 06 — Your first MCP controller (`@rekog/mcp-nest`)
 
-**You will:** expose existing services as MCP tools and run them over stdio.
+**Your agent will:** expose existing services as MCP tools and run them over stdio (module 4,
+spec `specs/mcp.md`).
 **Commit:** `course(ch06)`. **Files:** `src/mcp/notes.tools.ts`, `src/mcp/tool-result.ts`,
 `src/mcp/mcp-tools.module.ts`, `src/mcp-stdio.ts`.
 
@@ -87,12 +88,16 @@ e2e `Tests 54 passed`, including stdio: identity, three tools, schema `required:
 
 ## Labs
 
-Lab 1 is checked: `pnpm lab 06`. The contract (parameters, and the tool-error text
-for each failure) is in `boilerplate/nest-ai-starter/test/labs/README.md`.
+Lab 1 is the end of module 4: your agent adds a `publish-note` tool, and you check with
+`pnpm lab 06`. The contract (parameters, and the tool-error text for each failure) is in
+`boilerplate/nest-ai-starter/test/labs/README.md`. The check runs over stdio until `/mcp`
+exists, and over HTTP with a device from module 5 on.
 
-1. Add a `publish-note` tool. Which rule from chapter 01 must it respect, and where is it
-   enforced?
+1. Your agent adds `publish-note`. Which rule from chapter 01 must it respect, and where did
+   your agent enforce it? It belongs in the service, once; a second copy in the tool is a
+   finding.
 2. Add a tool whose description is vague, and one whose description states the rules. Ask
    an agent to use each. What changes?
-3. Plant `console.log(JSON.stringify({debug:true}))` in a tool. Which test fails and which
+3. Ask your agent to "add some debug logging" to a tool, or plant
+   `console.log(JSON.stringify({debug:true}))` yourself. Which test fails and which
    do not?

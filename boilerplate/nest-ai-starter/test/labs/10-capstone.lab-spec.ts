@@ -49,9 +49,9 @@ describe('Lab 10 · capstone: device-scoped notes', () => {
     bobClient = await mcpClient(lab, await device(lab, bob.auth, 'active'));
   });
   afterAll(async () => {
-    await adaClient.close();
-    await bobClient.close();
-    await lab.close();
+    await adaClient?.close();
+    await bobClient?.close();
+    await lab?.close();
   });
 
   it("REST: another user's note is 404 for GET, PATCH and DELETE", async () => {

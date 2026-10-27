@@ -1,7 +1,10 @@
 # nest-ai-starter
 
 A NestJS 12 REST starter for building services **with AI agents, skills and templated
-code**. It is the hands-on companion to the course in `docs/ai-agent-training/`.
+code**. It is the hands-on companion to the course in the course repository's
+`docs/ai-agent-training/`: in each
+module your AI agent, following the proctor's instructions, adds the next layer (a
+resource, a column, authentication, devices, an MCP server), and the lab checks prove it.
 
 The idea: split every piece of work by who does it best.
 
@@ -22,21 +25,22 @@ pnpm start                                  # app on :3000 (pnpm start:dev to wa
 curl localhost:3000/api/health              # {"status":"ok"}
 open http://localhost:3000/api/docs         # OpenAPI, generated from the zod schemas
 pnpm verify                                 # the full gate
-pnpm mcp:inspect:ui                         # MCP Inspector web UI on localhost:6274
+pnpm lab 01                                 # a module's lab check (red until it is built)
 ```
 
-In the Inspector UI, add `http://localhost:3000/mcp` as a `streamable-http` server with your
-device's two headers. See the course's Chapter 00 for details.
+See the course's Chapter 00 for details. The MCP Inspector (`pnpm mcp:inspect:ui`) is used
+from module 5, once the app serves MCP.
 
 ## Call it from Postman
 
 `postman/nest-ai-starter.postman_collection.json` holds every REST and MCP call the course
 labs make. Import it; `baseUrl` is `http://localhost:3000`.
-Folders are numbered by chapter, and every request carries tests (the Test Results tab).
-Run the folders in order the first time: 03 signs up the demo user, and 04 issues the device
-credentials that the MCP folders use.
+Folders are numbered by chapter and named by module, and every request carries tests (the
+Test Results tab). A folder works once its module is built. From module 3 on, 03 signs up
+the demo user and logs in (the token goes to the `token` variable), and 04 provisions the
+device whose key and secret the MCP folders use.
 
-**Issuing credentials stores a live device secret in a collection
+**Provisioning stores a live device secret in a collection
 variable: never export or share the collection after a run.**
 
 ## Add a resource

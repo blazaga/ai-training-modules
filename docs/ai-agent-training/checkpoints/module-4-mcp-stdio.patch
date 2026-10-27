@@ -1,0 +1,341 @@
+diff --git a/src/mcp-stdio.ts b/src/mcp-stdio.ts
+new file mode 100644
+index 0000000..28b7259
+--- /dev/null
++++ b/src/mcp-stdio.ts
+@@ -0,0 +1,38 @@
++// ch06: the MCP server over STDIO, as a separate entrypoint.
++//
++//   node dist/mcp-stdio.js
++//
++// The MCP client starts this process and talks JSON-RPC over stdin/stdout, so
++// STDOUT BELONGS TO THE PROTOCOL. Nest's logger is off; diagnostics go to stderr.
++// Measured with the MCP SDK v2 client: a stray console.log line IS written into
++// the protocol stream. That client silently skips a plain-text line and reports a
++// JSON-shaped one as a protocol error; stricter clients may disconnect. A client-
++// driven test cannot see this, so test/mcp-stdio.e2e-spec.ts reads raw stdout.
++import { Module } from '@nestjs/common';
++import { ConfigModule } from '@nestjs/config';
++import { NestFactory } from '@nestjs/core';
++import { McpStrategy, StdioTransport } from '@rekog/mcp-nest';
++import { validateEnv } from './config/env.schema.js';
++import { MCP_SERVER_INFO, McpToolsModule } from './mcp/mcp-tools.module.js';
++
++@Module({
++  imports: [
++    ConfigModule.forRoot({
++      isGlobal: true,
++      validate: validateEnv,
++      ignoreEnvFile: process.env.NODE_ENV === 'test', // see app.module.ts
++    }),
++    McpToolsModule,
++  ],
++})
++class McpStdioModule {}
++
++const app = await NestFactory.createMicroservice(McpStdioModule, {
++  strategy: new McpStrategy({
++    ...MCP_SERVER_INFO,
++    transports: [new StdioTransport()],
++  }),
++  logger: false,
++});
++await app.listen();
++process.stderr.write('mcp-stdio: ready\n');
+diff --git a/src/mcp/mcp-tools.module.ts b/src/mcp/mcp-tools.module.ts
+new file mode 100644
+index 0000000..353b6fc
+--- /dev/null
++++ b/src/mcp/mcp-tools.module.ts
+@@ -0,0 +1,13 @@
++import { Module } from '@nestjs/common';
++import { NotesModule } from '../notes/notes.module.js';
++import { NotesTools } from './notes.tools.js';
++
++/** Every @McpController lives here, so each entrypoint (stdio, HTTP) serves the same tools. */
++@Module({
++  imports: [NotesModule],
++  controllers: [NotesTools],
++})
++export class McpToolsModule {}
++
++/** The server identity clients see in `initialize`. */
++export const MCP_SERVER_INFO = { name: 'nest-ai-starter', version: '0.1.0' };
+diff --git a/src/mcp/notes.tools.ts b/src/mcp/notes.tools.ts
+new file mode 100644
+index 0000000..8b17b3d
+--- /dev/null
++++ b/src/mcp/notes.tools.ts
+@@ -0,0 +1,62 @@
++import { Payload } from '@nestjs/microservices';
++import { McpController, Tool } from '@rekog/mcp-nest';
++import { z } from 'zod';
++import { CreateNoteSchema } from '../notes/note.schema.js';
++import { NotesService } from '../notes/notes.service.js';
++import { runTool, type ToolResult } from './tool-result.js';
++
++/**
++ * ch06: the first MCP controller. Tools are thin adapters over the SAME
++ * service the REST controller uses, and `create-note` takes the SAME zod
++ * schema as POST /api/v1/notes, so REST and MCP cannot drift apart.
++ */
++@McpController()
++export class NotesTools {
++  constructor(private readonly notes: NotesService) {}
++
++  @Tool({
++    name: 'list-notes',
++    description: 'List notes in creation order. Returns { items, total }.',
++    parameters: z.object({
++      limit: z.number().int().min(1).max(50).default(10),
++      offset: z.number().int().min(0).default(0),
++    }),
++  })
++  listNotes(
++    @Payload() { limit, offset }: { limit: number; offset: number },
++  ): Promise<ToolResult> {
++    return runTool(() => this.notes.findPage(limit, offset));
++  }
++
++  @Tool({
++    name: 'get-note',
++    description: 'Get one note by its id (a UUID).',
++    parameters: z.object({ id: z.string().uuid() }),
++  })
++  getNote(@Payload() { id }: { id: string }): Promise<ToolResult> {
++    return runTool(() => this.notes.findOne(id));
++  }
++
++  @Tool({
++    name: 'create-note',
++    description:
++      'Create a note. status is draft or published; a published note needs a body.',
++    parameters: CreateNoteSchema,
++  })
++  createNote(
++    @Payload() input: z.output<typeof CreateNoteSchema>,
++  ): Promise<ToolResult> {
++    return runTool(() => this.notes.create(input));
++  }
++
++  @Tool({
++    name: 'publish-note',
++    description:
++      'Publish a note by its id (a UUID): sets status to published. Rule: a published note needs a non-empty body, so publishing a note whose body is empty fails with RULE_VIOLATION. Publishing cannot be undone.',
++    parameters: z.object({ id: z.string().uuid() }),
++  })
++  publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {
++    // Through the service, so R5 is enforced in one place, not re-implemented here.
++    return runTool(() => this.notes.update(id, { status: 'published' }));
++  }
++}
+diff --git a/src/mcp/tool-result.ts b/src/mcp/tool-result.ts
+new file mode 100644
+index 0000000..5d18b68
+--- /dev/null
++++ b/src/mcp/tool-result.ts
+@@ -0,0 +1,33 @@
++import { DomainError } from '../common/errors/domain-error.js';
++
++/** An MCP tool result: content blocks, and `isError` for failures the model should see. */
++export interface ToolResult {
++  [key: string]: unknown;
++  content: { type: 'text'; text: string }[];
++  isError?: boolean;
++}
++
++/**
++ * Run a tool body and shape its result. A DomainError (not found, rule
++ * violation) becomes a TOOL error (`isError: true`), which the model can read
++ * and react to. Anything else is a real failure, so it propagates and becomes
++ * a protocol error.
++ */
++export async function runTool(
++  body: () => Promise<unknown>,
++): Promise<ToolResult> {
++  try {
++    const value = await body();
++    return {
++      content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
++    };
++  } catch (error) {
++    if (error instanceof DomainError) {
++      return {
++        isError: true,
++        content: [{ type: 'text', text: `${error.code}: ${error.message}` }],
++      };
++    }
++    throw error;
++  }
++}
+diff --git a/test/mcp-stdio.e2e-spec.ts b/test/mcp-stdio.e2e-spec.ts
+new file mode 100644
+index 0000000..c766749
+--- /dev/null
++++ b/test/mcp-stdio.e2e-spec.ts
+@@ -0,0 +1,165 @@
++import { Client } from '@modelcontextprotocol/client';
++import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
++import { spawn } from 'node:child_process';
++import { join } from 'node:path';
++
++type TextResult = {
++  content: { type: string; text: string }[];
++  isError?: boolean;
++};
++
++/**
++ * ch06: drive the STDIO server exactly as an MCP client (an IDE, an agent)
++ * would: spawn the process, `initialize`, list tools, call them.
++ */
++describe('MCP over stdio (e2e)', () => {
++  let client: Client;
++  let stderr = '';
++
++  beforeAll(async () => {
++    const transport = new StdioClientTransport({
++      command: process.execPath,
++      args: [join(import.meta.dirname, '..', 'dist', 'mcp-stdio.js')],
++      stderr: 'pipe',
++    });
++    transport.stderr?.on('data', (chunk: Buffer) => (stderr += String(chunk)));
++    client = new Client({ name: 'e2e', version: '1.0.0' });
++    await client.connect(transport);
++  });
++
++  afterAll(async () => {
++    await client.close();
++  });
++
++  const call = async (name: string, args: Record<string, unknown>) =>
++    (await client.callTool({ name, arguments: args })) as TextResult;
++
++  it('initialize: identifies the server', () => {
++    expect(client.getServerVersion()).toMatchObject({
++      name: 'nest-ai-starter',
++    });
++  });
++
++  it('lists the tools, with input schemas generated from zod', async () => {
++    const { tools } = await client.listTools();
++    expect(tools.map((t) => t.name).sort()).toEqual([
++      'create-note',
++      'get-note',
++      'list-notes',
++      'publish-note',
++    ]);
++    const create = tools.find((t) => t.name === 'create-note');
++    expect(create?.inputSchema.required).toEqual(['title']);
++  });
++
++  it('create-note then list-notes: tools call the real service', async () => {
++    const created = await call('create-note', {
++      title: 'From MCP',
++      body: 'hi',
++    });
++    expect(created.isError ?? false).toBe(false);
++    expect(JSON.parse(created.content[0].text)).toMatchObject({
++      title: 'From MCP',
++      status: 'draft',
++    });
++    const list = await call('list-notes', {});
++    expect(JSON.parse(list.content[0].text).total).toBeGreaterThanOrEqual(1);
++  });
++
++  it('a DomainError becomes a tool error the model can read (isError)', async () => {
++    const missing = await call('get-note', {
++      id: '00000000-0000-4000-8000-000000000000',
++    });
++    expect(missing.isError).toBe(true);
++    expect(missing.content[0].text).toMatch(/^NOT_FOUND:/);
++  });
++
++  it('invalid input is rejected by the SAME schema as REST (incl. rule R2)', async () => {
++    const bad = await call('create-note', { title: 'x', status: 'published' });
++    expect(bad.isError).toBe(true);
++    expect(bad.content[0].text).toMatch(
++      /a published note needs a non-empty body/,
++    );
++  });
++
++  it('publish-note publishes through the service', async () => {
++    const created = await call('create-note', {
++      title: 'To publish',
++      body: 'hi',
++    });
++    const { id } = JSON.parse(created.content[0].text) as { id: string };
++    const published = await call('publish-note', { id });
++    expect(published.isError ?? false).toBe(false);
++    expect(JSON.parse(published.content[0].text)).toMatchObject({
++      id,
++      status: 'published',
++    });
++  });
++
++  it('publish-note with an empty body is a RULE_VIOLATION tool error (R5)', async () => {
++    const created = await call('create-note', { title: 'Empty' });
++    const { id } = JSON.parse(created.content[0].text) as { id: string };
++    const result = await call('publish-note', { id });
++    expect(result.isError).toBe(true);
++    expect(result.content[0].text).toMatch(
++      /^RULE_VIOLATION: A published note needs a non-empty body/,
++    );
++    const stored = await call('get-note', { id });
++    expect(JSON.parse(stored.content[0].text).status).toBe('draft');
++  });
++
++  it('publish-note with an unknown id is a NOT_FOUND tool error', async () => {
++    const result = await call('publish-note', {
++      id: '00000000-0000-4000-8000-000000000000',
++    });
++    expect(result.isError).toBe(true);
++    expect(result.content[0].text).toMatch(/^NOT_FOUND:/);
++  });
++
++  it('stdout carries only protocol: diagnostics went to stderr', () => {
++    expect(stderr).toContain('mcp-stdio: ready');
++  });
++
++  it('RAW stdout: every line is a JSON-RPC 2.0 message (no stray logging)', async () => {
++    // The SDK client silently skips non-JSON lines, so the test above cannot
++    // catch a stray console.log. Read the raw stream instead.
++    const child = spawn(process.execPath, [
++      join(import.meta.dirname, '..', 'dist', 'mcp-stdio.js'),
++    ]);
++    let out = '';
++    child.stdout.on('data', (chunk: Buffer) => (out += String(chunk)));
++    const send = (message: object) =>
++      child.stdin.write(`${JSON.stringify(message)}\n`);
++    const linesSoFar = () => out.split('\n').filter((l) => l.trim());
++    const waitForLines = async (n: number) => {
++      for (let i = 0; i < 100 && linesSoFar().length < n; i++) {
++        await new Promise((r) => setTimeout(r, 50));
++      }
++    };
++    send({
++      jsonrpc: '2.0',
++      id: 1,
++      method: 'initialize',
++      params: {
++        protocolVersion: '2025-06-18',
++        capabilities: {},
++        clientInfo: { name: 'raw', version: '1' },
++      },
++    });
++    await waitForLines(1);
++    send({ jsonrpc: '2.0', method: 'notifications/initialized' });
++    send({
++      jsonrpc: '2.0',
++      id: 2,
++      method: 'tools/call',
++      params: { name: 'list-notes', arguments: {} },
++    });
++    await waitForLines(2);
++    child.kill();
++    const lines = linesSoFar();
++    expect(lines.length).toBeGreaterThanOrEqual(2);
++    for (const line of lines) {
++      expect(JSON.parse(line)).toMatchObject({ jsonrpc: '2.0' });
++    }
++  });
++});

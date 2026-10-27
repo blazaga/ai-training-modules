@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { basic, type LabApp, startApp } from './lab-harness.js';
+import { type LabApp, login, startApp } from './lab-harness.js';
 
 /**
  * Lab 02 (module 2): add `phone` to users, through schema, table and migration.
@@ -28,7 +28,7 @@ describe('Lab 02 · users.phone', () => {
   beforeAll(async () => {
     lab = await startApp();
   });
-  afterAll(() => lab.close());
+  afterAll(() => lab?.close());
 
   it('sign-up stores a valid E.164 phone and returns it', async () => {
     const res = await signUpWith({ phone: '+14155550123' });
@@ -66,7 +66,7 @@ describe('Lab 02 · users.phone', () => {
       .post(users)
       .send({ email, name: 'Phone Lab', password: 'lab passphrase 123' })
       .expect(201);
-    const auth = basic(email, 'lab passphrase 123');
+    const auth = await login(lab, email, 'lab passphrase 123');
     await lab
       .rest()
       .patch(`${users}/${created.body.id}`)

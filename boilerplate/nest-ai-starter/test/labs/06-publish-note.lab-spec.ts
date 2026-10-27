@@ -6,11 +6,14 @@ import {
   mcpClient,
   signUp,
   startApp,
+  stdioClient,
   textOf,
 } from './lab-harness.js';
 
 /**
- * Lab 06 (module 4): an MCP tool `publish-note`.
+ * Lab 06 (module 4): an MCP tool `publish-note`. Checked over stdio, the transport module 4
+ * builds; once the app serves /mcp (module 5 on), over HTTP as a device instead, so the
+ * check still holds after tools are scoped to a device's owner (the capstone).
  *
  * The contract:
  *   name        publish-note
@@ -22,27 +25,33 @@ import {
  */
 describe('Lab 06 · publish-note tool', () => {
   let lab: LabApp;
-  let auth: string;
   let client: Client;
   const missing = '00000000-0000-4000-8000-000000000000';
+
+  /** A draft note created through the server's own create-note tool. */
   const note = async (body: string) => {
-    const res = await lab
-      .rest()
-      .post('/api/v1/notes')
-      .set('Authorization', auth)
-      .send({ title: 'Lab note', body })
-      .expect(201);
-    return res.body.id as string;
+    const created = await callTool(client, 'create-note', {
+      title: 'Lab note',
+      body,
+    });
+    expect(created.isError, textOf(created)).not.toBe(true);
+    return JSON.parse(textOf(created)).id as string;
   };
+  const statusOf = async (id: string) =>
+    JSON.parse(textOf(await callTool(client, 'get-note', { id }))).status;
 
   beforeAll(async () => {
     lab = await startApp();
-    auth = (await signUp(lab, 'lab06@example.com')).auth;
-    client = await mcpClient(lab, await device(lab, auth, 'active'));
+    if (lab.hasMcpHttp) {
+      const { auth } = await signUp(lab, 'lab06@example.com');
+      client = await mcpClient(lab, await device(lab, auth, 'active'));
+    } else {
+      client = await stdioClient();
+    }
   });
   afterAll(async () => {
-    await client.close();
-    await lab.close();
+    await client?.close();
+    await lab?.close();
   });
 
   it('tools/list includes publish-note with an `id` parameter', async () => {
@@ -63,12 +72,7 @@ describe('Lab 06 · publish-note tool', () => {
     const id = await note('Ready to share');
     const result = await callTool(client, 'publish-note', { id });
     expect(result.isError, textOf(result)).not.toBe(true);
-    const stored = await lab
-      .rest()
-      .get(`/api/v1/notes/${id}`)
-      .set('Authorization', auth)
-      .expect(200);
-    expect(stored.body.status).toBe('published');
+    expect(await statusOf(id)).toBe('published');
   });
 
   it('an empty body is a tool error RULE_VIOLATION, and nothing is stored', async () => {
@@ -79,12 +83,7 @@ describe('Lab 06 · publish-note tool', () => {
       'wrap the body in runTool() so a DomainError becomes a tool error',
     ).toBe(true);
     expect(textOf(result)).toMatch(/^RULE_VIOLATION/);
-    const stored = await lab
-      .rest()
-      .get(`/api/v1/notes/${id}`)
-      .set('Authorization', auth)
-      .expect(200);
-    expect(stored.body.status).toBe('draft');
+    expect(await statusOf(id)).toBe('draft');
   });
 
   it('an unknown id is a tool error NOT_FOUND', async () => {

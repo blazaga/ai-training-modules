@@ -6,7 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/bootstrap/configure-app.js';
 import { __Name__ResponseSchema } from '../src/__names__/__name__.schema.js';
 
-/** Through the real HTTP stack: auth guard, routing, validation pipe, error filter. */
+/** Through the real HTTP stack: routing, validation pipe, error filter. */
 describe('__names__ (e2e)', () => {
   let app: INestApplication<App>;
   const base = '/api/v1/__names__';
@@ -16,19 +16,16 @@ describe('__names__ (e2e)', () => {
   // FRESH value per call if any field is unique (e.g. a counter in the email).
   const valid = () => ({});
 
-  /** Headers that authenticate a request (set by e2e-setup). */
-  let authHeaders: Record<string, string> = {};
-
-  /** Every request in this file is authenticated unless it uses `request` directly. */
+  /** Shorthand for requests through the real HTTP server. */
   const http = {
     get: (url: string) =>
-      request(app.getHttpServer()).get(url).set(authHeaders),
+      request(app.getHttpServer()).get(url),
     post: (url: string) =>
-      request(app.getHttpServer()).post(url).set(authHeaders),
+      request(app.getHttpServer()).post(url),
     patch: (url: string) =>
-      request(app.getHttpServer()).patch(url).set(authHeaders),
+      request(app.getHttpServer()).patch(url),
     delete: (url: string) =>
-      request(app.getHttpServer()).delete(url).set(authHeaders),
+      request(app.getHttpServer()).delete(url),
   };
 
   beforeAll(async () => {
@@ -38,18 +35,11 @@ describe('__names__ (e2e)', () => {
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
-    // AI-FILL(e2e-setup): routes are authenticated by default (global guard).
-    // Create a user through the public sign-up route and set
-    // `authHeaders = { Authorization: 'Basic ' + base64(email:password) }`.
-    // Only if EVERY route of this resource is @Public(), delete this comment.
   });
 
   afterAll(async () => {
     await app.close();
   });
-
-  it('rejects requests without credentials (401)', () =>
-    request(app.getHttpServer()).get(base).expect(401));
 
   it('POST creates (201) and GET reads it back (200)', async () => {
     const created = await http.post(base).send(valid()).expect(201);
@@ -104,5 +94,5 @@ describe('__names__ (e2e)', () => {
   });
 
   // AI-FILL(rule-e2e): one request per business rule proving the HTTP status the rule
-  // maps to (409 ConflictError, 422 RuleViolationError). Use `http` (authenticated).
+  // maps to (409 ConflictError, 422 RuleViolationError). Use `http` (it carries the auth headers once the app has auth).
 });

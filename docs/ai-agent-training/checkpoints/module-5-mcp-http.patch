@@ -1,0 +1,280 @@
+diff --git a/.env.example b/.env.example
+index 83c878b..f67ad7c 100644
+--- a/.env.example
++++ b/.env.example
+@@ -14,3 +14,6 @@ DATABASE_URL=file:./data/app.db
+ # JWT_SECRET=
+ # ch03: access-token lifetime in seconds.
+ JWT_EXPIRES_IN=3600
++
++# ch08: host names the MCP endpoint accepts (comma-separated). Unset = localhost only.
++# MCP_ALLOWED_HOSTS=localhost,mcp.example.com
+diff --git a/src/app.module.ts b/src/app.module.ts
+index e8fba12..02838c6 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -6,6 +6,7 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter.
+ import { validateEnv } from './config/env.schema.js';
+ import { DatabaseModule } from './database/database.module.js';
+ import { HealthModule } from './health/health.module.js';
++import { McpToolsModule } from './mcp/mcp-tools.module.js';
+ import { NotesModule } from './notes/notes.module.js';
+ import { UsersModule } from './users/users.module.js';
+ import { AuthModule } from './auth/auth.module.js';
+@@ -24,6 +25,7 @@ import { OrdersModule } from './orders/orders.module.js';
+     }),
+     DatabaseModule,
+     HealthModule,
++    McpToolsModule, // ch08: MCP tool controllers, served at /mcp
+     // Feature modules. `nest g resource <name>` appends new ones here.
+     NotesModule,
+     UsersModule,
+diff --git a/src/bootstrap/attach-mcp.ts b/src/bootstrap/attach-mcp.ts
+new file mode 100644
+index 0000000..6eec013
+--- /dev/null
++++ b/src/bootstrap/attach-mcp.ts
+@@ -0,0 +1,43 @@
++import type { INestApplication } from '@nestjs/common';
++import { ConfigService } from '@nestjs/config';
++import { McpStrategy, StreamableHttpTransport } from '@rekog/mcp-nest';
++import type { Env } from '../config/env.schema.js';
++import { MCP_SERVER_INFO } from '../mcp/mcp-tools.module.js';
++
++/**
++ * ch08: serve the SAME MCP tools over Streamable HTTP, inside the main app.
++ * main.ts AND the e2e tests call this, so tests exercise the real wiring.
++ *
++ * Every option below is spelled out, with its default, because the defaults
++ * of @rekog/mcp-nest 2.0.8 (read from its source) are easy to misjudge:
++ *   endpoint            '/mcp'        mounted on the HTTP adapter, OUTSIDE /api
++ *   statefulMode        false         no Mcp-Session-Id; every POST stands alone
++ *   enableJsonResponse  !statefulMode i.e. TRUE by default: plain JSON replies,
++ *                                     no SSE. We set false to stream responses
++ *                                     as Server-Sent Events (text/event-stream)
++ *   security.allowedHosts 'localhost' DNS-rebinding protection: any other Host
++ *                                     header is REJECTED. Set MCP_ALLOWED_HOSTS
++ *                                     when deployed behind a real hostname.
++ */
++export async function attachMcp(app: INestApplication): Promise<void> {
++  const config = app.get(ConfigService<Env, true>);
++  const mcp = new McpStrategy({
++    ...MCP_SERVER_INFO,
++    transports: [
++      new StreamableHttpTransport({
++        endpoint: '/mcp',
++        statefulMode: false,
++        enableJsonResponse: false,
++        security: {
++          allowedHosts: config.get('MCP_ALLOWED_HOSTS', { infer: true }),
++        },
++      }),
++    ],
++  });
++  // No authentication on /mcp yet: module 6 adds device auth here, BEFORE the
++  // transport mounts its routes.
++  mcp.setHttpAdapter(app.getHttpAdapter());
++  app.connectMicroservice({ strategy: mcp });
++  // Order matters: mount the MCP routes before the server accepts connections.
++  await app.startAllMicroservices();
++}
+diff --git a/src/config/env.schema.spec.ts b/src/config/env.schema.spec.ts
+index 7f0b863..0f50a26 100644
+--- a/src/config/env.schema.spec.ts
++++ b/src/config/env.schema.spec.ts
+@@ -6,10 +6,18 @@ describe('validateEnv', () => {
+       NODE_ENV: 'development',
+       PORT: 3000,
+       SWAGGER_ENABLED: true,
++      MCP_ALLOWED_HOSTS: 'localhost',
+       JWT_EXPIRES_IN: 3600,
+     });
+   });
+ 
++  it('MCP_ALLOWED_HOSTS: a comma-separated list, trimmed', () => {
++    expect(
++      validateEnv({ MCP_ALLOWED_HOSTS: 'localhost, mcp.example.com ,' })
++        .MCP_ALLOWED_HOSTS,
++    ).toEqual(['localhost', 'mcp.example.com']);
++  });
++
+   /** The minimum a production start needs. The key is a stand-in, 32 characters. */
+   const prod = {
+     NODE_ENV: 'production',
+diff --git a/src/config/env.schema.ts b/src/config/env.schema.ts
+index 16adcd0..8cf3206 100644
+--- a/src/config/env.schema.ts
++++ b/src/config/env.schema.ts
+@@ -16,6 +16,22 @@ export const envSchema = z
+     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+     /** Serve OpenAPI docs at /api/docs. Unset: on, except in production. */
+     SWAGGER_ENABLED: z.enum(['true', 'false']).optional(),
++    /**
++     * ch08: Host names the MCP HTTP endpoint accepts (comma-separated). Unset →
++     * 'localhost' (measured: localhost and 127.0.0.1 pass, the machine's hostname gets
++     * 403; DNS-rebinding protection). Set it when deployed.
++     */
++    MCP_ALLOWED_HOSTS: z
++      .string()
++      .optional()
++      .transform((v) =>
++        v
++          ? v
++              .split(',')
++              .map((h) => h.trim())
++              .filter(Boolean)
++          : ('localhost' as const),
++      ),
+     // A libSQL URL for an SQLite file, e.g. file:./data/app.db. Unset → in memory (dev/test only).
+     DATABASE_URL: z
+       .string()
+diff --git a/src/main.ts b/src/main.ts
+index 7688db9..f058688 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -2,12 +2,14 @@ import { Logger } from '@nestjs/common';
+ import { ConfigService } from '@nestjs/config';
+ import { NestFactory } from '@nestjs/core';
+ import { AppModule } from './app.module.js';
++import { attachMcp } from './bootstrap/attach-mcp.js';
+ import { configureApp } from './bootstrap/configure-app.js';
+ import type { Env } from './config/env.schema.js';
+ 
+ async function bootstrap(): Promise<void> {
+   const app = await NestFactory.create(AppModule);
+   configureApp(app);
++  await attachMcp(app); // ch08: MCP over Streamable HTTP at /mcp
+ 
+   const port = app.get(ConfigService<Env, true>).get('PORT', { infer: true });
+   await app.listen(port);
+diff --git a/test/mcp-http.e2e-spec.ts b/test/mcp-http.e2e-spec.ts
+new file mode 100644
+index 0000000..5926a6c
+--- /dev/null
++++ b/test/mcp-http.e2e-spec.ts
+@@ -0,0 +1,125 @@
++import type { INestApplication } from '@nestjs/common';
++import { Test } from '@nestjs/testing';
++import {
++  Client,
++  StreamableHTTPClientTransport,
++} from '@modelcontextprotocol/client';
++import { request } from 'node:http';
++import type { AddressInfo } from 'node:net';
++import { AppModule } from '../src/app.module.js';
++import { attachMcp } from '../src/bootstrap/attach-mcp.js';
++import { configureApp } from '../src/bootstrap/configure-app.js';
++
++type TextResult = { content: { text: string }[]; isError?: boolean };
++
++/**
++ * ch08: the MCP tools over Streamable HTTP on a real listening server. Module 6 adds
++ * device authentication; until then /mcp is open, and the first test says so.
++ */
++describe('MCP over Streamable HTTP (e2e)', () => {
++  let app: INestApplication;
++  let url: string;
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++    app = moduleRef.createNestApplication();
++    configureApp(app);
++    await attachMcp(app);
++    await app.listen(0);
++    const { port } = app.getHttpServer().address() as AddressInfo;
++    url = `http://localhost:${port}/mcp`;
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  const post = (body: object, headers: Record<string, string> = {}) =>
++    fetch(url, {
++      method: 'POST',
++      headers: {
++        'content-type': 'application/json',
++        accept: 'application/json, text/event-stream',
++        ...headers,
++      },
++      body: JSON.stringify(body),
++    });
++  const ping = { jsonrpc: '2.0', id: 1, method: 'ping' };
++
++  it('NO authentication yet: a real MCP client lists and calls tools without credentials', async () => {
++    // The security finding this module ends on; module 6 closes it with device auth.
++    const client = new Client({ name: 'e2e', version: '1.0.0' });
++    await client.connect(new StreamableHTTPClientTransport(new URL(url)));
++    const { tools } = await client.listTools();
++    expect(tools.map((t) => t.name)).toEqual(
++      expect.arrayContaining(['create-note', 'list-notes']),
++    );
++    const result = (await client.callTool({
++      name: 'create-note',
++      arguments: { title: 'over HTTP' },
++    })) as TextResult;
++    expect(JSON.parse(result.content[0].text).title).toBe('over HTTP');
++    await client.close();
++  });
++
++  it('responses are Server-Sent Events: `event: message` + `data: <JSON-RPC>`', async () => {
++    const res = await post({
++      jsonrpc: '2.0',
++      id: 1,
++      method: 'initialize',
++      params: {
++        protocolVersion: '2025-06-18',
++        capabilities: {},
++        clientInfo: { name: 'raw', version: '1' },
++      },
++    });
++    expect(res.status).toBe(200);
++    expect(res.headers.get('content-type')).toContain('text/event-stream');
++    const text = await res.text();
++    expect(text).toMatch(/^event: message\ndata: /);
++    expect(JSON.parse(text.split('data: ')[1])).toMatchObject({
++      jsonrpc: '2.0',
++      id: 1,
++      result: { serverInfo: { name: 'nest-ai-starter' } },
++    });
++  });
++
++  it('is mounted at /mcp, OUTSIDE the /api prefix', async () => {
++    const res = await fetch(url.replace('/mcp', '/api/mcp'), {
++      method: 'POST',
++    });
++    expect(res.status).toBe(404);
++  });
++
++  it('rejects a foreign Host header (DNS-rebinding protection): 403', async () => {
++    // NOT fetch: under the Fetch spec `Host` is a forbidden header, and Node's
++    // fetch silently replaces it (measured). node:http sends it as written.
++    // The same request on both, so the Host is the ONLY difference.
++    const status = (host: string) =>
++      new Promise<number | undefined>((resolve, reject) => {
++        const req = request(
++          {
++            host: 'localhost',
++            port: new URL(url).port,
++            path: '/mcp',
++            method: 'POST',
++            headers: {
++              host,
++              'content-type': 'application/json',
++              accept: 'application/json, text/event-stream',
++            },
++          },
++          (res) => {
++            res.resume();
++            resolve(res.statusCode);
++          },
++        );
++        req.on('error', reject);
++        req.end(JSON.stringify(ping));
++      });
++    expect(await status(`localhost:${new URL(url).port}`)).toBe(200);
++    expect(await status('evil.example')).toBe(403);
++  });
++});

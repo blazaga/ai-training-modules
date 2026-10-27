@@ -1,7 +1,8 @@
 # Chapter 08 — From stdio to Streamable HTTP: configuring nest-mcp
 
-**You will:** serve the same tools over HTTP inside the main app, configure the transport,
-and see the SSE frames. **Commit:** `course(ch08)`. **File:** `src/bootstrap/attach-mcp.ts`.
+**Your agent will:** serve the same tools over HTTP inside the main app (module 5) and
+configure the transport; you see the SSE frames. **Commit:** `course(ch08)`. **File:**
+`src/bootstrap/attach-mcp.ts`.
 
 > **About "SSE":** the MCP spec deprecated the old HTTP+SSE transport (2025-03-26), and
 > `@rekog/mcp-nest` 2.0.8 ships only `StdioTransport` and `StreamableHttpTransport`.
@@ -71,7 +72,7 @@ server saw `localhost`). The test now uses `node:http`, with a one-variable cont
 
 ## The security finding this chapter ends on
 
-At this point, **`tools/call` over HTTP works with no credentials.** Our global Basic-auth
+At this point, **`tools/call` over HTTP works with no credentials.** Our global JWT
 guard (chapter 03) does **not** cover MCP tool calls, because they are microservice
 handlers, not HTTP controllers. The e2e test names this state explicitly, and chapter 09
 closes it.
@@ -83,8 +84,9 @@ the Host check.
 
 ## Labs
 
-Labs 1 and 2 are checked the other way round: `pnpm lab 08` passes on the starter,
-fails while either setting is flipped, and passes again once you revert and rebuild.
+`pnpm lab 08` is red until your agent has built module 5, then green. Labs 1 and 2 are
+experiments on that working state: have your agent flip one setting, watch `pnpm lab 08`
+fail, revert, rebuild, and watch it pass again.
 
 1. Set `enableJsonResponse: true` and capture the reply. What changed on the wire?
 2. Turn on `statefulMode` and capture the `Mcp-Session-Id` header. What must the client

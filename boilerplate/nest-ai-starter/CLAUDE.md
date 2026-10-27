@@ -28,14 +28,14 @@ denied.
 
 Skills live in `.claude/skills/`.
 
-| task | skill |
-|---|---|
-| any code change | `karpathy-guidelines`, `nestjs-best-practices` |
-| add an endpoint/resource | `resource-spec` first, then `nest-resource-scaffold` |
-| add a setting or secret | `env-config` |
-| multi-step or multi-session work | `plan-feature` |
-| before saying "done" | `nest-verify` |
-| end of every session | `worklog-handoff` |
+| task                             | skill                                                |
+| -------------------------------- | ---------------------------------------------------- |
+| any code change                  | `karpathy-guidelines`, `nestjs-best-practices`       |
+| add an endpoint/resource         | `resource-spec` first, then `nest-resource-scaffold` |
+| add a setting or secret          | `env-config`                                         |
+| multi-step or multi-session work | `plan-feature`                                       |
+| before saying "done"             | `nest-verify`                                        |
+| end of every session             | `worklog-handoff`                                    |
 
 `nestjs-best-practices` shows class-validator DTOs in its examples. **This repo uses zod
 via the in-repo adapter in `src/common/zod/`** (`createZodDto`, `ZodValidationPipe`), and this
@@ -74,6 +74,19 @@ specs/<plural>.md               one spec per resource; the input for step 3
 Full procedure and traps: `.claude/skills/nest-resource-scaffold/SKILL.md`. `src/notes/`
 is the finished worked example, and `specs/notes.md` is its spec.
 
+## Adding a field to an existing resource
+
+1. The spec first (`specs/<plural>.md`): the field, its rule, and what `null` means.
+2. The zod schema (`<name>.schema.ts`): create, patch and response schemas derive from
+   it, so the field is declared once. A unit-test fixture typed as the parsed DTO
+   needs the new field too (tsc says where).
+3. With SQLite storage: the column in `<plural>.table.ts` (the drift test requires it),
+   then `pnpm db:generate`. Read the generated SQL: a nullable `ADD` is safe on a table
+   with rows, a `NOT NULL` one is not (see Conventions). `pnpm check:migrations` fails
+   before the migration exists and passes after.
+4. e2e tests for the validation (unit tests get already-parsed input), then
+   `pnpm verify`.
+
 ## Conventions
 
 - **Validation:** zod schemas are the single source of truth. DTOs are
@@ -95,22 +108,11 @@ is the finished worked example, and `specs/notes.md` is its spec.
   `__drizzle_migrations` table, never drizzle's log.
 - **Private fields** (password/secret hashes) live in the schema's `PRIVATE` set. Responses
   go through `<Name>ResponseSchema`, so they never leave the API.
-- **Auth (secure by default):** `BasicAuthGuard` is a global `APP_GUARD` (Passport,
-  strategy `basic`). Every route needs valid credentials unless marked `@Public()`
-  (`src/auth/public.decorator.ts`); a forgotten decorator fails CLOSED (401). Every auth
-  failure is the same 401 body plus `WWW-Authenticate`. `req.user` is the PUBLIC user.
-  Do not swap in `passport-http`'s BasicStrategy: it truncates passwords at a second colon
-  and answers 400 for malformed headers (measured).
-- **Ownership:** user-owned resources take the owner id from `@CurrentUser()` and scope
-  every read and write to it (see `DevicesService.findOne`). Another user's row is **404**,
-  never 403, so ids cannot be probed. FK deletes that are blocked map to 409
-  (`SQLITE_CONSTRAINT_TRIGGER` for RESTRICT, `SQLITE_CONSTRAINT_FOREIGNKEY` for NO ACTION;
-  the adapter handles both).
 - **Generated migrations are not automatically safe.** drizzle-kit emits `ADD … NOT NULL`
   with no warning, and SQLite refuses it on any table that has rows (an empty test database
   hides that). It also drops `ON DELETE` from a foreign key added with `ADD`. Read every
   generated SQL file; hand-edit it (decide what happens to existing rows, write the
-  `ON DELETE` clause out), and say why in a SQL comment (see `drizzle/0002_*`).
+  `ON DELETE` clause out), and say why in a SQL comment.
 - **Passwords:** `src/common/security/password.ts` (scrypt, salted, timing-safe). Never
   log, return or store a plain password.
 - **Config:** read via `ConfigService<Env, true>`, never `process.env`. **Never log config

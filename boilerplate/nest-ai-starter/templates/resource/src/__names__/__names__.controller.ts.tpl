@@ -34,9 +34,6 @@ const toResponse = (entity: __Name__): __Name__Response =>
 export class __Names__Controller {
   constructor(private readonly service: __Names__Service) {}
 
-  // AI-FILL(access-create): every route is authenticated by default (global
-  // guard). If the spec makes CREATE public (e.g. sign-up), put `@Public()` here
-  // (import it from '../auth/public.decorator.js'); otherwise delete this comment.
   @Post()
   async create(@Body() body: Create__Name__Dto): Promise<__Name__Response> {
     return toResponse(await this.service.create(body));

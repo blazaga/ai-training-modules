@@ -3,72 +3,90 @@
 **Audience:** developers who want to build production services _with_ AI coding agents,
 and keep them consistent, tested and safe.
 
-**How it works:** you build one real service, `boilerplate/nest-ai-starter/` (NestJS 12),
-in **six modules** of roughly **170 minutes** of labs, with the capstone as homework. Each
-module covers one or two chapters, which are the reading. **It runs on Node 24 and pnpm**
-(chapter 00); the database is a SQLite file, so there is no database server to install.
-Repeatable work is done by tools (nest-cli, templates, a verify gate); judgement is done by
-an agent inside marked regions, guided by skills in `.claude/skills/`. Every claim in the
-chapters was measured on this code, and the traps we hit are part of the material.
+**How it works:** you do not type the service, your AI coding agent does. You start from a small
+base, `boilerplate/nest-ai-starter/` (NestJS 12: setup, `notes`, `users`; no auth, devices or
+MCP yet), and in **six modules** of roughly **185 minutes** your agent builds it up, one layer
+per module. The proctor gives each step as an **instruction**: the goal, where the
+requirements are, and when it is done, never the steps. You give it to your agent, in your own
+words or as written; the agent works out how (from the repo's `CLAUDE.md`, its skills and its
+specs) and you watch its approach. Then you **check** the result with a lab check and
+`pnpm verify`, and **review** what it wrote. Measured before the course was published: a fresh
+agent given only each module's instruction, from the checkpoint before it, built that module to
+a green lab and `pnpm verify` on its own. The capstone is homework. It runs on Node 24 and
+pnpm (chapter 00); the database is a SQLite file, so there is no database server to install.
 
-You work on the starter as it is. Where a chapter names the commit that built a step
-(`course(ch03a)` and so on), read its diff with `git show`; do not check it out to run it,
-because only the starter matches the setup in chapter 00. For the same reason, test counts
-quoted inside a chapter are from that chapter's commit: on the starter, `pnpm verify` reports
-69 unit and 61 e2e tests before you add anything.
+Repeatable work is done by tools (nest-cli, templates, a verify gate). Judgement is done by the
+agent inside marked regions, guided by the skills in `.claude/skills/` and the specs in
+`specs/`. Every claim in the chapters was measured on this code, and the traps we hit are part
+of the material.
+
+On the base, `pnpm verify` reports **40 unit and 26 e2e tests**, and every lab check is red: the
+checks describe what your agent is about to build. Where a chapter names the commit that built a
+step (`course(ch03a)` and so on), read its diff with `git show` to compare with what your agent
+wrote; test counts quoted inside a chapter are from that chapter's commit.
 
 ## The track: six modules
 
-Every module that writes code runs the same loop, and every module has the same four
-lecturer slides (divider, _Run this_, _Checkpoint_, _If you're stuck_):
+Every module runs the same loop:
 
 ```
-spec → generate (nest-cli) → template → fill (agent, AI-FILL only) → verify (read the counts)
+proctor → prompt → agent → check → review
 ```
 
-Each module keeps **one** lab. The rest of its chapters' labs are stretch work for fast
-groups. All lab times are estimates; nobody has run the course with an audience yet.
+and every module that writes code has the agent run the build loop inside it:
 
-| module                          | reading     | lab                                                                                        | stretch                                                 | lab |
-| ------------------------------- | ----------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------- | --- |
-| 1 Setup and the loop            | ch00 + ch01 | set up and start the app, then an `orders` resource through all five steps; mutation check | the persistence and clean-wipe demos                    | 40' |
-| 2 Data: drizzle and zod         | ch02        | `phone` column: drift caught → `db:generate` → ledger rows 4                               | none                                                    | 25' |
-| 3 Identity: auth and devices    | ch03 + ch04 | break the "one identical 401" rule; issue and rotate a device secret                       | the hand-written middleware commit; the `expiresAt` lab | 30' |
-| 4 Your first MCP server         | ch05 + ch06 | a raw `initialize` (envelopes, SSE framing); a `publish-note` tool pinned by tests         | the envelope discussion lab                             | 30' |
-| 5 Inspector and transports      | ch07 + ch08 | Inspector UI, then the CLI as a CI check (exit 5); `enableJsonResponse` flip               | the Host-header lab (its snags are on the stuck slide)  | 25' |
-| 6 Secure MCP, then the capstone | ch09 + ch10 | rotate a secret mid-session, next call fails                                               | the capstone, as homework                               | 20' |
+```
+spec → generate (nest-cli) → template → fill (AI-FILL only) → verify (read the counts)
+```
+
+Each module ends at a **checkpoint**: the state the lab checks expect. If your agent went
+somewhere you cannot recover from in the time, catch up from `checkpoints/` (a fresh copy of the
+base plus the module patches up to that point) and carry on. All lab times are estimates; nobody
+has run the course with an audience yet.
+
+| module                          | reading     | your agent builds                                                           | you check                                 | lab |
+| ------------------------------- | ----------- | --------------------------------------------------------------------------- | ----------------------------------------- | --- |
+| 1 Setup and the loop            | ch00 + ch01 | sets the project up, then an `orders` resource through all five steps       | lab 01 · mutation check: delete a rule    | 40' |
+| 2 Data: drizzle and zod         | ch02        | a `phone` column: drift caught → `db:generate` → ledger 1 → 2 rows          | lab 02 · read the generated SQL           | 25' |
+| 3 Identity: auth and devices    | ch03 + ch04 | Basic login with Passport, then JWT; devices with `POST /devices/provision` | labs 03 + 04 · one identical 401          | 45' |
+| 4 Your first MCP server         | ch05 + ch06 | the notes service as MCP tools over stdio, then a `publish-note` tool       | lab 06 · the Inspector CLI (exit 5)       | 30' |
+| 5 Inspector and transports      | ch07 + ch08 | the same tools over Streamable HTTP at `/mcp`, `MCP_ALLOWED_HOSTS`          | lab 08 · a raw `initialize`, Inspector UI | 25' |
+| 6 Secure MCP, then the capstone | ch09 + ch10 | `X-Device-Key` / `X-Device-Secret` on `/mcp`, and a `whoami` tool           | lab 09 · rotate a secret mid-session      | 20' |
+
+Stretch for fast groups after module 6: lab 12 (`expiresAt` on device secrets). The capstone,
+lab 10 (device-scoped notes through every layer), is homework.
 
 Why these chapters share a module:
 
-- **00 + 01:** setup has no lab of its own worth a slot. The first `pnpm verify` is the
-  starting line for the resource lab.
-- **03 + 04:** both are about identity. Devices exist so MCP can authenticate, and the
-  rotation lab exercises the same "one 401 for every failure" rule.
+- **00 + 01:** setup has no lab of its own worth a slot. The first `pnpm verify` is the starting
+  line for the resource lab.
+- **03 + 04:** both are about identity. The auth guards built here are the ones that later
+  secure the HTTP MCP server, and devices exist so MCP can authenticate.
 - **05 + 06:** the envelopes are most concrete when learners read a real exchange. The raw
   `initialize` is that exchange.
 - **07 + 08:** both are about what goes over the wire and how a client sees it.
-- **09 + 10:** device-key auth is the last technical step. The capstone takes an hour, so
-  it is homework.
+- **09 + 10:** device-key auth is the last technical step. The capstone takes an hour, so it is
+  homework.
 
-The lecturer deck is `slides/lab-companion.pptx` (and `.md`), generated by
-`slides/build-lab-deck.mjs`. Each module's divider notes say which chapters it covers and
-what is left for stretch.
+The proctor deck is `slides/lab-companion.pptx` (and `.md`), generated by
+`slides/build-lab-deck.mjs`. Each module has its prompt slides, a _Check it_ slide, a
+_Checkpoint_ slide and a _When the agent goes wrong_ slide.
 
 ## Chapters (the reading)
 
-| ch  | chapter                                                                   | you build                                                                             | key lesson                                                      |
-| --- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 00  | [Setup: Node, pnpm and one SQLite file](00-setup.md)                      | install, migrate the SQLite file, run the app, run the gate                           | migrate before start; `pnpm verify` is the gate                 |
-| 01  | [Starting from the CLI and templates](01-cli-and-templates.md)            | Nest 12 project, `notes` via generate → template → fill → verify                      | tools for repeatable work, agents only inside markers           |
-| 02  | [A users table with drizzle and zod](02-users-drizzle-zod.md)             | database module, drizzle storage variant, `users` (controller + service + unit tests) | migrations are checked by the ledger; table/migration drift     |
-| 03  | [Auth: BasicAuth middleware, then Passport](03-auth-basic-to-passport.md) | hand-written middleware → Passport strategy + global guard                            | secure by default; one 401 for every failure                    |
-| 04  | [Devices: credentials, then merged with users](04-devices.md)             | device credentials (issue/rotate/activate/archive), ownership                         | server-issued, hash-only secrets; 404 not 403                   |
-| 05  | [The Model Context Protocol](05-mcp-concepts.md)                          | — (concepts from captured traffic)                                                    | JSON-RPC envelopes; stdio vs Streamable HTTP; SSE inside HTTP   |
-| 06  | [Your first MCP controller](06-first-mcp-controller.md)                   | `@rekog/mcp-nest` tools over existing services; stdio entrypoint                      | reuse the REST schema; test stdout as raw bytes                 |
-| 07  | [Using the MCP Inspector](07-mcp-inspector.md)                            | UI + scripted CLI checks                                                              | the CLI's exit code as a CI check                               |
-| 08  | [From stdio to Streamable HTTP](08-stdio-to-streamable-http.md)           | MCP over HTTP inside the app; transport configuration                                 | defaults matter; `MCP_ALLOWED_HOSTS`; `fetch` can't send `Host` |
-| 09  | [MCP auth with device access keys](09-mcp-device-auth.md)                 | `X-Access-Key-Id` / `X-Secret-Key` on `/mcp`, `whoami`                                | authenticate at the transport; order is load-bearing            |
-| 10  | [Capstone](10-capstone.md)                                                | device-scoped notes through every layer                                               | evidence, not claims                                            |
+| ch  | chapter                                                          | you build                                                                             | key lesson                                                      |
+| --- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 00  | [Setup: Node, pnpm and one SQLite file](00-setup.md)             | install, migrate the SQLite file, run the app, run the gate                           | migrate before start; `pnpm verify` is the gate                 |
+| 01  | [Starting from the CLI and templates](01-cli-and-templates.md)   | Nest 12 project, `notes` via generate → template → fill → verify                      | tools for repeatable work, agents only inside markers           |
+| 02  | [A users table with drizzle and zod](02-users-drizzle-zod.md)    | database module, drizzle storage variant, `users` (controller + service + unit tests) | migrations are checked by the ledger; table/migration drift     |
+| 03  | [Auth with Passport: Basic, then JWT](03-auth-basic-then-jwt.md) | Basic login (passport-http) → a JWT → a global JWT guard                              | secure by default; one 401 for every failure                    |
+| 04  | [Devices: provisioned with a key and a secret](04-devices.md)    | `POST /devices/provision` → key + secret; rotate, archive; ownership                  | server-issued, hash-only secrets; 404 not 403                   |
+| 05  | [The Model Context Protocol](05-mcp-concepts.md)                 | — (concepts from captured traffic)                                                    | JSON-RPC envelopes; stdio vs Streamable HTTP; SSE inside HTTP   |
+| 06  | [Your first MCP controller](06-first-mcp-controller.md)          | `@rekog/mcp-nest` tools over existing services; stdio entrypoint                      | reuse the REST schema; test stdout as raw bytes                 |
+| 07  | [Using the MCP Inspector](07-mcp-inspector.md)                   | UI + scripted CLI checks                                                              | the CLI's exit code as a CI check                               |
+| 08  | [From stdio to Streamable HTTP](08-stdio-to-streamable-http.md)  | MCP over HTTP inside the app; transport configuration                                 | defaults matter; `MCP_ALLOWED_HOSTS`; `fetch` can't send `Host` |
+| 09  | [MCP auth with device keys](09-mcp-device-auth.md)               | `X-Device-Key` / `X-Device-Secret` on `/mcp`, `whoami`                                | authenticate at the transport; order is load-bearing            |
+| 10  | [Capstone](10-capstone.md)                                       | device-scoped notes through every layer                                               | evidence, not claims                                            |
 
 ## Principles (reference, linked from the chapters)
 

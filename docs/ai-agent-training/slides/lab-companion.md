@@ -11,23 +11,23 @@ paginate: true
 **Lab companion · six modules · NestJS 12 · drizzle · SQLite · Passport · MCP**
 
 <!--
-Keep this deck on screen during lab work. Each module has: a divider (goal + time), RUN THIS (commands), CHECKPOINT (what correct looks like) and IF YOU ARE STUCK (snags we actually hit). The full explanations are in the chapter documents.
+Keep this deck on screen during lab work. Each module has: a divider (goal + time), PROMPT slides (what the proctor says and the exact prompt learners paste into their agent), CHECK IT (what learners run to check the agent's work), CHECKPOINT (what correct looks like) and WHEN THE AGENT GOES WRONG (mistakes agents actually made). The full explanations are in the chapter documents.
 -->
 
 ---
 
 ## How every lab works
 
-1. **Spec**: specs/<name>.md: fields, rules, gaps
-2. **Generate**: nest-cli: structure + wiring
-3. **Template**: house conventions, identical every time
-4. **Fill**: your agent, ONLY inside AI-FILL markers
-5. **Verify**: pnpm verify: read the counts
+1. **Proctor**: the goal, where the requirements are, when it is done
+2. **Instruct**: you give that to your agent, never the steps
+3. **Agent**: works out how from the repo, then builds it
+4. **Check**: pnpm verify + pnpm lab NN: read the counts
+5. **Review**: ask it to show, not tell: the red run, the SQL
 
 _Repeatable work → tools. Judgement → the agent, fenced in._
 
 <!--
-The repeatable work belongs to tools; judgement belongs to the agent, fenced into markers. If a learner hand-edits generated code, steer them back to the template or the marker.
+The AI does the building and the planning; the learner directs and checks. The instruction says what and when it is done, never how: the repo (CLAUDE.md, its skills, the specs) tells the agent how, and watching it find that out is part of the lab. Measured: fresh agents given only these instructions got every module's lab green. Hold the agent to evidence: counts, a failing run, the generated SQL.
 -->
 
 ---
@@ -36,7 +36,7 @@ The repeatable work belongs to tools; judgement belongs to the agent, fenced int
 
 - **Node 24 + pnpm**: Every command runs in boilerplate/nest-ai-starter. `corepack enable` once puts pnpm on your PATH; otherwise write `corepack pnpm`.
 - **Counts, not exit codes**: Read "Tests N passed" AND "Test Files": a failed beforeAll shows 0 failures in the Tests line and exit 1.
-- **Never share a secret**: Device secrets, Basic credentials and Inspector URLs (they carry a token) stay in your terminal.
+- **Never share a secret**: Passwords, tokens, device secrets and Inspector URLs (they carry a token) stay in your terminal.
 
 <!--
 Linux, macOS and WSL shells were the target. The `eval "$(…)"` lab helper needs a POSIX shell; on PowerShell, copy the printed values by hand. Not tested on PowerShell.
@@ -48,7 +48,7 @@ Linux, macOS and WSL shells were the target. The `eval "$(…)"` lab helper need
 
 - **Import one file**: In the starter: `postman/nest-ai-starter.postman_collection.json`. baseUrl is http://localhost:3000; the first request in folder 03 signs up the demo user.
 - **Folders follow the labs**: Numbered by chapter, and each name says its module. Every request has tests: read the Test Results tab, not just the status.
-- **It stores a live secret**: Issuing credentials saves the device secret in a collection variable. Never export or share the collection after a run.
+- **It stores a live secret**: Logging in saves a token and provisioning saves the device secret in collection variables. Never export or share the collection after a run.
 
 <!--
 The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP client, which is the point of those chapters.
@@ -59,11 +59,11 @@ The Inspector CLI (chapters 07 and 09) stays in the terminal: it is a real MCP c
 ## Lab checks: is my lab done?
 
 - **One check per lab**: `pnpm lab 01` runs the check for lab 01, `pnpm lab` all of them. Done means `Test Files 1 passed` and every test green.
-- **Build labs start red**: Labs 01, 02, 04, 06 and 10 fail on the starter, because the feature is not there yet. They pass once you have built it.
-- **Guard labs start green**: Labs 03, 08 and 09 pass on the starter. Break the rule on purpose, watch the check fail, then put it back.
+- **Red until built**: Every lab check fails on the starter, because its feature is not there yet. It turns green when your agent has built it, and stays green after.
+- **Fell behind?**: Start the next module from its checkpoint (docs/ai-agent-training/checkpoints/), not by patching your own copy.
 
 <!--
-The checks drive the app over HTTP and MCP and never import learner code, so they compile before the lab is done. The contracts are in test/labs/README.md in the starter. Reference solutions for facilitators are in docs/ai-agent-training/solutions/.
+The checks drive the app over HTTP and MCP and never import learner code, so they compile before the lab is done. The contracts are in test/labs/README.md in the starter. Each module's reference result is a patch in docs/ai-agent-training/checkpoints/.
 -->
 
 ---
@@ -74,7 +74,7 @@ The checks drive the app over HTTP and MCP and never import learner code, so the
 | --- | ----------------------------- | --- |
 | 1   | Setup and the loop            | 40' |
 | 2   | Data: drizzle and zod         | 25' |
-| 3   | Identity: auth and devices    | 30' |
+| 3   | Identity: auth and devices    | 45' |
 | 4   | Your first MCP server         | 30' |
 | 5   | Inspector and transports      | 25' |
 | 6   | Secure MCP, then the capstone | 20' |
@@ -91,7 +91,7 @@ Six modules, about 170 minutes of labs plus the capstone as homework. Times are 
 
 # Setup and the loop
 
-Set up and start the app, then add an `orders` resource: generate → template → fill → verify.
+Your agent sets the project up, then adds an `orders` resource: spec → generate → template → fill → verify.
 
 ⏱ 40 min lab (draft estimate)
 
@@ -101,62 +101,109 @@ Covers chapters 00 + 01. Left out for time: the persistence and clean-wipe demos
 
 ---
 
-## Run this: set up, then an orders resource
+## Instruction 1/2: set the project up
 
-```bash
-cd boilerplate/nest-ai-starter
-corepack enable   # refused? use corepack pnpm
-pnpm install
-cp .env.example .env   # port busy? set PORT= here
-pnpm build && pnpm db:migrate
-pnpm verify                # 69 + 61 tests
-# write specs/orders.md (copy specs/notes.md);
-#   the contract: test/labs/README.md, 01. Then:
-pnpm exec nest g resource orders --type rest --crud
-pnpm resource:template --name order --plural orders
-pnpm check:ai-fill         # your agent's to-do list
-# your agent fills every AI-FILL marker, then:
-pnpm verify
-pnpm lab 01   # the lab check: all green?
+> **Proctor:** Have your agent set the project up and prove it works. You only read what it reports.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Set this project up on this machine and prove it works.
+Tell me what you ran and what you saw: counts, not "it
+works".
 ```
 
+**Watch its approach**
+
+- reads CLAUDE.md before running anything
+- reports counts: ledger rows 1, 40 unit, 26 e2e
+- proves a check can fail (a planted error)
+- switches to corepack pnpm if pnpm is missing
+
 <!--
-While pnpm install runs, walk through specs/notes.md. Learners give their agent the spec and the skill name (nest-resource-scaffold), not ad-hoc instructions.
+Measured: a fresh agent given only this instruction set the project up, started the app, and reported ledger 1 / 40 unit / 26 e2e plus a red lab 01 as its baseline. If port 3000 is busy, PORT in .env (chapter 00).
 -->
 
 ---
 
-## Checkpoint: gate green, markers to zero
+## Instruction 2/2: an orders resource
 
-_Output: captured, then expected_
+> **Proctor:** Do not tell your agent how. The repo says how resources are built; watch whether it finds that out.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+We need an orders resource. Its contract is section 01 of
+test/labs/README.md. Build it the way this repo builds
+resources. Done when pnpm lab 01 and pnpm verify are
+green. Report the counts, and anything the contract leaves
+undecided.
+```
+
+**Watch its approach**
+
+- specs/orders.md before any code
+- finds the repo's steps: generate, template, fill
+- O1 in the schema, O2 in the service
+- open questions recorded, no invented rules
+
+<!--
+Measured: a fresh agent found the resource-spec and nest-resource-scaffold skills from CLAUDE.md on its own, filled 14 markers, got lab 01 15/15 and verify green, and listed six open questions (reopening a fulfilled order first). Ask: which instruction told it to use the skill? None did.
+-->
+
+---
+
+## Check it: module 1
 
 ```bash
-# pnpm db:migrate
-db:migrate: ledger rows: 3
-# pnpm verify (before your resource)
-Tests  69 passed (69)
-Tests  61 passed (61)
-# after the template step (captured)
+pnpm check:ai-fill    # 0 markers left
+pnpm verify           # read both Tests lines
+# ask the agent: "delete rule O2, run
+#   pnpm exec vitest run src/orders, put it back"
+pnpm lab 01   # the lab check: all green?
+```
+
+**In Postman**
+
+- **00 · Setup (module 1)**: Health
+
+<!--
+The mutation check proves the rule is tested: deleting O2 must turn a test red. Ask the agent to show the red run, not to describe it.
+-->
+
+---
+
+## Checkpoint: the loop, closed
+
+_Output: captured_
+
+```bash
+# setup: pnpm db:migrate
+db:migrate: ledger rows: 1
+# setup: pnpm verify
+Tests  40 passed (40)
+Tests  26 passed (26)
+# the template step
 files written: 11;
-AI-FILL markers to complete: 16
-# after your agent (expected)
-AI-FILL markers: 0
+AI-FILL markers to complete: 14
+# after the agent: pnpm verify
+Tests  47 passed (47)
+Tests  42 passed (42)
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 01`: every test passes
-- [ ] ledger rows: 3, both gates green
 - [ ] check:ai-fill prints 0 markers
-- [ ] delete O2 from the service: `pnpm exec vitest run src/orders` shows one red test
+- [ ] deleting O2 turns a test red
 
 ---
 
-## If you are stuck: module 1
+## When the agent goes wrong: module 1
 
-- **Port 3000 is already in use**: Set PORT=3100 in .env, then use 3100 in Postman (baseUrl) and every URL. The lab helper reads PORT from .env.
-- **"Run step 1 first"**: The template script refuses before `nest g resource`, and refuses a second run. Never use --force after filling.
-- **Unit green, e2e red**: Validation, defaults and status codes live at the HTTP boundary. Only e2e sees them.
+- **It says "done" without counts**: Ask for the two `Tests` lines and the `Test Files` lines. A claim is not a count.
+- **It edited code outside the markers**: Ask it to undo that and put the change in the template, or in a marker. Generated code stays generated.
+- **`it.each` fails typecheck (TS2322)**: Known trap (in the skill): with supertest, write `async (x) => { await … }`.
 
 ---
 
@@ -166,7 +213,7 @@ AI-FILL markers: 0
 
 # Data: drizzle and zod
 
-Add a `phone` column and watch the migration checks work for you.
+Your agent adds a `phone` column, generates the migration and tells you whether it is safe.
 
 ⏱ 25 min lab (draft estimate)
 
@@ -176,59 +223,77 @@ Covers chapter 02. Left out for time: nothing. This is chapter 02 as it stands.
 
 ---
 
-## Run this: add a phone column
+## Instruction: a phone column
+
+> **Proctor:** A schema change: the agent must read the migration it generates and tell you if it is safe.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Users need an optional phone number; the contract is
+section 02 of test/labs/README.md. Done when pnpm lab 02
+and pnpm verify are green. Before you finish, show me the
+database change and tell me whether it is safe on a
+database that already has users.
+```
+
+**Watch its approach**
+
+- the spec, then the schema, then the table
+- reads the generated SQL before calling it safe
+- tests the migration on a table with rows
+- ledger rows: 2
+
+<!--
+Measured: a fresh agent migrated a scratch database that already had a user, showed the row kept with phone null, and refused a NOT NULL column as a control. If yours only says "it is nullable, so it is safe", ask it to prove it.
+-->
+
+---
+
+## Check it: module 2
 
 ```bash
-# 1. specs/users.md: phone (optional, E.164)
-# 2. user.schema.ts + users.table.ts
-pnpm check:migrations   # FAILS: drift
-pnpm db:generate        # READ the SQL
-pnpm check:migrations   # clean now
-# add an allowed and a refused phone case
-#   to test/users.e2e-spec.ts
-pnpm verify   # TS2345 phone missing? add
-#   phone: null to users.service.spec.ts payloads
-# stop the app (Ctrl+C), then:
-pnpm build && pnpm db:migrate
-pnpm start
+git diff drizzle/        # one new migration
+pnpm db:migrate          # ledger rows: 2
+pnpm verify
+# restart the app (Ctrl+C), then:
+pnpm build && pnpm start
 pnpm lab 02   # the lab check: all green?
 ```
 
 <!--
-Make learners read the generated SQL out loud. A nullable ADD COLUMN is safe on populated tables; NOT NULL is not (chapter 04).
+The in-memory test database is built from the migration SQL, not the TypeScript table, so tests cannot catch a missing migration; check:migrations can.
 -->
 
 ---
 
 ## Checkpoint: drift caught, ledger grows
 
-_Output: captured messages, expected count_
+_Output: captured_
 
 ```bash
-# before db:generate (captured)
+# before db:generate
 check-migrations: DRIFT - tables
   changed without a migration.
-# db:generate (captured format)
-[✓] Your SQL migration file ➜
-    drizzle/0003_….sql
-# pnpm db:migrate (expected)
-db:migrate: ledger rows: 4
+# the generated SQL
+ALTER TABLE `users` ADD `phone` text;
+# pnpm db:migrate
+db:migrate: ledger rows: 2
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 02`: every test passes
-- [ ] check:migrations failed BEFORE generating
-- [ ] you read the SQL in `drizzle/0003_*`
-- [ ] ledger rows: 4; phone appears in responses
+- [ ] you saw the drift failure first
+- [ ] the agent explained why the SQL is safe
 
 ---
 
-## If you are stuck: module 2
+## When the agent goes wrong: module 2
 
-- **All tests pass, check fails**: Correct: tests run on the MIGRATION SQL (in-memory SQLite), not your TypeScript table. Generate the migration.
-- **Drift test fails**: The zod schema and the table must declare exactly the same fields, with the same TS names.
-- **The generated SQL says NOT NULL**: SQLite refuses it on any table with rows (measured). Decide what happens to existing rows first, as drizzle/0002 does.
+- **TS2345 "phone" is missing**: Older specs build a user by hand: they need `phone: null` (the skill names this trap).
+- **All tests pass, the check fails**: Correct: tests run on the MIGRATION SQL. The agent must run `pnpm db:generate`.
+- **It hand-wrote the SQL file**: Ask it to delete that and generate: the snapshot in drizzle/meta must match.
 
 ---
 
@@ -238,71 +303,141 @@ db:migrate: ledger rows: 4
 
 # Identity: auth and devices
 
-Break the "one identical 401" rule on purpose, then issue and rotate device credentials.
+Your agent adds Basic auth with Passport, moves it to JWT, then adds devices provisioned with a key and a secret.
 
-⏱ 30 min lab (draft estimate)
+⏱ 45 min lab (draft estimate)
 
 <!--
-Covers chapters 03 + 04. Left out for time: reading the hand-written middleware commit (chapter 03) and the expiresAt lab (chapter 04). Offer expiresAt as a stretch.
+Covers chapters 03 + 04. Left out for time: nothing; the expiresAt stretch needs /mcp, so it comes after module 6.
 -->
 
 ---
 
-## Run this: break the 401, then rotate a key
+## Instruction 1/3: Basic auth with Passport
+
+> **Proctor:** First the simple handler: HTTP Basic, with Passport doing the protocol. No hand-written header parsing.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Callers must authenticate now. specs/auth.md is the
+design: do its step 1 only, keep pnpm verify green, and
+show me how to see it working.
+```
+
+**Watch its approach**
+
+- passport-http: no hand-written parser
+- a global guard; health and sign-up public
+- every e2e suite now signs in
+- shows you curl: 200 with, 401 without
+
+<!--
+Measured: a fresh agent built step 1 and demonstrated it with curl: 401 with a Basic challenge and one body for wrong password, unknown email and a bare header. Lab 03 stays red until step 2, by design.
+-->
+
+---
+
+## Instruction 2/3: move to JWT
+
+> **Proctor:** Now the better handler: the password crosses the wire once, at login; every other request carries a token that expires.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Now step 2 of specs/auth.md. Done when pnpm lab 03 and
+pnpm verify are green.
+```
+
+**Watch its approach**
+
+- JWT_SECRET the env-config way, never hard-coded
+- a jwt strategy that re-checks the user
+- Basic only on login
+- one 401 body, now with a Bearer challenge
+
+<!--
+Measured: a fresh agent got lab 03 8/8 from this one line, because the spec carries the design. Production must refuse to start without JWT_SECRET; check that your agent did not hard-code one.
+-->
+
+---
+
+## Instruction 3/3: devices
+
+> **Proctor:** A device is a non-human client. One call provisions it and returns its key and secret, shown once.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Add devices: specs/devices.md, and section 04 of
+test/labs/README.md. Done when pnpm lab 03 04 and pnpm
+verify are green.
+```
+
+**Watch its approach**
+
+- the scaffold skill, then reshaped for provision
+- reads the migration (ON DELETE restrict)
+- secret stored as a hash, shown once
+- another user's device is 404, not 403
+
+<!--
+Measured: a fresh agent scaffolded devices with the skill, reshaped the CRUD into provision, rotate and archive, and got lab 03 04 14/14. Break-it discussion: have it give unknown emails a different 401, watch lab 03 fail, revert.
+-->
+
+---
+
+## Check it: module 3
 
 ```bash
-# send folder 03, then the lab:
-# unknown emails get a different message
-pnpm test:e2e   # which test fails?
-pnpm lab 03     # red too
+# send Postman folder 03, then 04
+pnpm verify
 # restart the app (Ctrl+C), then:
-pnpm build && pnpm start
-# re-send 03 in Postman: red. Revert,
-#   rebuild, restart: all green again
-# then send folder 04
+pnpm build && pnpm db:migrate && pnpm start
+pnpm lab 03 04   # the lab check: all green?
 ```
 
 **In Postman**
 
-- **03 · Auth (module 3)**: Sign up (public) · Me: no credentials → 401 · Me: wrong password → the same 401 · Me: unknown email → the same 401 · Me (Basic auth)
-- **04 · Devices (module 3)**: Create device · Issue credentials (secret shown once) · Activate device · Get device (no secret, no hash)
+- **03 · Auth (module 3)**: Sign up (public) · Log in: wrong password → 401 · Log in: unknown email → the same 401 · Log in (Basic) → token · Me (Bearer token)
+- **04 · Devices (module 3)**: Provision device (key + secret shown once) · Get device (no secret, no hash)
 
 <!--
-Issuing credentials stores a live secret in a collection variable: never export or share the collection after a run. Re-sending Issue credentials is a rotation.
+Logging in stores a token, and provisioning a live device secret, in collection variables: never export or share the collection after a run.
 -->
 
 ---
 
-## Checkpoint: one 401, one secret
+## Checkpoint: a token, one 401, one secret
 
 _Output: from the code, then expected_
 
 ```bash
+# Log in: unknown email
 HTTP/1.1 401 Unauthorized
 WWW-Authenticate: Basic
   realm="nest-ai-starter", charset="UTF-8"
-# after your change, e2e reports:
-× every failure is the SAME 401 …
-# GET device (expected)
-"status":"active", "secretLast4":"…"
-# POST …/credentials (expected)
-"secret":"dsk_…"   (shown ONCE)
+# Log in (Basic) → token
+"tokenType":"Bearer","expiresIn":3600
+# Provision device
+"deviceKey":"DK…","secret":"dsk_…"
+# pnpm db:migrate
+db:migrate: ledger rows: 3
 ```
 
 **Done when**
 
-- [ ] `pnpm lab 03`: every test passes
-- [ ] you saw the test that pins the 401 rule fail, then reverted
-- [ ] no response but /credentials ever shows a secret
+- [ ] `pnpm lab 03 04`: every test passes
+- [ ] only provision and rotate ever show a secret
 - [ ] another user's device → 404, not 403
 
 ---
 
-## If you are stuck: module 3
+## When the agent goes wrong: module 3
 
-- **"2 passed | 30 skipped", exit 1**: A beforeAll threw (e.g. sign-up lost @Public()). The failure is on the Test Files line.
-- **My new route answers 401**: Secure by default: the guard is global. Add @Public() only on purpose.
-- **Deleting a user gives a 500**: A blocked delete reports `SQLITE_CONSTRAINT_TRIGGER` (RESTRICT) or `SQLITE_CONSTRAINT_FOREIGNKEY` (NO ACTION). Map both to 409.
+- **It hand-writes a Basic parser**: Point it at the spec: passport-http does the parsing. The colon limit is recorded, not worked around.
+- **Skipped tests, exit 1**: A beforeAll threw (sign-up or login lost @Public()). The failure is on the Test Files line.
+- **A malformed Basic header gives 400**: passport-http alone does that. The guard's handleRequest must turn every failure into the one 401.
 
 ---
 
@@ -312,86 +447,84 @@ WWW-Authenticate: Basic
 
 # Your first MCP server
 
-Read one raw JSON-RPC exchange, then add a `publish-note` tool and pin it with tests.
+Your agent turns the notes service into MCP tools over stdio, then adds a `publish-note` tool.
 
 ⏱ 30 min lab (draft estimate)
 
 <!--
-Covers chapters 05 + 06. Left out for time: the separate envelope-discussion lab (chapter 05): the raw initialize below covers it.
+Covers chapters 05 + 06. Left out for time: the separate envelope-discussion lab (chapter 05): reading one raw exchange covers it.
 -->
 
 ---
 
-## Run this (1/2): a raw MCP initialize
+## Instruction: an MCP server over stdio
 
-**In Postman**
+> **Proctor:** The same services, now as tools an AI client can call. Stdout belongs to the protocol.
 
-- **05 · MCP over HTTP (module 4)**: initialize · tools/list · tools/call whoami · No device headers → 401
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Make the notes service usable by AI clients over MCP,
+stdio first: module 4 of specs/mcp.md, plus the
+publish-note tool in section 06 of test/labs/README.md.
+Done when pnpm lab 06 and pnpm verify are green.
+```
+
+**Watch its approach**
+
+- reads the installed library, not its memory
+- tools call NotesService: no rules of their own
+- an e2e test that reads RAW stdout
+- publish-note reuses the published-needs-a-body rule
 
 <!--
-Open the Body tab of initialize: one SSE event, `event: message` then `data: {...}`, and the Headers tab: X-Access-Key-Id / X-Secret-Key come from the variables 04 · Devices stored. Then ask: which id answers which request? Where is the SSE framing? What would a tool error look like vs a protocol error?
+Measured: a fresh agent read the installed @rekog/mcp-nest types, got lab 06 4/4, and proved a stray console.log fails its raw-stdout test. Then look at the wire with pnpm mcp:inspect:cli and read chapter 05.
 -->
 
 ---
 
-## Run this (2/2): add a publish-note tool
+## Check it: module 4
 
 ```bash
-// src/mcp/notes.tools.ts
-@Tool({
-  name: 'publish-note',
-  description: 'Publish a note. A published note needs a non-empty body.',
-  parameters: z.object({ id: z.string().uuid() }),
-})
-publishNote(@Payload() { id }: { id: string }): Promise<ToolResult> {
-  return runTool(() => this.notes.update(id, { status: 'published' }));
-}
-# then, in the terminal:
-pnpm verify   # red until you add publish-note to
-#   the tool list in test/mcp-stdio.e2e-spec.ts
+pnpm build
+pnpm mcp:inspect:cli --method tools/list
+pnpm mcp:inspect:cli --method tools/call \
+  --tool-name get-note \
+  --tool-arg id=00000000-0000-4000-8000-000000000000
+echo "exit: $?"
 pnpm lab 06   # the lab check: all green?
 ```
 
-**In Postman**
-
-- **06 · Notes over REST (module 4)**: Create note (draft, empty body) · Publish it → 422 RULE_VIOLATION · Get note
-
 <!--
-Then: pnpm verify. The stdio e2e test pins the EXACT tool list, so it fails until they update it deliberately. That is the lesson.
+The CLI is a real MCP client over stdio. Exit 5 comes from the tool's own isError, so it is a sound CI signal (module 5 uses it).
 -->
 
 ---
 
-## Checkpoint: JSON-RPC in SSE, rule over MCP
+## Checkpoint: errors the model can read
 
 _Output: captured_
 
 ```bash
-content-type: text/event-stream
-event: message
-data: {"result":{"protocolVersion":…},
- "jsonrpc":"2.0","id":1}
-# publish-note on a note with no body
-{"content":[{"type":"text","text":
-  "RULE_VIOLATION: A published note
-   needs a non-empty body"}],
- "isError":true}
+{ "content": [ { "type": "text",
+  "text": "NOT_FOUND: Note … not found" } ],
+  "isError": true }
+exit: 5
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 06`: every test passes
-- [ ] you matched the response id to the request
-- [ ] the stdio e2e tool list updated on purpose
-- [ ] tool error (isError) vs protocol error (error)
+- [ ] tools/list shows create-note, get-note, list-notes, publish-note
+- [ ] a rule violation is a tool error, not a crash
 
 ---
 
-## If you are stuck: module 4
+## When the agent goes wrong: module 4
 
-- **401 on /mcp**: Missing headers, a draft or archived device, or a rotated secret: one 401 for all. Re-run the helper.
-- **console.log "for debugging"**: It goes into the protocol stream. The SDK client ignores it, so only the RAW stdout test fails.
-- **A crash instead of isError**: Wrap tool bodies in runTool(): DomainError → tool error the model can read.
+- **A console.log "for debugging"**: It goes into the protocol stream. The SDK client ignores it, so only the RAW stdout test catches it.
+- **It copied the zod schema into the tool**: Two copies drift. Ask it to import the REST schema.
+- **Tool errors come back as exceptions**: Wrap tool bodies in the tool-result helper: a DomainError must be `isError: true`.
 
 ---
 
@@ -401,7 +534,7 @@ data: {"result":{"protocolVersion":…},
 
 # Inspector and transports
 
-Turn an Inspector call into a CI check, then flip `enableJsonResponse` and compare the wire.
+Your agent serves the same tools over HTTP at /mcp; you drive them with the Inspector.
 
 ⏱ 25 min lab (draft estimate)
 
@@ -411,7 +544,32 @@ Covers chapters 07 + 08. Left out for time: the Host-header lab (chapter 08). Me
 
 ---
 
-## Run this (1/2): the Inspector UI
+## Instruction: MCP over Streamable HTTP
+
+> **Proctor:** Same tools, over HTTP, inside the app. No auth yet: name that state in a test, module 6 closes it.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Serve the same MCP tools over HTTP inside the app: module
+5 of specs/mcp.md. Done when pnpm lab 08 and pnpm verify
+are green.
+```
+
+**Watch its approach**
+
+- finds how the transport mounts on the app
+- MCP_ALLOWED_HOSTS the env-config way
+- the tools module imported by the app
+- a test that says /mcp is still open
+
+<!--
+Measured: a fresh agent got lab 08 4/4 and broke each setting once to see a test fail. Experiment: have it flip enableJsonResponse, compare initialize in Postman, watch lab 08 fail, revert.
+-->
+
+---
+
+## Run this: the Inspector UI
 
 ```bash
 pnpm mcp:inspect:ui      # leave it running
@@ -419,8 +577,8 @@ pnpm mcp:inspect:ui      # leave it running
 # in a second terminal:
 eval "$(node scripts/demo-device.mjs)"
 # the values for the two headers:
-echo "$MCP_KEY_ID"
-echo "$MCP_SECRET"
+echo "$DEVICE_KEY"
+echo "$DEVICE_SECRET"
 ```
 
 **In the Inspector UI**
@@ -428,7 +586,7 @@ echo "$MCP_SECRET"
 1. Add Servers → + Add manually
 2. streamable-http · http://localhost:3000/mcp → Add
 3. Settings → Custom Headers → + Add Header, twice
-4. X-Access-Key-Id and X-Secret-Key, then close
+4. X-Device-Key and X-Device-Secret, then close
 5. Switch the card on: Connected
 6. Tools → whoami → Execute Tool
 
@@ -438,62 +596,50 @@ The Inspector listens on loopback only (127.0.0.1, ports 6274, 6275, 6278). Its 
 
 ---
 
-## Run this (2/2): a CI check, then the wire
+## Check it: module 5
 
 ```bash
-pnpm build
-pnpm mcp:inspect:cli --method tools/call \
-  --tool-name get-note \
-  --tool-arg id=00000000-0000-4000-8000-000000000000
-echo "exit: $?"
-# attach-mcp.ts: enableJsonResponse: true
-# restart the app: Ctrl+C, then
-pnpm build && pnpm start
-# re-send Postman 05 › initialize: what changed?
-#   (its test goes red: that is the point)
-# then revert enableJsonResponse
-pnpm lab 08   # green now; break it, see red, revert
+# Postman 05 › initialize: an SSE stream
+# Postman 08 › Foreign Host → 403
+pnpm verify
+pnpm lab 08   # the lab check: all green?
 ```
 
 **In Postman**
 
-- **05 · MCP over HTTP (module 4)**: initialize
+- **05 · MCP over HTTP (module 5)**: initialize
 - **08 · Host check (module 5)**: Foreign Host → 403
 
 <!--
-The CLI is the scriptable half of the Inspector. Exit 5 comes from the tool's own isError, which is why it is a sound CI signal.
+At this point the Inspector connects with no headers at all: that is the security finding module 6 fixes.
 -->
 
 ---
 
-## Checkpoint: exit 5, then two framings
+## Checkpoint: one message, SSE framing
 
-_Output: captured, then expected_
+_Output: captured_
 
 ```bash
-{ "content": [ { "type": "text",
-  "text": "NOT_FOUND: Note … not found" } ],
-  "isError": true }
-exit: 5
-# enableJsonResponse: true (expected)
-content-type: application/json
-{"result":…}
+content-type: text/event-stream
+event: message
+data: {"result":{"protocolVersion":…},
+ "jsonrpc":"2.0","id":1}
 ```
 
 **Done when**
 
 - [ ] `pnpm lab 08`: every test passes
-- [ ] the Inspector UI shows Connected
-- [ ] a script that FAILS when create-note accepts `{title:'x', status:'published'}`
-- [ ] both framings captured and compared
+- [ ] tools listed over HTTP, the same as stdio
+- [ ] a foreign Host is refused (403)
 
 ---
 
-## If you are stuck: module 5
+## When the agent goes wrong: module 5
 
-- **The UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network). Check Settings → Custom Headers.
-- **Sharing the Inspector UI URL**: Don't: it carries MCP_INSPECTOR_API_TOKEN, which is a credential.
-- **Called by hostname: 403**: With valid device headers (without them it is 401: auth runs first). Add the name to MCP_ALLOWED_HOSTS: localhost,<hostname>.
+- **tools/list over HTTP is empty**: McpToolsModule is not in AppModule (measured while building this course). Lab 08 checks for it.
+- **Called by hostname: 403**: That name is not in MCP_ALLOWED_HOSTS: localhost,<hostname>.
+- **My fetch Host test passes 200**: fetch silently replaces Host (measured). node:http, curl and Postman send it as written.
 
 ---
 
@@ -503,34 +649,58 @@ content-type: application/json
 
 # Secure MCP, then the capstone
 
-Rotate a device secret mid-session and watch the next call fail. The capstone is homework.
+Your agent locks /mcp to devices; you rotate a secret mid-session and watch the next call fail.
 
 ⏱ 20 min lab (draft estimate)
 
 <!--
-Covers chapters 09 + 10. Left out for time: nothing from chapter 09; the chapter 10 capstone moves to homework.
+Covers chapters 09 + 10. Left out for time: nothing from chapter 09; the chapter 10 capstone moves to homework, and the expiresAt lab is a stretch.
 -->
 
 ---
 
-## Run this: rotate mid-session
+## Instruction: lock /mcp to devices
+
+> **Proctor:** The transport authenticates, not the tools: a failure is an HTTP 401 before any JSON-RPC is read.
+
+**Give it to your agent** (paste, or say it in your own words):
+
+```text
+Only devices may use /mcp: module 6 of specs/mcp.md. Done
+when pnpm lab 09 and pnpm verify are green.
+```
+
+**Watch its approach**
+
+- middleware BEFORE the transport mounts
+- one 401 body for every failure
+- whoami: device and owner, public fields
+- proves the order matters by breaking it
+
+<!--
+Measured: a fresh agent got lab 09 4/4, and registering its middleware after the transport made lab 09 fail 3 tests. Discuss the known limit in the spec: a disabled user's devices keep working until archived.
+-->
+
+---
+
+## Check it: rotate mid-session
 
 ```bash
 eval "$(node scripts/demo-device.mjs)"
 npx -y @modelcontextprotocol/inspector@2.12.0 \
   --cli http://localhost:3000/mcp \
   --method tools/call --tool-name whoami \
-  --header "X-Access-Key-Id: $MCP_KEY_ID" \
-  --header "X-Secret-Key: $MCP_SECRET"
-pnpm lab 09   # green now; break it, see red, revert
+  --header "X-Device-Key: $DEVICE_KEY" \
+  --header "X-Device-Secret: $DEVICE_SECRET"
+pnpm lab 09   # the lab check: all green?
 ```
 
 **In Postman**
 
-- **09 · Rotate mid-session (module 6)**: Rotate credentials · whoami with the OLD secret → 401 · whoami with the NEW secret
+- **09 · Rotate mid-session (module 6)**: Rotate secret · whoami with the OLD secret → 401 · whoami with the NEW secret
 
 <!--
-Two clients, two devices: the Inspector uses the helper's device, Postman its own. Rotating in Postman therefore does not break the Inspector call; that is a good question to ask. The rotation response contains the NEW secret: do not paste it anywhere.
+Two clients, two devices: the Inspector uses the helper's device, Postman its own. Rotating in Postman therefore does not break the Inspector call; a good question to ask.
 -->
 
 ---
@@ -544,7 +714,7 @@ _Output: captured_
 "device": { … "status": "active" … },
 "owner":  { … "email": "demo@example.com" }
 # Postman 09 · Rotate mid-session
-Rotate credentials           200
+Rotate secret                200
 whoami with the OLD secret   401
 whoami with the NEW secret   200
 ```
@@ -553,20 +723,15 @@ whoami with the NEW secret   200
 
 - [ ] `pnpm lab 09`: every test passes
 - [ ] the old secret failed on the NEXT call
-- [ ] the 7 failure modes → one 401, explained
-- [ ] why stdio whoami is a tool error (local trust)
-
-<!--
-The Inspector treats any 401 as an OAuth challenge. Device keys suit header-configured machine clients; the OAuth path is @rekog/mcp-nest-auth (not built in this course).
--->
+- [ ] a user token on /mcp → 401
 
 ---
 
-## If you are stuck: module 6
+## When the agent goes wrong: module 6
 
-- **Inspector says auth_required**: That IS your 401. Check the headers, or re-run the helper for a fresh device.
-- **whoami over stdio fails**: By design: stdio trusts the local user; there is no device identity.
-- **Auth seems bypassed**: The middleware must be registered BEFORE the transport mounts (measured: after = bypassed).
+- **Calls without headers still work**: The middleware is registered after the transport mounts. Move it before (measured: 2 e2e tests fail otherwise).
+- **It logs the headers to debug**: Never: a device secret in a log is a leaked secret. Ask it to remove the line.
+- **The Inspector UI says Failed**: Wrong or missing device headers. The 401 makes the Inspector try OAuth (404s in Network).
 
 ---
 
