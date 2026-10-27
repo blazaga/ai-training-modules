@@ -2,7 +2,7 @@
 
 A hands-on workshop: your AI coding agent builds a NestJS 12 service with skills and templated
 code, then an MCP server that your Claude Desktop app connects to, to query and change the
-data; you direct it and check every step. Two modules, about 105 minutes. In each module the proctor gives an instruction (the
+data; you direct it and check every step. Two modules, about 15 minutes each for Claude Code to build. In each module the proctor gives an instruction (the
 goal, where the requirements are, when it is done), the agent works out how, and a lab check
 confirms it.
 

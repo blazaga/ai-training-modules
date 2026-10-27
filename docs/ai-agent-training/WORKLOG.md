@@ -2,6 +2,14 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T13:39:08+08:00 - Module times: 15 minutes each
+
+- **Request (operator):** Claude Code should take about 15 minutes to finish each module;
+  update the slides.
+- **What:** deck module times 60' and 45' → 15' each (agenda, module dividers, speaker note:
+  about 30 minutes of labs); the outline's lab column and the training repo README to match.
+  Still marked as estimates. Deck rebuilt: 21 slides, validator passed.
+
 ## 2026-10-27T12:44:57+08:00 - Module 2: Claude Desktop reads AND writes the SQLite data
 
 - **Request (operator):** both read and write tools on the SQL MCP; the goal is Claude

@@ -104,11 +104,11 @@ The checks drive the app over HTTP (lab 01, empty in-memory database) and the MC
 
 | mod | module                     | lab |
 | --- | -------------------------- | --- |
-| 1   | Users and notes            | 60' |
-| 2   | An MCP server on your data | 45' |
+| 1   | Users and notes            | 15' |
+| 2   | An MCP server on your data | 15' |
 
 <!--
-Two modules, about 105 minutes of labs. Times are ESTIMATES: nobody has run these labs with an audience yet. Adjust after the first session.
+Two modules, about 15 minutes each for Claude Code to build, so about 30 minutes of labs. Times are ESTIMATES: nobody has run these labs with an audience yet. Adjust after the first session.
 -->
 
 ---
@@ -121,7 +121,7 @@ Two modules, about 105 minutes of labs. Times are ESTIMATES: nobody has run thes
 
 Your agent sets the project up, then builds the users and notes resources (notes shareable between users) on the seeded tables.
 
-⏱ 60 min lab (draft estimate)
+⏱ 15 min lab (draft estimate)
 
 <!--
 Covers chapters 00 + 01 + 02. Left out for time: nothing: the two stretch exercises of chapter 01 are for fast groups.
@@ -267,7 +267,7 @@ notes?status=done total=85
 
 Your agent builds an MCP server that queries and changes the database; you connect it to Claude Desktop and have Claude read and write your data.
 
-⏱ 45 min lab (draft estimate)
+⏱ 15 min lab (draft estimate)
 
 <!--
 Covers chapters 03 + 04. Left out for time: the stdio framing lab (chapter 03): reading one exchange covers it.

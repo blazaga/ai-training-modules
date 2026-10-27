@@ -34,10 +34,11 @@ proctor → instruct → agent → check → review
 
 | module                       | reading            | your agent builds                                                                          | you check                                          | lab |
 | ---------------------------- | ------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------- | --- |
-| 1 Users and notes            | ch00 + ch01 + ch02 | sets the project up, then users and notes (with sharing) on the tables                     | lab 01 · break a rule, see red                     | 60' |
-| 2 An MCP server on your data | ch03 + ch04        | a stdio MCP server that queries and changes the database; you connect it to Claude Desktop | lab 02 · Claude Desktop reads and writes your data | 45' |
+| 1 Users and notes            | ch00 + ch01 + ch02 | sets the project up, then users and notes (with sharing) on the tables                     | lab 01 · break a rule, see red                     | 15' |
+| 2 An MCP server on your data | ch03 + ch04        | a stdio MCP server that queries and changes the database; you connect it to Claude Desktop | lab 02 · Claude Desktop reads and writes your data | 15' |
 
-Both lab times are estimates; nobody has run the course with an audience yet.
+Both lab times (about 15 minutes each for Claude Code to finish the module) are estimates;
+nobody has run the course with an audience yet.
 
 Each module ends at a **checkpoint**. If your agent went somewhere you cannot recover from in
 the time, catch up from `checkpoints/` and carry on. The branch `modules-done` of the course

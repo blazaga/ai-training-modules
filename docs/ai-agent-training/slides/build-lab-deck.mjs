@@ -80,8 +80,8 @@ const INSPECTOR = '6D4AE8'; // the Inspector UI panel
 // slides (divider, instructions, check it, checkpoint, when the agent goes wrong).
 const MOD = (n, title, minutes, goal, covers) => ({ n, title, minutes, goal, covers });
 const MODULES = [
-  MOD('1', 'Users and notes', 60, 'Your agent sets the project up, then builds the users and notes resources (notes shareable between users) on the seeded tables.', '00 + 01 + 02'),
-  MOD('2', 'An MCP server on your data', 45, 'Your agent builds an MCP server that queries and changes the database; you connect it to Claude Desktop and have Claude read and write your data.', '03 + 04'),
+  MOD('1', 'Users and notes', 15, 'Your agent sets the project up, then builds the users and notes resources (notes shareable between users) on the seeded tables.', '00 + 01 + 02'),
+  MOD('2', 'An MCP server on your data', 15, 'Your agent builds an MCP server that queries and changes the database; you connect it to Claude Desktop and have Claude read and write your data.', '03 + 04'),
 ];
 // An instruction as card lines: words unchanged, at most 58 characters per line (fitCode
 // refuses a code block that does not fit, so a longer line would fail the build).
@@ -198,7 +198,7 @@ const SLIDES = [
   {
     type: 'agenda',
     title: 'The track (draft lab times)',
-    notes: 'Two modules, about 105 minutes of labs. Times are ESTIMATES: nobody has run these labs with an audience yet. Adjust after the first session.',
+    notes: 'Two modules, about 15 minutes each for Claude Code to build, so about 30 minutes of labs. Times are ESTIMATES: nobody has run these labs with an audience yet. Adjust after the first session.',
   },
 
   // ---------------------------------------------------------------- module 1
