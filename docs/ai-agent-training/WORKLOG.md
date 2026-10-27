@@ -2,6 +2,19 @@
 
 Newest first. Stamps in Asia/Manila with offset.
 
+## 2026-10-27T16:12:38+08:00 - Dry run: the whole guided course from the step files
+
+- **Request (operator):** run the dry run again with a fresh agent.
+- **How:** one fresh agent session on a clean copy of the starter (no `.env`), given only
+  "Read steps/NN-….md and do what it says", one step at a time; after each step the proctor
+  checked the git diff, the seed and the checks before sending the next.
+- **Result:** all four steps stopped at their own scope with a WORKLOG entry; step 01 created
+  `.env`; the module 1 checkpoint held (lab 01 15/15, lab 02 red, no MCP server); after step
+  04 verify unit 73 / e2e 89 and labs 31/31, re-run by the proctor; seed unchanged throughout.
+  Record: `dry-runs/guided-run-steps-01-04.md`.
+- **Fixed from it:** `specs/notes.md` now says a `dueAt` needs an offset (two agents had
+  stopped to ask; the checkpoint already refused it, measured).
+
 ## 2026-10-27T15:32:10+08:00 - Step 01 tells Claude Code to copy .env
 
 - **Request (operator):** add the instruction to copy `.env` during setup for Claude Code.

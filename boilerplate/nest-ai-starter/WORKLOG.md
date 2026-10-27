@@ -2,6 +2,13 @@
 
 Newest first. Stamps from a clock, with offset.
 
+## 2026-10-27T16:12:38+08:00 - specs/notes.md: dueAt needs an offset
+
+- **Why:** two dry-run agents stopped on "any offset accepted" to ask about a value with no
+  offset. **What:** the spec now says an offset (`Z` or `±hh:mm`) is required, no offset →
+  400, because its UTC time would depend on the server's time zone. Measured: the module 1
+  checkpoint's `z.iso.datetime({ offset: true })` already refuses it.
+
 ## 2026-10-27T15:32:10+08:00 - steps/01: create the local .env during setup
 
 - **What:** the step 01 instruction names the `.env` copy explicitly (with the PowerShell
